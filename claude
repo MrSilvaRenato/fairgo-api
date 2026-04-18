@@ -1,0 +1,11 @@
+      PID    PPID    PGID     WINPID   TTY         UID    STIME COMMAND
+     2450    2442    2442       5484  pty1      197609 21:34:54 /c/Program Files/nodejs/node
+     2270       1    2268       9832  ?         197609 21:26:01 /d/xampp/php/php
+     2547    2457    2547      25524  cons0     197609 21:42:57 /usr/bin/PS
+     2442    1930    2442       8484  pty1      197609 21:34:54 /usr/bin/bash
+     2325    2324    2325       8932  pty0      197609 21:29:19 /usr/bin/bash
+     1930    1928    1930      13524  pty1      197609 20:55:26 /usr/bin/bash
+     2451    2325    2451       9204  pty0      197609 21:35:00 /usr/bin/winpty
+     2324       1    2324      13336  ?         197609 21:29:18 /usr/bin/mintty
+     1928       1    1928      14100  ?         197609 20:55:26 /usr/bin/mintty
+     2457       1    2457      24596  cons0     197609 21:42:46 /usr/bin/bash
