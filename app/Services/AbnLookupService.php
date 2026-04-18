@@ -3,65 +3,87 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
+/**
+ * Australian Business Register (ABR) lookup.
+ *
+ * Production: set ABN_LOOKUP_GUID in .env to your GUID from
+ *   https://abr.business.gov.au/Tools/WebServicesAgreement
+ *
+ * Locally: set ABN_LOOKUP_GUID=fake — lookups validate ABN format only (checksum).
+ */
 class AbnLookupService
 {
-    public function lookup(string $abn): ?array
+    private const ABR_URL = 'https://abr.business.gov.au/json/AbnDetails.aspx';
+
+    public function lookup(string $abn): array
     {
-        $abn = preg_replace('/\s+/', '', $abn);
+        $abn  = preg_replace('/\s+/', '', $abn);
+        $guid = config('services.abn_lookup.guid', 'fake');
 
-        if (!$this->isValidAbn($abn)) {
-            return null;
-        }
-
-        $guid = config('services.abr.guid');
-
-        if (!$guid) {
-            // No GUID configured — return format-validated stub
-            return ['abn' => $abn, 'name' => null, 'type' => null, 'state' => null, 'postcode' => null, 'status' => 'Active'];
+        // Local stub — skip real API, just validate format
+        if (!$guid || $guid === 'fake') {
+            $valid = $this->validateChecksum($abn);
+            return [
+                'valid'       => $valid,
+                'abn'         => $abn,
+                'entity_name' => $valid ? 'ABN format valid (dev mode)' : null,
+                'entity_type' => null,
+                'state'       => null,
+                'postcode'    => null,
+                'status'      => $valid ? 'Active' : 'Invalid',
+                'stub'        => true,
+            ];
         }
 
         try {
-            $response = Http::timeout(5)->get(
-                'https://abr.business.gov.au/json/AbnDetails.aspx',
-                ['abn' => $abn, 'guid' => $guid, 'callback' => 'c']
-            );
+            $response = Http::timeout(8)->get(self::ABR_URL, [
+                'abn'      => $abn,
+                'guid'     => $guid,
+                'callback' => 'callback',
+            ]);
 
-            $json = preg_replace('/^c\((.*)\);?$/s', '$1', trim($response->body()));
-            $data = json_decode($json, true);
+            // ABR returns JSONP: callback({...}) — strip wrapper
+            $body = preg_replace('/^callback\(/', '', $response->body());
+            $body = rtrim($body, ')');
+            $data = json_decode($body, true);
 
-            if (!$data || !empty($data['Message']) || empty($data['EntityName'])) {
-                return null;
+            if (!$data || isset($data['Message'])) {
+                return ['valid' => false, 'abn' => $abn, 'error' => $data['Message'] ?? 'Lookup failed'];
             }
 
+            $active = ($data['EntityStatusCode'] ?? '') === 'Active';
+
             return [
-                'abn'      => $abn,
-                'name'     => $data['EntityName'],
-                'type'     => $data['EntityTypeName'] ?? null,
-                'state'    => $data['AddressState'] ?? null,
-                'postcode' => $data['AddressPostcode'] ?? null,
-                'status'   => $data['AbnStatus'] ?? null,
+                'valid'       => $active,
+                'abn'         => $abn,
+                'entity_name' => $data['EntityName'] ?? null,
+                'entity_type' => $data['EntityTypeName'] ?? null,
+                'state'       => $data['StateCode'] ?? null,
+                'postcode'    => $data['Postcode'] ?? null,
+                'status'      => $data['EntityStatusCode'] ?? null,
             ];
-        } catch (\Throwable) {
-            return null;
+        } catch (\Throwable $e) {
+            Log::warning('ABN lookup failed: ' . $e->getMessage());
+            return ['valid' => false, 'abn' => $abn, 'error' => 'Lookup service unavailable'];
         }
     }
 
-    public function isValidAbn(string $abn): bool
+    /**
+     * ABN Modulus 89 checksum validation.
+     */
+    public function validateChecksum(string $abn): bool
     {
-        $abn = preg_replace('/\s+/', '', $abn);
-
-        if (!preg_match('/^\d{11}$/', $abn)) {
-            return false;
-        }
+        if (!preg_match('/^\d{11}$/', $abn)) return false;
 
         $weights = [10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
         $digits  = str_split($abn);
         $digits[0] = (int)$digits[0] - 1;
 
         $sum = 0;
-        foreach ($weights as $i => $w) {
-            $sum += (int)$digits[$i] * $w;
+        foreach ($digits as $i => $d) {
+            $sum += (int)$d * $weights[$i];
         }
 
         return $sum % 89 === 0;

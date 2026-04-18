@@ -24,6 +24,10 @@ api.interceptors.response.use(
       localStorage.removeItem('token')
       window.location.href = '/login'
     }
+    if (error.response?.status === 403 && error.response?.data?.message?.includes('suspended')) {
+      localStorage.removeItem('token')
+      window.location.href = '/login?banned=1'
+    }
     return Promise.reject(error)
   }
 )

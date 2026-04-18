@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../lib/axios'
 import useAuthStore from '../../store/authStore'
+import PhoneVerification from '../../components/PhoneVerification'
 
 const CATEGORIES = [
   { value: 'billing',  label: 'Billing issue',        icon: '💳' },
@@ -30,6 +31,7 @@ export default function ComplaintFormPage() {
   const [errors, setErrors]                 = useState({})
   const [loading, setLoading]               = useState(false)
   const [draftRestored, setDraftRestored]   = useState(false)
+  const [phoneVerified, setPhoneVerified]   = useState(!!user?.phone_verified_at)
 
   /* ── Restore draft saved before auth redirect ── */
   useEffect(() => {
@@ -229,8 +231,18 @@ export default function ComplaintFormPage() {
             </div>
           )}
 
+          {/* Phone verification gate — disabled locally, re-enable for production */}
+          {/* {user && !phoneVerified && (
+            <PhoneVerification
+              compact
+              onVerified={() => setPhoneVerified(true)}
+            />
+          )} */}
+
           <div className="pt-2">
-            <button type="submit" disabled={loading || !form.company_id || !form.category}
+            <button
+              type="submit"
+              disabled={loading || !form.company_id || !form.category}
               className="btn-primary w-full justify-center flex">
               {loading ? (
                 <span className="flex items-center gap-2">

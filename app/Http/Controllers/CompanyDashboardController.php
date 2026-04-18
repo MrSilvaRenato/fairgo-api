@@ -16,16 +16,22 @@ class CompanyDashboardController extends Controller
 
         $complaints = $company->complaints()
             ->with(['consumer:id,name', 'response', 'feedback'])
+            ->withCount([
+                'replies as unread_count' => fn($q) => $q
+                    ->where('author_type', 'consumer')
+                    ->whereNull('company_read_at'),
+            ])
             ->latest()
             ->get();
 
         $stats = [
-            'total'           => $complaints->count(),
-            'open'            => $complaints->whereIn('status', ['open', 'awaiting_response'])->count(),
-            'responded'       => $complaints->where('status', 'responded')->count(),
-            'resolved'        => $complaints->where('status', 'resolved')->count(),
-            'unresolved'      => $complaints->where('status', 'unresolved')->count(),
-            'pending_response'=> $complaints->whereIn('status', ['open'])->count(),
+            'total'            => $complaints->count(),
+            'open'             => $complaints->whereIn('status', ['open', 'awaiting_response'])->count(),
+            'pending_response' => $complaints->where('status', 'open')->count(),
+            'responded'        => $complaints->where('status', 'responded')->count(),
+            'resolved'         => $complaints->where('status', 'resolved')->count(),
+            'unresolved'       => $complaints->where('status', 'unresolved')->count(),
+            'unread'           => $complaints->sum('unread_count'),
         ];
 
         return response()->json([

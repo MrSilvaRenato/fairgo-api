@@ -13,7 +13,7 @@ const INDUSTRIES = [
 export default function CompanyRegisterPage() {
   const { fetchUser } = useAuthStore()
   const navigate = useNavigate()
-  const [form, setForm] = useState({ name: '', abn: '', industry: '', description: '' })
+  const [form, setForm] = useState({ name: '', abn: '', industry: '', description: '', website: '' })
   const [abnData, setAbnData] = useState(null)
   const [abnError, setAbnError] = useState('')
   const [abnLoading, setAbnLoading] = useState(false)
@@ -128,6 +128,12 @@ export default function CompanyRegisterPage() {
               <option value="">Select an industry…</option>
               {INDUSTRIES.map((i) => <option key={i} value={i}>{i}</option>)}
             </select>
+          </Field>
+
+          <Field label="Website" error={errors.website?.[0]} hint="Optional — used to display your logo automatically">
+            <input name="website" value={form.website} onChange={handle}
+              placeholder="e.g. yourcompany.com.au"
+              className="input" />
           </Field>
 
           <Field label="Short description" error={errors.description?.[0]}

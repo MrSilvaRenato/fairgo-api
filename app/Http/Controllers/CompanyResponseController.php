@@ -3,11 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\CalculateCompanyScore;
-use App\Mail\CompanyResponded;
 use App\Models\Complaint;
 use App\Models\CompanyResponse;
+use App\Notifications\CompanyRepliedConsumer;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 
 class CompanyResponseController extends Controller
 {
@@ -38,9 +37,9 @@ class CompanyResponseController extends Controller
 
         CalculateCompanyScore::dispatch($complaint->company_id);
 
-        // Notify consumer
-        $complaint->load(['consumer', 'company', 'response']);
-        Mail::to($complaint->consumer->email)->queue(new CompanyResponded($complaint));
+        // Notify consumer via queued notification (logs locally, SMTP in production)
+        $complaint->load(['consumer', 'company']);
+        $complaint->consumer?->notify(new CompanyRepliedConsumer($complaint));
 
         return response()->json($response, 201);
     }

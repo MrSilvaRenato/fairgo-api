@@ -8,7 +8,8 @@ export default function LoginPage() {
   const { login, loading } = useAuthStore()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const next = searchParams.get('next') ?? '/'
+  const next    = searchParams.get('next') ?? '/'
+  const banned  = searchParams.get('banned') === '1'
   const hasDraft = !!sessionStorage.getItem(DRAFT_KEY)
 
   const [form, setForm] = useState({ email: '', password: '' })
@@ -31,6 +32,20 @@ export default function LoginPage() {
   return (
     <div className="min-h-[80vh] flex items-center justify-center -mt-8">
       <div className="w-full max-w-md">
+
+        {/* Banned account banner */}
+        {banned && (
+          <div className="mb-6 flex items-start gap-3 rounded-2xl px-4 py-4"
+            style={{ background: 'var(--color-clay-soft)', border: '1px solid var(--color-clay)' }}>
+            <span className="text-lg shrink-0">🚫</span>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: 'var(--color-clay)' }}>Account suspended</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--color-ink-2)' }}>
+                This account has been suspended by Fair Go. Contact <a href="mailto:support@fairgo.com.au" className="underline">support@fairgo.com.au</a> if you believe this is an error.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Complaint draft context banner */}
         {hasDraft && (

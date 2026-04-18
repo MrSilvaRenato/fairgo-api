@@ -47,6 +47,14 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
+
+        if ($user->banned) {
+            Auth::logout();
+            throw ValidationException::withMessages([
+                'email' => ['This account has been suspended. Contact support if you believe this is an error.'],
+            ]);
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         $user->load('company:id');
@@ -58,7 +66,12 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $token = $request->user()->currentAccessToken();
+
+        // TransientToken (stateful sessions) has no delete() method
+        if (method_exists($token, 'delete')) {
+            $token->delete();
+        }
 
         return response()->json(['message' => 'Logged out successfully.']);
     }
@@ -67,7 +80,17 @@ class AuthController extends Controller
     {
         $user = $request->user();
         $data = $user->toArray();
-        $data['company_id'] = $user->company?->id;
+        $data['company_id']    = $user->company?->id;
+        $data['unread_replies'] = $this->unreadCount($user);
         return response()->json($data);
+    }
+
+    private function unreadCount(\App\Models\User $user): int
+    {
+        if ($user->role !== 'consumer') return 0;
+        return \App\Models\ComplaintReply::whereHas('complaint', fn($q) => $q->where('consumer_id', $user->id))
+            ->where('author_type', 'company')
+            ->whereNull('read_at')
+            ->count();
     }
 }

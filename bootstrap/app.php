@@ -16,7 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'requires.plan' => \App\Http\Middleware\RequiresPlan::class,
             'admin'         => \App\Http\Middleware\EnsureAdmin::class,
+            'not.banned'    => \App\Http\Middleware\EnsureNotBanned::class,
         ]);
+        // Apply ban check to every authenticated API request
+        $middleware->appendToGroup('api', \App\Http\Middleware\EnsureNotBanned::class);
     })
     ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule): void {
         $schedule->job(new \App\Jobs\ExpireUnansweredComplaints)->hourly();

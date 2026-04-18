@@ -16,14 +16,22 @@ class Company extends Model
         'abn',
         'industry',
         'description',
+        'website',
+        'logo_url',
         'logo',
         'claimed',
+        'verified_badge',
+        'not_recommended',
+        'abn_verified',
     ];
 
     protected function casts(): array
     {
         return [
-            'claimed' => 'boolean',
+            'claimed'         => 'boolean',
+            'verified_badge'  => 'boolean',
+            'not_recommended' => 'boolean',
+            'abn_verified'    => 'boolean',
         ];
     }
 

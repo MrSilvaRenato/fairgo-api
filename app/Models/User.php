@@ -18,6 +18,11 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'phone',
+        'phone_verified_at',
+        'banned',
+        'reputation_score',
+        'reputation_flag',
     ];
 
     protected $hidden = [
@@ -28,9 +33,16 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'email_verified_at'  => 'datetime',
+            'phone_verified_at'  => 'datetime',
+            'password'           => 'hashed',
+            'banned'             => 'boolean',
         ];
+    }
+
+    public function isPhoneVerified(): bool
+    {
+        return $this->phone_verified_at !== null;
     }
 
     public function company()

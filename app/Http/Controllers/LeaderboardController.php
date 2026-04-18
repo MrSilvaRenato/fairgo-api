@@ -23,14 +23,18 @@ class LeaderboardController extends Controller
             ->take(10)
             ->values()
             ->map(fn($c) => [
-                'id'       => $c->id,
-                'name'     => $c->name,
-                'slug'     => $c->slug,
-                'industry' => $c->industry,
-                'score'    => round($c->score?->score ?? 0, 1),
-                'badge'    => $c->score?->badge ?? 'not_rated',
-                'total'    => $c->score?->total_complaints ?? 0,
-                'response_rate' => round(($c->score?->response_rate ?? 0) * 100),
+                'id'              => $c->id,
+                'name'            => $c->name,
+                'slug'            => $c->slug,
+                'industry'        => $c->industry,
+                'website'         => $c->website,
+                'logo_url'        => $c->logo_url,
+                'score'           => round($c->score?->score ?? 0, 1),
+                'badge'           => $c->score?->badge ?? 'not_rated',
+                'total'           => $c->score?->total_complaints ?? 0,
+                'response_rate'   => round(($c->score?->response_rate ?? 0) * 100),
+                'verified_badge'  => (bool) $c->verified_badge,
+                'not_recommended' => (bool) $c->not_recommended,
             ]);
 
         $industries = Company::whereNotNull('industry')

@@ -19,13 +19,21 @@ class Complaint extends Model
         'status',
         'is_public',
         'expires_at',
+        'reopened_at',
+        'moderation_status',
+        'moderation_flags',
+        'moderation_note',
+        'moderation_edited',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_public'  => 'boolean',
-            'expires_at' => 'datetime',
+            'is_public'          => 'boolean',
+            'expires_at'         => 'datetime',
+            'reopened_at'        => 'datetime',
+            'moderation_flags'   => 'array',
+            'moderation_edited'  => 'boolean',
         ];
     }
 

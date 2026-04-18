@@ -12,8 +12,11 @@ import ResolvePage from '../pages/complaint/ResolvePage'
 import ConsumerDashboardPage from '../pages/consumer/ConsumerDashboardPage'
 import CompanyDashboardPage from '../pages/company/CompanyDashboardPage'
 import CompanyAnalyticsPage from '../pages/company/CompanyAnalyticsPage'
+import CompanySettingsPage from '../pages/company/CompanySettingsPage'
 import BillingPage from '../pages/company/BillingPage'
 import AdminPage from '../pages/admin/AdminPage'
+import SearchPage from '../pages/SearchPage'
+import MostComplainedPage from '../pages/MostComplainedPage'
 
 const router = createBrowserRouter([
   {
@@ -30,8 +33,11 @@ const router = createBrowserRouter([
       { path: '/dashboard',              element: <ConsumerDashboardPage /> },
       { path: '/company/dashboard',       element: <CompanyDashboardPage /> },
       { path: '/company/analytics',       element: <CompanyAnalyticsPage /> },
+      { path: '/company/settings',        element: <CompanySettingsPage /> },
       { path: '/company/billing',          element: <BillingPage /> },
       { path: '/admin',                    element: <AdminPage /> },
+      { path: '/search',                   element: <SearchPage /> },
+      { path: '/most-complained',          element: <MostComplainedPage /> },
       // Step 15 – /dashboard
       // Step 16 – /company/dashboard
       // Step 21 – /admin

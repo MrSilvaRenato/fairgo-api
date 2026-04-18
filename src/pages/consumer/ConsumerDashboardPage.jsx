@@ -1,177 +1,263 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../lib/axios'
+import useAuthStore from '../../store/authStore'
+import Icon from '../../components/Icon'
 
-const STATUS_CONFIG = {
-  open:              { label: 'Open',             style: 'badge badge-blue' },
-  awaiting_response: { label: 'Awaiting Response', style: 'badge badge-yellow' },
-  responded:         { label: 'Responded',          style: 'badge badge-purple' },
-  resolved:          { label: 'Resolved',           style: 'badge badge-green' },
-  unresolved:        { label: 'Unresolved',         style: 'badge badge-red' },
-  expired:           { label: 'Expired',            style: 'badge badge-gray' },
+const STATUS = {
+  open:              { label: 'Open',              fg: 'var(--color-eucalyptus)',  bg: 'var(--color-eucalyptus-3)' },
+  awaiting_response: { label: 'Awaiting response', fg: '#8A5A1F',                  bg: '#F3E2C3' },
+  responded:         { label: 'Responded',          fg: '#3B4B7A',                  bg: '#DAE0EE' },
+  resolved:          { label: 'Resolved',           fg: 'var(--color-eucalyptus)',  bg: '#E7EEDF' },
+  unresolved:        { label: 'Unresolved',         fg: 'var(--color-clay)',        bg: 'var(--color-clay-soft)' },
+  expired:           { label: 'Expired',            fg: 'var(--color-muted)',       bg: 'var(--color-paper-2)' },
 }
 
 export default function ConsumerDashboardPage() {
-  const [data, setData] = useState(null)
+  const { user } = useAuthStore()
+  const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter]   = useState('all')
 
-  useEffect(() => {
+  const load = () => {
     api.get('/dashboard/consumer').then((res) => setData(res.data)).finally(() => setLoading(false))
-  }, [])
+  }
 
-  if (loading) return <DashboardSkeleton />
+  useEffect(() => { load() }, [])
+
+  if (loading) return <Skeleton />
+  if (!data)   return null
+
   const { stats, complaints } = data
-
   const filtered = filter === 'all' ? complaints : complaints.filter((c) => c.status === filter)
 
+  const needsAction  = complaints.filter((c) => c.status === 'responded').length
+  const totalUnread  = stats.unread ?? 0
+
   const statItems = [
-    { label: 'Total',      value: stats.total,      key: 'all' },
-    { label: 'Open',       value: stats.open,        key: 'open',       alert: stats.open > 0 },
-    { label: 'Responded',  value: stats.responded,   key: 'responded',  highlight: stats.responded > 0 },
-    { label: 'Resolved',   value: stats.resolved,    key: 'resolved' },
-    { label: 'Unresolved', value: stats.unresolved,  key: 'unresolved' },
+    { label: 'Total',        value: stats.total,      key: 'all' },
+    { label: 'Open',         value: stats.open,        key: 'open' },
+    { label: 'Responded',    value: stats.responded,   key: 'responded' },
+    { label: 'Resolved',     value: stats.resolved,    key: 'resolved' },
+    { label: 'Unresolved',   value: stats.unresolved,  key: 'unresolved' },
   ]
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="page-header">My Complaints</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Track and manage your submitted complaints</p>
+          <p className="caps mb-1">Consumer dashboard</p>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">
+            Hi, {user?.name?.split(' ')[0]} 👋
+          </h1>
+          <p className="text-sm text-[color:var(--color-ink-2)] mt-1">
+            Track and manage your complaints on the public record.
+          </p>
         </div>
-        <Link to="/complaints/new" className="btn-primary shrink-0">
-          <span className="hidden sm:inline">+ New complaint</span>
-          <span className="sm:hidden">+</span>
+        <Link to="/complaints/new" className="btn btn-primary shrink-0">
+          <Icon name="plus" size={14} /> New complaint
         </Link>
       </div>
 
-      {/* Action needed banner */}
-      {stats.responded > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
-            <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-            </svg>
+      {/* Unread replies banner */}
+      {totalUnread > 0 && (
+        <div className="rounded-2xl border border-[color:var(--color-clay)] bg-[color:var(--color-clay-soft)] p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: 'var(--color-clay)' }}>
+            <Icon name="reply" size={18} className="text-white" />
           </div>
-          <div>
-            <p className="text-sm font-semibold text-amber-900">
-              {stats.responded} complaint{stats.responded > 1 ? 's' : ''} waiting for your response
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-[color:var(--color-ink)]">
+              {totalUnread} unread repl{totalUnread > 1 ? 'ies' : 'y'} from companies
             </p>
-            <p className="text-xs text-amber-700 mt-0.5">Companies have replied — close them to update their scores.</p>
+            <p className="text-xs text-[color:var(--color-ink-2)] mt-0.5">
+              Open the complaint to read — replies are marked as read automatically.
+            </p>
           </div>
         </div>
       )}
 
-      {/* Stats */}
+      {/* Action banner */}
+      {needsAction > 0 && (
+        <div className="rounded-2xl border border-[color:var(--color-ochre)] bg-[#FDF6E8] p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-[color:var(--color-ochre)] flex items-center justify-center shrink-0">
+            <Icon name="flag" size={18} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-[color:var(--color-ink)]">
+              {needsAction} complaint{needsAction > 1 ? 's' : ''} waiting for your verdict
+            </p>
+            <p className="text-xs text-[color:var(--color-ink-2)] mt-0.5">
+              A company has replied — only you can mark it resolved or unresolved.
+            </p>
+          </div>
+          <button onClick={() => setFilter('responded')}
+            className="btn btn-secondary shrink-0 text-xs">View</button>
+        </div>
+      )}
+
+      {/* Stats strip */}
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
         {statItems.map((s) => (
-          <button
-            key={s.key}
-            onClick={() => setFilter(s.key)}
-            className={`stat-card transition hover:shadow-md cursor-pointer ${
-              filter === s.key ? 'ring-2 ring-green-500 ring-offset-1' : ''
-            } ${s.alert ? 'border-amber-200 bg-amber-50' : ''}`}
-          >
-            <p className={`text-2xl font-bold ${s.alert ? 'text-amber-600' : s.highlight ? 'text-purple-600' : 'text-gray-800'}`}>
-              {s.value}
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+          <button key={s.key} onClick={() => setFilter(s.key)}
+            className={`card p-4 text-left transition cursor-pointer hover:shadow-md ${
+              filter === s.key ? 'ring-2 ring-[color:var(--color-eucalyptus)] ring-offset-1' : ''
+            }`}>
+            <p className="font-display text-[28px] font-semibold leading-none text-[color:var(--color-ink)]">{s.value}</p>
+            <p className="text-xs text-[color:var(--color-muted)] mt-1">{s.label}</p>
           </button>
         ))}
       </div>
 
-      {/* Complaints list */}
+      {/* List */}
       {filtered.length === 0 ? (
-        <div className="card p-12 text-center">
-          <div className="text-5xl mb-4">📋</div>
-          <h3 className="font-semibold text-gray-800 mb-1">
-            {filter === 'all' ? 'No complaints yet' : `No ${filter} complaints`}
-          </h3>
-          <p className="text-sm text-gray-500 mb-5">
-            {filter === 'all'
-              ? 'Had a bad experience? Put it on the record.'
-              : 'Try a different filter.'}
+        <div className="card p-14 text-center">
+          <div className="font-display italic-display text-[24px] mb-2 text-[color:var(--color-muted)]">Nothing here yet.</div>
+          <p className="text-sm text-[color:var(--color-muted)] mb-6">
+            {filter === 'all' ? 'Had a bad experience? Put it on the public record.' : 'No complaints with this status.'}
           </p>
           {filter === 'all' && (
-            <Link to="/complaints/new" className="btn-primary">Submit your first complaint</Link>
+            <Link to="/complaints/new" className="btn btn-primary">Submit your first complaint</Link>
           )}
         </div>
       ) : (
         <ul className="space-y-3">
-          {filtered.map((c) => {
-            const st = STATUS_CONFIG[c.status] ?? STATUS_CONFIG.open
-            const needsClose = c.status === 'responded' && !c.feedback
-            return (
-              <li key={c.id} className={`card p-4 sm:p-5 hover:shadow-md transition ${needsClose ? 'border-amber-200' : ''}`}>
-                <div className="flex items-start gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <span className={st.style}>{st.label}</span>
-                      <span className="text-xs text-gray-400 capitalize">{c.category}</span>
-                    </div>
-                    <Link to={`/complaints/${c.id}`}
-                      className="font-semibold text-gray-900 hover:text-green-600 transition block leading-snug">
-                      {c.title}
-                    </Link>
-                    <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-gray-400">
-                      <Link to={`/companies/${c.company?.slug}`} className="hover:text-green-600 font-medium text-gray-500">
-                        {c.company?.name}
-                      </Link>
-                      <span>·</span>
-                      <span>{new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                    </div>
-                  </div>
-
-                  {needsClose && (
-                    <Link to={`/complaints/${c.id}/resolve`}
-                      className="shrink-0 text-xs bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-600 transition font-medium">
-                      Close
-                    </Link>
-                  )}
-                </div>
-
-                {c.response && (
-                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-start gap-2">
-                    <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center shrink-0 mt-0.5">
-                      <svg className="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
-                      </svg>
-                    </div>
-                    <p className="text-xs text-gray-500 line-clamp-2 flex-1">
-                      <span className="font-medium text-gray-700">Company replied: </span>
-                      {c.response.content}
-                    </p>
-                  </div>
-                )}
-
-                {c.feedback && (
-                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">
-                    <span className="text-sm">{c.feedback.resolved ? '✅' : '❌'}</span>
-                    <span className="text-xs text-gray-500">
-                      {c.feedback.resolved ? 'You marked this resolved' : 'You marked this unresolved'}
-                      {c.feedback.rating && ` · ${c.feedback.rating}/5 ★`}
-                    </span>
-                  </div>
-                )}
-              </li>
-            )
-          })}
+          {filtered.map((c) => (
+            <ComplaintRow key={c.id} complaint={c} onReopen={load} />
+          ))}
         </ul>
       )}
+
     </div>
   )
 }
 
-function DashboardSkeleton() {
+/* ─── Complaint row ──────────────────────────────────────── */
+function ComplaintRow({ complaint: c, onReopen }) {
+  const st = STATUS[c.status] ?? STATUS.open
+  const needsClose  = c.status === 'responded'
+  const canReopen   = (c.status === 'resolved' || c.status === 'unresolved') && !c.reopened_at
+  const unreadCount = c.unread_count ?? 0
+  const [reopening, setReopening] = useState(false)
+
+  const handleReopen = async () => {
+    setReopening(true)
+    try {
+      await api.post(`/complaints/${c.id}/reopen`)
+      onReopen()
+    } catch { /* ignore */ } finally {
+      setReopening(false)
+    }
+  }
+
+  return (
+    <li className={`card p-5 transition hover:shadow-md ${needsClose ? 'border-[color:var(--color-ochre)]' : ''} ${unreadCount > 0 ? 'border-l-[3px] border-l-[color:var(--color-clay)]' : ''}`}>
+      <div className="flex items-start gap-4">
+        <div className="flex-1 min-w-0">
+
+          {/* Status + category */}
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+              style={{ color: st.fg, background: st.bg }}>
+              {c.status === 'resolved' && <Icon name="check" size={10} />}
+              {st.label}
+            </span>
+            <span className="text-xs text-[color:var(--color-muted)] capitalize">{c.category}</span>
+            {c.is_public && (
+              <span className="text-xs text-[color:var(--color-muted)] flex items-center gap-1">
+                <Icon name="globe" size={10} /> Public
+              </span>
+            )}
+          </div>
+
+          {/* Title + unread badge */}
+          <div className="flex items-center gap-2 mb-1.5">
+            <Link to={`/complaints/${c.id}`}
+              className="font-semibold text-[color:var(--color-ink)] hover:text-[color:var(--color-eucalyptus)] transition leading-snug">
+              {c.title}
+            </Link>
+            {unreadCount > 0 && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                style={{ background: 'var(--color-clay)', color: 'var(--color-paper)' }}>
+                {unreadCount} new repl{unreadCount > 1 ? 'ies' : 'y'}
+              </span>
+            )}
+          </div>
+
+          {/* Meta */}
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[color:var(--color-muted)]">
+            <Link to={`/companies/${c.company?.slug}`}
+              className="font-medium text-[color:var(--color-ink-2)] hover:text-[color:var(--color-eucalyptus)] transition flex items-center gap-1">
+              <Icon name="building" size={11} /> {c.company?.name}
+            </Link>
+            <span>·</span>
+            <span className="flex items-center gap-1">
+              <Icon name="calendar" size={11} />
+              {new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="shrink-0 flex flex-col items-end gap-2">
+          {needsClose && (
+            <Link to={`/complaints/${c.id}/resolve`}
+              className="btn btn-primary text-xs">
+              Close it <Icon name="arrow-r" size={12} />
+            </Link>
+          )}
+          {canReopen && (
+            <button onClick={handleReopen} disabled={reopening}
+              className="btn btn-secondary text-xs">
+              {reopening ? 'Reopening…' : 'Re-open'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Company response preview */}
+      {c.response && (
+        <div className="mt-4 pt-4 border-t hairline-2 flex items-start gap-2.5">
+          <div className="w-6 h-6 bg-[color:var(--color-eucalyptus-3)] rounded-lg flex items-center justify-center shrink-0">
+            <Icon name="reply" size={12} className="text-[color:var(--color-eucalyptus)]" />
+          </div>
+          <p className="text-xs text-[color:var(--color-ink-2)] line-clamp-2 flex-1">
+            <span className="font-medium text-[color:var(--color-ink)]">Company replied: </span>
+            {c.response.content}
+          </p>
+        </div>
+      )}
+
+      {/* Feedback summary */}
+      {c.feedback && (
+        <div className="mt-3 pt-3 border-t hairline-2 flex items-center gap-2 text-xs text-[color:var(--color-muted)]">
+          <Icon name={c.feedback.resolved ? 'check' : 'x'} size={13}
+            className={c.feedback.resolved ? 'text-[color:var(--color-eucalyptus)]' : 'text-[color:var(--color-clay)]'} />
+          <span>
+            {c.feedback.resolved ? 'You marked this resolved' : 'You marked this unresolved'}
+            {c.feedback.rating ? ` · ${c.feedback.rating}/5` : ''}
+          </span>
+          {c.reopened_at && ['open', 'awaiting_response', 'responded'].includes(c.status) && (
+            <span className="ml-2 text-[color:var(--color-ochre)] font-medium flex items-center gap-1">
+              <Icon name="arrow-up" size={11} /> Re-opened
+            </span>
+          )}
+        </div>
+      )}
+    </li>
+  )
+}
+
+function Skeleton() {
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-pulse">
-      <div className="h-8 bg-gray-100 rounded w-1/3" />
+      <div className="h-9 bg-[color:var(--color-paper-2)] rounded w-1/3" />
       <div className="grid grid-cols-5 gap-3">
-        {[...Array(5)].map((_, i) => <div key={i} className="h-20 bg-gray-100 rounded-2xl" />)}
+        {[...Array(5)].map((_, i) => <div key={i} className="h-20 bg-[color:var(--color-paper-2)] rounded-2xl" />)}
       </div>
-      {[...Array(3)].map((_, i) => <div key={i} className="h-24 bg-gray-100 rounded-2xl" />)}
+      {[...Array(3)].map((_, i) => <div key={i} className="h-24 bg-[color:var(--color-paper-2)] rounded-2xl" />)}
     </div>
   )
 }

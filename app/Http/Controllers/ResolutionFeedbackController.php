@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\CalculateCompanyScore;
-use App\Mail\ComplaintResolved;
 use App\Models\Complaint;
 use App\Models\ResolutionFeedback;
+use App\Notifications\ComplaintResolvedCompany;
+use App\Services\ConsumerReputationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 
 class ResolutionFeedbackController extends Controller
 {
@@ -17,7 +17,8 @@ class ResolutionFeedbackController extends Controller
             abort(403, 'Only the complaint author can close this complaint.');
         }
 
-        if ($complaint->feedback) {
+        // Block if already closed AND not re-opened
+        if ($complaint->feedback && !$complaint->reopened_at) {
             return response()->json(['message' => 'Feedback already submitted.'], 422);
         }
 
@@ -28,14 +29,25 @@ class ResolutionFeedbackController extends Controller
             'would_deal_again' => 'nullable|boolean',
         ]);
 
-        $feedback = ResolutionFeedback::create([
-            'complaint_id'     => $complaint->id,
-            'consumer_id'      => $request->user()->id,
-            'resolved'         => $data['resolved'],
-            'rating'           => $data['rating'] ?? null,
-            'comment'          => $data['comment'] ?? null,
-            'would_deal_again' => $data['would_deal_again'] ?? null,
-        ]);
+        // Update existing feedback if re-opened, create fresh otherwise
+        if ($complaint->feedback) {
+            $complaint->feedback->update([
+                'resolved'         => $data['resolved'],
+                'rating'           => $data['rating'] ?? null,
+                'comment'          => $data['comment'] ?? null,
+                'would_deal_again' => $data['would_deal_again'] ?? null,
+            ]);
+            $feedback = $complaint->feedback->fresh();
+        } else {
+            $feedback = ResolutionFeedback::create([
+                'complaint_id'     => $complaint->id,
+                'consumer_id'      => $request->user()->id,
+                'resolved'         => $data['resolved'],
+                'rating'           => $data['rating'] ?? null,
+                'comment'          => $data['comment'] ?? null,
+                'would_deal_again' => $data['would_deal_again'] ?? null,
+            ]);
+        }
 
         $complaint->update([
             'status' => $data['resolved'] ? 'resolved' : 'unresolved',
@@ -43,11 +55,14 @@ class ResolutionFeedbackController extends Controller
 
         CalculateCompanyScore::dispatch($complaint->company_id);
 
+        // Recalculate consumer reputation after each feedback submission
+        (new ConsumerReputationService)->calculate($request->user());
+
         // Notify company admin
-        $complaint->load(['company.user', 'feedback']);
+        $complaint->load(['company.user', 'consumer', 'feedback']);
         $companyUser = $complaint->company->user;
-        if ($companyUser?->email) {
-            Mail::to($companyUser->email)->queue(new ComplaintResolved($complaint));
+        if ($companyUser) {
+            $companyUser->notify(new ComplaintResolvedCompany($complaint));
         }
 
         return response()->json($feedback, 201);

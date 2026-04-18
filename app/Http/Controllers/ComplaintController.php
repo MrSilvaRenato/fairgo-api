@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\CalculateCompanyScore;
-use App\Mail\ComplaintSubmitted;
+use App\Jobs\ModerateComplaint;
 use App\Models\Complaint;
-use App\Models\Company;
+use App\Notifications\ComplaintFiledConsumer;
+use App\Notifications\ComplaintFiledCompany;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 
 class ComplaintController extends Controller
 {
@@ -24,18 +24,25 @@ class ComplaintController extends Controller
 
         $complaint = Complaint::create([
             ...$data,
-            'consumer_id' => $request->user()->id,
-            'status'      => 'open',
-            'is_public'   => $data['is_public'] ?? true,
-            'expires_at'  => now()->addDays(7),
+            'consumer_id'       => $request->user()->id,
+            'status'            => 'open',
+            'is_public'         => $data['is_public'] ?? true,
+            'expires_at'        => now()->addDays(7),
+            'moderation_status' => 'pending',
         ]);
 
-        CalculateCompanyScore::dispatch($complaint->company_id);
+        $complaint->load(['consumer:id,name,email', 'company:id,name,slug,user_id', 'company.user:id,name,email']);
 
-        // Notify company admin
+        CalculateCompanyScore::dispatch($complaint->company_id);
+        ModerateComplaint::dispatch($complaint->id);
+
+        // Notify consumer — confirmation
+        $request->user()->notify(new ComplaintFiledConsumer($complaint));
+
+        // Notify company admin — new complaint alert
         $companyUser = $complaint->company->user;
-        if ($companyUser?->email) {
-            Mail::to($companyUser->email)->queue(new ComplaintSubmitted($complaint->load('company')));
+        if ($companyUser) {
+            $companyUser->notify(new ComplaintFiledCompany($complaint));
         }
 
         return response()->json(

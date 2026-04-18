@@ -32,6 +32,10 @@ return [
         'guid' => env('ABR_GUID'),
     ],
 
+    'abn_lookup' => [
+        'guid' => env('ABN_LOOKUP_GUID', 'fake'),
+    ],
+
     'stripe' => [
         'key'            => env('STRIPE_KEY'),
         'secret'         => env('STRIPE_SECRET'),
@@ -42,11 +46,33 @@ return [
         ],
     ],
 
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+    ],
+
+    'moderation' => [
+        'driver' => env('MODERATION_DRIVER', 'log'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
+    ],
+
+    /*
+     * SMS — swap SMS_DRIVER=twilio in .env for production.
+     * LOCAL: logs OTP to storage/logs/laravel.log
+     */
+    'sms' => [
+        'driver' => env('SMS_DRIVER', 'log'),
+    ],
+
+    'twilio' => [
+        'sid'   => env('TWILIO_SID'),
+        'token' => env('TWILIO_TOKEN'),
+        'from'  => env('TWILIO_FROM'),
     ],
 
 ];

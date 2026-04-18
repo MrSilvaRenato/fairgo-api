@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import api from '../../lib/axios'
 import useAuthStore from '../../store/authStore'
 import CompanyResponseForm from '../../components/CompanyResponseForm'
+import useSeoMeta from '../../hooks/useSeoMeta'
 
 const STATUS_CONFIG = {
   open:              { label: 'Open',               style: 'badge badge-blue' },
@@ -33,6 +34,10 @@ export default function ComplaintPage() {
       .then(([cRes, rRes]) => {
         setComplaint(cRes.data)
         setReplies(rRes.data)
+        // Scroll to bottom after paint so latest message is visible
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'instant' }), 80)
+        // Refresh user so navbar unread badge updates (replies marked read server-side above)
+        useAuthStore.getState().fetchUser()
       })
       .catch(() => setError('Complaint not found.'))
       .finally(() => setLoading(false))
@@ -53,6 +58,16 @@ export default function ComplaintPage() {
       setReplyLoading(false)
     }
   }
+
+  useSeoMeta({
+    title: complaint
+      ? `${complaint.title} — complaint against ${complaint.company?.name}`
+      : undefined,
+    description: complaint
+      ? `Consumer complaint filed against ${complaint.company?.name} on Fair Go. Category: ${complaint.category}. Status: ${complaint.status}. ${complaint.description?.slice(0, 120)}…`
+      : undefined,
+    url: `${window.location.origin}/complaints/${id}`,
+  })
 
   if (loading) return <LoadingSkeleton />
   if (error) return (
@@ -127,6 +142,16 @@ export default function ComplaintPage() {
 
       {/* Complaint body */}
       <div className="card p-6 space-y-5">
+        {complaint.moderation_edited && (
+          <div className="flex items-start gap-2 px-3 py-2 rounded-xl text-xs"
+            style={{ background: 'var(--color-paper-2)', color: 'var(--color-muted)', border: '1px solid var(--color-line)' }}>
+            <span className="shrink-0 mt-0.5">✏️</span>
+            <span>
+              <strong style={{ color: 'var(--color-ink-2)' }}>Edited by Fair Go</strong>
+              {' '}— Some content was automatically removed to comply with our community guidelines (e.g. personal information or offensive language).
+            </span>
+          </div>
+        )}
         <Section title="What happened">
           <p className="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm">{complaint.description}</p>
         </Section>
@@ -156,63 +181,96 @@ export default function ComplaintPage() {
       )}
 
       {/* Thread / replies */}
-      {replies.length > 0 && (
-        <div className="card p-6 space-y-4">
-          <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"/>
+      {(replies.length > 0 || canReply) && (
+        <div className="card overflow-hidden">
+          {/* Header */}
+          <div className="px-5 py-4 border-b hairline-2 flex items-center gap-2">
+            <svg className="w-4 h-4 text-[color:var(--color-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"/>
             </svg>
-            Follow-up conversation
-          </h3>
+            <span className="text-sm font-semibold text-[color:var(--color-ink)]">Follow-up conversation</span>
+            <span className="ml-auto text-xs text-[color:var(--color-muted)]">{replies.length} message{replies.length !== 1 ? 's' : ''}</span>
+          </div>
 
-          <div className="space-y-3">
-            {replies.map((reply) => {
-              const isConsumerReply = reply.author_type === 'consumer'
+          {/* Bubbles — oldest first, newest at bottom (WhatsApp order) */}
+          <div className="px-5 py-4 space-y-2 bg-[color:var(--color-paper-2)]">
+            {replies.length === 0 && (
+              <p className="text-xs text-[color:var(--color-muted)] text-center py-4">
+                No messages yet. Be the first to follow up.
+              </p>
+            )}
+            {replies.map((reply, i) => {
+              const isConsumer = reply.author_type === 'consumer'
+              const prev = replies[i - 1]
+              const showName = !prev || prev.author_type !== reply.author_type
+
               return (
-                <div key={reply.id} className={`flex gap-3 ${isConsumerReply ? '' : 'flex-row-reverse'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isConsumerReply ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                <div key={reply.id} className={`flex items-end gap-2 ${isConsumer ? '' : 'flex-row-reverse'}`}>
+                  {/* Avatar — only on first bubble of a run */}
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mb-0.5 ${
+                    showName ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                  } ${isConsumer
+                    ? 'bg-[color:var(--color-paper)] border hairline text-[color:var(--color-ink)]'
+                    : 'bg-[color:var(--color-eucalyptus)] text-[color:var(--color-paper)]'
+                  }`}>
                     {reply.user?.name?.charAt(0).toUpperCase()}
                   </div>
-                  <div className={`flex-1 max-w-[85%] ${isConsumerReply ? '' : 'items-end flex flex-col'}`}>
-                    <div className={`rounded-2xl px-4 py-3 text-sm ${isConsumerReply ? 'bg-gray-50 border border-gray-100 text-gray-700' : 'bg-green-50 border border-green-100 text-gray-700'}`}>
-                      <p className={`text-xs font-semibold mb-1 ${isConsumerReply ? 'text-blue-600' : 'text-green-600'}`}>
-                        {isConsumerReply ? reply.user?.name : `${complaint.company?.name}`}
-                      </p>
-                      <p className="whitespace-pre-wrap leading-relaxed">{reply.content}</p>
+
+                  <div className={`flex flex-col gap-0.5 max-w-[75%] ${isConsumer ? 'items-start' : 'items-end'}`}>
+                    {showName && (
+                      <span className={`text-[11px] font-semibold px-1 ${
+                        isConsumer ? 'text-[color:var(--color-ink-2)]' : 'text-[color:var(--color-eucalyptus)]'
+                      }`}>
+                        {isConsumer ? reply.user?.name : complaint.company?.name}
+                      </span>
+                    )}
+                    <div className={`px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                      isConsumer
+                        ? 'bg-[color:var(--color-card)] border hairline text-[color:var(--color-ink)] rounded-2xl rounded-bl-sm'
+                        : 'text-[color:var(--color-paper)] rounded-2xl rounded-br-sm'
+                    }`}
+                      style={!isConsumer ? { background: 'var(--color-eucalyptus)' } : {}}>
+                      {reply.content}
                     </div>
-                    <p className="text-xs text-gray-400 mt-1 px-1">
-                      {new Date(reply.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                    </p>
+                    <span className="text-[10px] text-[color:var(--color-muted)] px-1">
+                      {new Date(reply.created_at).toLocaleString('en-AU', {
+                        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                      })}
+                    </span>
                   </div>
                 </div>
               )
             })}
+            {/* Scroll anchor */}
+            <div ref={bottomRef} />
           </div>
-          <div ref={bottomRef} />
-        </div>
-      )}
 
-      {/* Reply form */}
-      {canReply && (
-        <div className="card p-5">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Add a follow-up</h3>
-          <form onSubmit={submitReply} className="space-y-3">
-            <textarea
-              value={replyContent}
-              onChange={(e) => setReplyContent(e.target.value)}
-              rows={3}
-              placeholder="Write a follow-up message…"
-              className="input resize-none"
-              maxLength={2000}
-            />
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-400">{replyContent.length}/2000</span>
-              <button type="submit" disabled={replyLoading || !replyContent.trim()} className="btn-primary text-xs px-4 py-2">
-                {replyLoading ? 'Sending…' : 'Send reply'}
-              </button>
+          {/* Reply input — attached to bottom of card */}
+          {canReply && (
+            <div className="border-t hairline-2 px-4 py-3 bg-[color:var(--color-card)]">
+              <form onSubmit={submitReply}>
+                <div className="flex items-end gap-2">
+                  <textarea
+                    value={replyContent}
+                    onChange={(e) => setReplyContent(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitReply(e) } }}
+                    rows={1}
+                    placeholder="Write a follow-up… (Enter to send, Shift+Enter for new line)"
+                    className="input resize-none flex-1 text-sm py-2.5 leading-snug"
+                    style={{ minHeight: '42px', maxHeight: '120px', overflowY: 'auto' }}
+                    maxLength={2000}
+                  />
+                  <button type="submit" disabled={replyLoading || !replyContent.trim()}
+                    className="btn btn-primary shrink-0 h-[42px] px-4 text-sm">
+                    {replyLoading ? '…' : 'Send'}
+                  </button>
+                </div>
+                {replyError && (
+                  <p className="text-xs text-[color:var(--color-clay)] mt-1.5">{replyError}</p>
+                )}
+              </form>
             </div>
-            {replyError && <p className="text-xs text-red-600">{replyError}</p>}
-          </form>
+          )}
         </div>
       )}
 
@@ -255,7 +313,7 @@ export default function ComplaintPage() {
       )}
 
       {/* Owner close action */}
-      {isOwner && hasResponse && !hasFeedback && (
+      {isOwner && hasResponse && !isClosed && (!hasFeedback || complaint.reopened_at) && (
         <div className="card p-5 bg-amber-50 border-amber-200">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center shrink-0">
@@ -264,10 +322,16 @@ export default function ComplaintPage() {
               </svg>
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-amber-900">The company has responded</p>
-              <p className="text-xs text-amber-700 mt-0.5 mb-3">Was your issue resolved? Close this complaint to update the company's score.</p>
+              <p className="text-sm font-semibold text-amber-900">
+                {complaint.reopened_at ? 'The company has replied to your follow-up' : 'The company has responded'}
+              </p>
+              <p className="text-xs text-amber-700 mt-0.5 mb-3">
+                {complaint.reopened_at
+                  ? 'Update your verdict — only the latest rating counts towards their score.'
+                  : 'Was your issue resolved? Close this complaint to update the company\'s score.'}
+              </p>
               <Link to={`/complaints/${complaint.id}/resolve`} className="btn-primary text-xs px-4 py-2">
-                Close this complaint
+                {complaint.reopened_at ? 'Update & close' : 'Close this complaint'}
               </Link>
             </div>
           </div>

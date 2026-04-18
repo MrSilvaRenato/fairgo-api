@@ -1,66 +1,30 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../lib/axios'
 import useAuthStore from '../../store/authStore'
 import CompanyResponseForm from '../../components/CompanyResponseForm'
+import CompanyLogo from '../../components/CompanyLogo'
+import Icon from '../../components/Icon'
+import { BAND } from '../../components/ScoreMeter'
 
-const STATUS_CONFIG = {
-  open:              { label: 'Open',             style: 'badge badge-blue' },
-  awaiting_response: { label: 'Awaiting Response', style: 'badge badge-yellow' },
-  responded:         { label: 'Responded',          style: 'badge badge-purple' },
-  resolved:          { label: 'Resolved',           style: 'badge badge-green' },
-  unresolved:        { label: 'Unresolved',         style: 'badge badge-red' },
-}
-
-const BADGE_COLOR = {
-  excellent: 'text-green-600', good: 'text-yellow-500',
-  regular: 'text-orange-500',  poor: 'text-red-500', not_rated: 'text-gray-300',
-}
-
-function TrustBadgeSection({ slug }) {
-  const [copied, setCopied] = useState(false)
-  const snippet = `<div id="fairgo-badge"></div>\n<script src="${window.location.origin}/api/badge/${slug}/embed.js"><\/script>`
-  const copy = () => {
-    navigator.clipboard.writeText(snippet)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-  return (
-    <div className="card p-5">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-green-100 rounded-lg flex items-center justify-center">
-            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-            </svg>
-          </div>
-          <h3 className="text-sm font-semibold text-gray-800">Trust Badge</h3>
-        </div>
-        <Link to="/company/billing" className="text-xs text-green-600 hover:underline">Manage plan →</Link>
-      </div>
-      <p className="text-xs text-gray-500 mb-3">Embed this on your website to display your Fair Go score.</p>
-      <div className="relative">
-        <pre className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs text-gray-600 overflow-x-auto whitespace-pre-wrap break-all font-mono">
-          {snippet}
-        </pre>
-        <button onClick={copy}
-          className="absolute top-2 right-2 text-xs bg-green-600 text-white px-2.5 py-1 rounded-lg hover:bg-green-700 transition">
-          {copied ? '✓ Copied!' : 'Copy'}
-        </button>
-      </div>
-    </div>
-  )
+const STATUS = {
+  open:              { label: 'Open',              fg: 'var(--color-eucalyptus)',  bg: 'var(--color-eucalyptus-3)' },
+  awaiting_response: { label: 'Awaiting response', fg: '#8A5A1F',                  bg: '#F3E2C3' },
+  responded:         { label: 'Responded',          fg: '#3B4B7A',                  bg: '#DAE0EE' },
+  resolved:          { label: 'Resolved',           fg: 'var(--color-eucalyptus)',  bg: '#E7EEDF' },
+  unresolved:        { label: 'Unresolved',         fg: 'var(--color-clay)',        bg: 'var(--color-clay-soft)' },
+  expired:           { label: 'Expired',            fg: 'var(--color-muted)',       bg: 'var(--color-paper-2)' },
 }
 
 export default function CompanyDashboardPage() {
   const { fetchUser } = useAuthStore()
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('all')
+  const [data, setData]           = useState(null)
+  const [loading, setLoading]     = useState(true)
+  const [filter, setFilter]       = useState('all')
+  const [search, setSearch]       = useState('')
   const [respondingTo, setRespondingTo] = useState(null)
 
   useEffect(() => {
-    // Sync user first so company association is fresh, then load dashboard
     fetchUser().finally(() => {
       api.get('/dashboard/company')
         .then((res) => setData(res.data))
@@ -79,235 +43,397 @@ export default function CompanyDashboardPage() {
     setRespondingTo(null)
   }
 
-  if (loading) return <DashboardSkeleton />
-  if (!data) return <NoCompanyPrompt />
+  const complaints = data?.complaints ?? []
+  const stats      = data?.stats ?? {}
+  const company    = data?.company ?? null
 
-  const { company, stats, complaints } = data
+  const filtered = useMemo(() => {
+    let list = filter === 'all' ? complaints : complaints.filter((c) => c.status === filter)
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter((c) =>
+        c.title?.toLowerCase().includes(q) ||
+        c.consumer?.name?.toLowerCase().includes(q) ||
+        c.category?.toLowerCase().includes(q)
+      )
+    }
+    return list
+  }, [complaints, filter, search])
+
+  if (loading) return <Skeleton />
+  if (!data)   return <NoCompanyPrompt />
+
   const score = company.score
-  const badge = score?.badge ?? 'not_rated'
+  const band  = score?.badge ?? 'not_rated'
+  const b     = BAND[band]
 
-  const filtered = filter === 'all' ? complaints : complaints.filter((c) => c.status === filter)
+  const needsResponse = complaints.filter((c) => c.status === 'open' && !c.response).length
+  const totalUnread   = stats.unread ?? 0
 
   const statItems = [
-    { label: 'Total',     value: stats.total },
-    { label: 'Open',      value: stats.open,             alert: stats.open > 0 },
-    { label: 'Responded', value: stats.responded },
-    { label: 'Resolved',  value: stats.resolved },
-    { label: 'Pending',   value: stats.pending_response, alert: stats.pending_response > 0 },
-    { label: 'Unresolved',value: stats.unresolved },
+    { label: 'Total',       value: stats.total,            key: 'all' },
+    { label: 'Open',        value: stats.open,             key: 'open' },
+    { label: 'Responded',   value: stats.responded,        key: 'responded' },
+    { label: 'Resolved',    value: stats.resolved,         key: 'resolved' },
+    { label: 'Unresolved',  value: stats.unresolved,       key: 'unresolved' },
   ]
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
+    <div className="max-w-4xl mx-auto space-y-5">
+
+      {/* Company header card */}
       <div className="card p-5 sm:p-6">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h1 className="page-header">{company.name}</h1>
-              <span className="badge badge-gray capitalize">{company.subscription?.plan ?? 'free'}</span>
+        <div className="flex items-start gap-4 flex-wrap">
+          <CompanyLogo company={company} size="lg" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <h1 className="font-display text-2xl font-semibold tracking-tight">{company.name}</h1>
+              <span className="chip capitalize">{company.subscription?.plan ?? 'free'}</span>
+              {company.verified_badge && (
+                <span className="chip font-semibold text-[color:var(--color-eucalyptus)]"
+                  style={{ borderColor: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
+                  <Icon name="verified" size={12} /> Verified
+                </span>
+              )}
             </div>
-            <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
-              <Link to={`/companies/${company.slug}`} className="text-green-600 hover:underline text-sm flex items-center gap-1">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                </svg>
-                Public profile
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <Link to={`/companies/${company.slug}`}
+                className="flex items-center gap-1 text-[color:var(--color-eucalyptus)] hover:underline">
+                <Icon name="arrow-ul" size={13} /> Public profile
               </Link>
-              <Link to="/company/analytics" className="text-gray-500 hover:text-green-600 text-sm">Analytics →</Link>
-              <Link to="/company/billing" className="text-gray-500 hover:text-green-600 text-sm">Billing →</Link>
+              <Link to="/company/analytics" className="text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]">Analytics</Link>
+              <Link to="/company/billing"   className="text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]">Billing</Link>
+              <Link to="/company/settings"  className="text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]">Settings</Link>
             </div>
           </div>
 
+          {/* Score pill */}
           {score && (
-            <div className="text-center">
-              <p className={`text-5xl font-bold ${BADGE_COLOR[badge]}`}>
-                {badge === 'not_rated' ? '—' : Math.round(score.score)}
+            <div className="card px-5 py-3 text-center shrink-0 bg-[color:var(--color-paper-2)]">
+              <p className="font-display text-[40px] font-semibold leading-none" style={{ color: b.text }}>
+                {band === 'not_rated' ? '—' : Math.round(score.score)}
               </p>
-              <p className="text-xs text-gray-400 mt-0.5">reputation score</p>
-              <p className={`text-xs font-medium mt-1 capitalize ${BADGE_COLOR[badge]}`}>{badge.replace('_', ' ')}</p>
+              <p className="caps mt-1" style={{ color: b.text }}>{b.label}</p>
+              <p className="text-[10px] text-[color:var(--color-muted)] mt-0.5">Fair Go score</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Alerts */}
-      {(stats.open > 0 || stats.pending_response > 0) && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
-            <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-            </svg>
+      {/* Unread replies banner */}
+      {totalUnread > 0 && (
+        <div className="rounded-2xl border border-[color:var(--color-clay)] bg-[color:var(--color-clay-soft)] p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: 'var(--color-clay)' }}>
+            <Icon name="reply" size={18} className="text-white" />
           </div>
-          <div>
-            <p className="text-sm font-semibold text-amber-900">
-              {stats.open + stats.pending_response} complaint{stats.open + stats.pending_response > 1 ? 's' : ''} need your attention
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-[color:var(--color-ink)]">
+              {totalUnread} unread follow-up{totalUnread > 1 ? 's' : ''} from consumers
             </p>
-            <p className="text-xs text-amber-700 mt-0.5">Respond promptly to improve your reputation score.</p>
+            <p className="text-xs text-[color:var(--color-ink-2)] mt-0.5">
+              Open the complaint to read — marked as read automatically.
+            </p>
           </div>
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-        {statItems.map((s) => (
-          <div key={s.label} className={`stat-card ${s.alert ? 'border-amber-200 bg-amber-50' : ''}`}>
-            <p className={`text-2xl font-bold ${s.alert ? 'text-amber-600' : 'text-gray-800'}`}>{s.value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+      {/* Needs response banner */}
+      {needsResponse > 0 && (
+        <div className="rounded-2xl border border-[color:var(--color-ochre)] bg-[#FDF6E8] p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-[color:var(--color-ochre)] flex items-center justify-center shrink-0">
+            <Icon name="clock" size={18} className="text-white" />
           </div>
-        ))}
-      </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-[color:var(--color-ink)]">
+              {needsResponse} complaint{needsResponse > 1 ? 's' : ''} need{needsResponse === 1 ? 's' : ''} a response
+            </p>
+            <p className="text-xs text-[color:var(--color-ink-2)] mt-0.5">
+              You have 7 days from filing — unanswered complaints hurt your score.
+            </p>
+          </div>
+          <button onClick={() => setFilter('open')} className="btn btn-secondary shrink-0 text-xs">
+            View
+          </button>
+        </div>
+      )}
 
-      {/* Trust badge */}
-      <TrustBadgeSection slug={company.slug} />
-
-      {/* Filter tabs */}
-      <div className="flex gap-1.5 flex-wrap">
-        {['all', 'open', 'responded', 'resolved', 'unresolved'].map((f) => (
-          <button key={f} onClick={() => setFilter(f)}
-            className={`text-sm px-4 py-1.5 rounded-xl border transition capitalize ${
-              filter === f
-                ? 'bg-green-600 text-white border-green-600'
-                : 'bg-white border-gray-200 text-gray-600 hover:border-green-300'
+      {/* Stats strip */}
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+        {statItems.map((s) => (
+          <button key={s.key} onClick={() => setFilter(s.key)}
+            className={`card p-4 text-left transition cursor-pointer hover:shadow-md ${
+              filter === s.key ? 'ring-2 ring-[color:var(--color-eucalyptus)] ring-offset-1' : ''
             }`}>
-            {f.replace('_', ' ')}
+            <p className="font-display text-[28px] font-semibold leading-none text-[color:var(--color-ink)]">{s.value}</p>
+            <p className="text-xs text-[color:var(--color-muted)] mt-1">{s.label}</p>
           </button>
         ))}
       </div>
 
+      {/* Search + filter bar */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Icon name="search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)]" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search complaints, consumers, categories…"
+            className="input pl-9 text-sm w-full"
+          />
+        </div>
+        <div className="flex gap-1.5 flex-wrap">
+          {['all', 'open', 'responded', 'resolved', 'unresolved'].map((f) => (
+            <button key={f} onClick={() => setFilter(f)}
+              className={`chip capitalize ${filter === f ? 'chip-active' : ''}`}>
+              {f.replace('_', ' ')}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Complaints inbox */}
       {filtered.length === 0 ? (
-        <div className="card p-12 text-center">
-          <div className="text-5xl mb-4">📭</div>
-          <h3 className="font-semibold text-gray-800 mb-1">No complaints here</h3>
-          <p className="text-sm text-gray-500">
-            {filter === 'all' ? 'No complaints have been submitted yet.' : `No ${filter} complaints.`}
+        <div className="card p-14 text-center">
+          <div className="font-display italic-display text-[24px] mb-2 text-[color:var(--color-muted)]">
+            {search ? 'No results found.' : 'Inbox is clear.'}
+          </div>
+          <p className="text-sm text-[color:var(--color-muted)]">
+            {search ? 'Try a different search term.' : filter === 'all' ? 'No complaints yet.' : `No ${filter} complaints.`}
           </p>
         </div>
       ) : (
         <ul className="space-y-3">
-          {filtered.map((c) => {
-            const st = STATUS_CONFIG[c.status] ?? STATUS_CONFIG.open
-            return (
-              <li key={c.id} className="card p-5 hover:shadow-md transition">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <span className={st.style}>{st.label}</span>
-                      <span className="text-xs text-gray-400 capitalize">{c.category}</span>
-                    </div>
-                    <Link to={`/complaints/${c.id}`}
-                      className="font-semibold text-gray-900 hover:text-green-600 transition block">
-                      {c.title}
-                    </Link>
-                    <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-gray-400">
-                      <span className="font-medium text-gray-500">{c.consumer?.name}</span>
-                      <span>·</span>
-                      <span>{new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                    </div>
-                  </div>
-                  {!c.response && (
-                    <button
-                      onClick={() => setRespondingTo(respondingTo === c.id ? null : c.id)}
-                      className={`shrink-0 text-xs px-3 py-1.5 rounded-lg font-medium transition ${
-                        respondingTo === c.id
-                          ? 'bg-gray-100 text-gray-600'
-                          : 'bg-green-600 text-white hover:bg-green-700'
-                      }`}>
-                      {respondingTo === c.id ? 'Cancel' : 'Respond'}
-                    </button>
-                  )}
-                </div>
-
-                <p className="text-sm text-gray-500 mt-3 line-clamp-2">{c.description}</p>
-
-                {c.response && (
-                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-start gap-2">
-                    <div className="w-5 h-5 bg-green-100 rounded shrink-0 flex items-center justify-center mt-0.5">
-                      <svg className="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
-                      </svg>
-                    </div>
-                    <p className="text-xs text-gray-500 line-clamp-2">
-                      <span className="font-medium text-gray-700">Your response: </span>{c.response.content}
-                    </p>
-                  </div>
-                )}
-
-                {respondingTo === c.id && (
-                  <div className="mt-4">
-                    <CompanyResponseForm
-                      complaintId={c.id}
-                      onSubmitted={(response) => handleResponseSubmitted(c.id, response)}
-                    />
-                  </div>
-                )}
-
-                {c.feedback && (
-                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">
-                    <span className="text-sm">{c.feedback.resolved ? '✅' : '❌'}</span>
-                    <span className="text-xs text-gray-500">
-                      {c.feedback.resolved ? 'Consumer marked resolved' : 'Consumer marked unresolved'}
-                      {c.feedback.rating && ` · ${c.feedback.rating}/5 ★`}
-                      {c.feedback.comment && ` · "${c.feedback.comment}"`}
-                    </span>
-                  </div>
-                )}
-              </li>
-            )
-          })}
+          {filtered.map((c) => (
+            <ComplaintCard
+              key={c.id}
+              complaint={c}
+              company={company}
+              respondingTo={respondingTo}
+              setRespondingTo={setRespondingTo}
+              onResponseSubmitted={handleResponseSubmitted}
+            />
+          ))}
         </ul>
       )}
+
+      {/* Trust badge embed */}
+      <TrustBadge slug={company.slug} />
     </div>
   )
 }
 
+/* ─── Complaint card ─────────────────────────────────────── */
+function ComplaintCard({ complaint: c, company, respondingTo, setRespondingTo, onResponseSubmitted }) {
+  const st          = STATUS[c.status] ?? STATUS.open
+  const unreadCount = c.unread_count ?? 0
+  const daysLeft    = c.expires_at
+    ? Math.ceil((new Date(c.expires_at) - Date.now()) / 86400000)
+    : null
+  const isUrgent    = !c.response && daysLeft !== null && daysLeft <= 2 && daysLeft > 0
+  const isExpiring  = !c.response && daysLeft !== null && daysLeft <= 5 && daysLeft > 2
+
+  return (
+    <li className={`card p-5 transition hover:shadow-md ${
+      unreadCount > 0 ? 'border-l-[3px] border-l-[color:var(--color-clay)]' : ''
+    } ${isUrgent ? 'border-l-[3px] border-l-[color:var(--color-clay)]' : ''}`}>
+
+      <div className="flex items-start gap-4">
+        <div className="flex-1 min-w-0">
+          {/* Status + category + urgency */}
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+              style={{ color: st.fg, background: st.bg }}>
+              {st.label}
+            </span>
+            <span className="text-xs text-[color:var(--color-muted)] capitalize">{c.category}</span>
+            {unreadCount > 0 && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full"
+                style={{ background: 'var(--color-clay)', color: 'var(--color-paper)' }}>
+                {unreadCount} new
+              </span>
+            )}
+            {isUrgent && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ color: 'var(--color-clay)', background: 'var(--color-clay-soft)' }}>
+                <Icon name="clock" size={10} /> {daysLeft}d left
+              </span>
+            )}
+            {isExpiring && !isUrgent && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ color: '#8A5A1F', background: '#F3E2C3' }}>
+                <Icon name="clock" size={10} /> {daysLeft}d left
+              </span>
+            )}
+          </div>
+
+          {/* Title */}
+          <Link to={`/complaints/${c.id}`}
+            className="font-semibold text-[color:var(--color-ink)] hover:text-[color:var(--color-eucalyptus)] transition block leading-snug mb-1.5">
+            {c.title}
+          </Link>
+
+          {/* Meta */}
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[color:var(--color-muted)]">
+            <span className="flex items-center gap-1">
+              <Icon name="user" size={11} />
+              <span className="font-medium text-[color:var(--color-ink-2)]">{c.consumer?.name}</span>
+            </span>
+            <span>·</span>
+            <span className="flex items-center gap-1">
+              <Icon name="calendar" size={11} />
+              {new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </span>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="shrink-0 flex flex-col items-end gap-2">
+          {!c.response ? (
+            <button
+              onClick={() => setRespondingTo(respondingTo === c.id ? null : c.id)}
+              className={`btn text-xs ${respondingTo === c.id ? 'btn-secondary' : 'btn-primary'}`}>
+              {respondingTo === c.id ? 'Cancel' : 'Respond'}
+            </button>
+          ) : (
+            <Link to={`/complaints/${c.id}`} className="btn btn-secondary text-xs">
+              View <Icon name="arrow-r" size={12} />
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {/* Description preview */}
+      <p className="text-sm text-[color:var(--color-ink-2)] mt-3 line-clamp-2 leading-relaxed">
+        {c.description}
+      </p>
+
+      {/* Response preview */}
+      {c.response && (
+        <div className="mt-3 pt-3 border-t hairline-2 flex items-start gap-2.5">
+          <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-[color:var(--color-eucalyptus-3)]">
+            <Icon name="check" size={12} className="text-[color:var(--color-eucalyptus)]" />
+          </div>
+          <p className="text-xs text-[color:var(--color-ink-2)] line-clamp-2 flex-1">
+            <span className="font-medium text-[color:var(--color-ink)]">Your response: </span>
+            {c.response.content}
+          </p>
+        </div>
+      )}
+
+      {/* Consumer feedback */}
+      {c.feedback && (
+        <div className="mt-3 pt-3 border-t hairline-2 flex items-center gap-2 text-xs text-[color:var(--color-muted)]">
+          <Icon name={c.feedback.resolved ? 'check' : 'x'} size={13}
+            className={c.feedback.resolved ? 'text-[color:var(--color-eucalyptus)]' : 'text-[color:var(--color-clay)]'} />
+          <span>
+            {c.feedback.resolved ? 'Consumer marked resolved' : 'Consumer marked unresolved'}
+            {c.feedback.rating ? ` · ${c.feedback.rating}/5` : ''}
+            {c.feedback.would_deal_again !== null && (
+              <span className="ml-1">
+                · {c.feedback.would_deal_again ? '👍 Would deal again' : '👎 Would not deal again'}
+              </span>
+            )}
+          </span>
+        </div>
+      )}
+
+      {/* Inline response form */}
+      {respondingTo === c.id && (
+        <div className="mt-4 pt-4 border-t hairline-2">
+          <CompanyResponseForm
+            complaintId={c.id}
+            onSubmitted={(response) => onResponseSubmitted(c.id, response)}
+          />
+        </div>
+      )}
+    </li>
+  )
+}
+
+/* ─── Trust badge snippet ────────────────────────────────── */
+function TrustBadge({ slug }) {
+  const [copied, setCopied] = useState(false)
+  const snippet = `<div id="fairgo-badge"></div>\n<script src="${window.location.origin}/api/badge/${slug}/embed.js"><\/script>`
+  const copy = () => {
+    navigator.clipboard.writeText(snippet)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <div className="card p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-[color:var(--color-eucalyptus-3)] rounded-lg flex items-center justify-center">
+            <Icon name="verified" size={14} className="text-[color:var(--color-eucalyptus)]" />
+          </div>
+          <h3 className="text-sm font-semibold text-[color:var(--color-ink)]">Trust Badge embed</h3>
+        </div>
+        <Link to="/company/billing" className="text-xs text-[color:var(--color-eucalyptus)] hover:underline">
+          Manage plan →
+        </Link>
+      </div>
+      <p className="text-xs text-[color:var(--color-muted)] mb-3">
+        Paste this on your website to display your live Fair Go score.
+      </p>
+      <div className="relative">
+        <pre className="bg-[color:var(--color-paper-2)] border hairline rounded-xl p-3 text-xs text-[color:var(--color-ink-2)] overflow-x-auto whitespace-pre-wrap break-all font-mono">
+          {snippet}
+        </pre>
+        <button onClick={copy}
+          className="absolute top-2 right-2 btn btn-primary text-xs py-1 px-2.5">
+          {copied ? <><Icon name="check" size={11} /> Copied</> : 'Copy'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ─── No company prompt ──────────────────────────────────── */
 function NoCompanyPrompt() {
   return (
     <div className="max-w-lg mx-auto py-16 px-4 text-center">
-      <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-        <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-        </svg>
+      <div className="w-16 h-16 bg-[color:var(--color-eucalyptus-3)] rounded-2xl flex items-center justify-center mx-auto mb-5">
+        <Icon name="building" size={28} className="text-[color:var(--color-eucalyptus)]" />
       </div>
-
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">Register your business</h2>
-      <p className="text-gray-500 text-sm leading-relaxed mb-8 max-w-sm mx-auto">
+      <h2 className="font-display text-2xl font-semibold mb-2">Register your business</h2>
+      <p className="text-[color:var(--color-muted)] text-sm leading-relaxed mb-8 max-w-sm mx-auto">
         Your account is ready — now set up your business profile so customers can find you and you can manage complaints.
       </p>
-
       <div className="card p-6 text-left mb-6 space-y-4">
         {[
-          { icon: '🔍', title: 'Get discovered', desc: 'Appear in company searches and the public rankings.' },
-          { icon: '💬', title: 'Respond to complaints', desc: 'Manage and reply to customer issues in one place.' },
-          { icon: '📈', title: 'Build your reputation', desc: 'Earn a public trust score that grows as you resolve issues.' },
+          { icon: 'search',   title: 'Get discovered',       desc: 'Appear in company searches and public rankings.' },
+          { icon: 'reply',    title: 'Respond to complaints', desc: 'Manage and reply to customer issues in one place.' },
+          { icon: 'sparkle',  title: 'Build your reputation', desc: 'Earn a public trust score that grows as you resolve issues.' },
         ].map((f) => (
           <div key={f.title} className="flex items-start gap-3">
-            <span className="text-xl shrink-0 mt-0.5">{f.icon}</span>
+            <div className="w-8 h-8 bg-[color:var(--color-paper-2)] rounded-lg flex items-center justify-center shrink-0">
+              <Icon name={f.icon} size={15} className="text-[color:var(--color-eucalyptus)]" />
+            </div>
             <div>
-              <p className="text-sm font-semibold text-gray-900">{f.title}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{f.desc}</p>
+              <p className="text-sm font-semibold text-[color:var(--color-ink)]">{f.title}</p>
+              <p className="text-xs text-[color:var(--color-muted)] mt-0.5">{f.desc}</p>
             </div>
           </div>
         ))}
       </div>
-
-      <Link to="/companies/register" className="btn-primary w-full justify-center flex text-sm py-3">
+      <Link to="/companies/register" className="btn btn-primary w-full justify-center text-sm py-3">
         Set up my business profile
       </Link>
-      <p className="text-xs text-gray-400 mt-3">Takes less than 2 minutes · Free forever</p>
+      <p className="text-xs text-[color:var(--color-muted)] mt-3">Takes less than 2 minutes · Free forever</p>
     </div>
   )
 }
 
-function DashboardSkeleton() {
+/* ─── Skeleton ───────────────────────────────────────────── */
+function Skeleton() {
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-pulse">
+    <div className="max-w-4xl mx-auto space-y-5 animate-pulse">
       <div className="card p-6 h-28" />
-      <div className="grid grid-cols-6 gap-3">
-        {[...Array(6)].map((_, i) => <div key={i} className="h-20 bg-gray-100 rounded-2xl" />)}
+      <div className="grid grid-cols-5 gap-3">
+        {[...Array(5)].map((_, i) => <div key={i} className="h-20 bg-[color:var(--color-paper-2)] rounded-2xl" />)}
       </div>
-      {[...Array(3)].map((_, i) => <div key={i} className="h-28 bg-gray-100 rounded-2xl" />)}
+      {[...Array(3)].map((_, i) => <div key={i} className="h-28 bg-[color:var(--color-paper-2)] rounded-2xl" />)}
     </div>
   )
 }

@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ComplaintReopenController;
+use App\Http\Controllers\PhoneVerificationController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\TrustBadgeController;
 use App\Http\Controllers\CompanyController;
@@ -13,6 +15,7 @@ use App\Http\Controllers\CompanyAnalyticsController;
 use App\Http\Controllers\CompanyDashboardController;
 use App\Http\Controllers\ConsumerDashboardController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\AbnVerificationController;
 use Illuminate\Support\Facades\Route;
 
 // Auth routes
@@ -21,14 +24,17 @@ Route::prefix('auth')->group(function () {
     Route::post('login',    [AuthController::class, 'login']);
 
     Route::middleware('auth:sanctum')->group(function () {
-        Route::post('logout', [AuthController::class, 'logout']);
-        Route::get('me',      [AuthController::class, 'me']);
+        Route::post('logout',        [AuthController::class, 'logout']);
+        Route::get('me',             [AuthController::class, 'me']);
+        Route::post('phone/send',    [PhoneVerificationController::class, 'send']);
+        Route::post('phone/verify',  [PhoneVerificationController::class, 'verify']);
     });
 });
 
 // Search & leaderboard
 Route::get('search',      SearchController::class);
-Route::get('leaderboard', \App\Http\Controllers\LeaderboardController::class);
+Route::get('leaderboard',     \App\Http\Controllers\LeaderboardController::class);
+Route::get('most-complained', \App\Http\Controllers\MostComplainedController::class);
 
 // Trust badge — public, CORS open
 Route::get('badge/{slug}',          [TrustBadgeController::class, 'show']);
@@ -36,8 +42,9 @@ Route::get('badge/{slug}/embed.js', [TrustBadgeController::class, 'embedScript']
 
 // Company routes
 Route::prefix('companies')->group(function () {
-    Route::get('abn/{abn}',  [CompanyController::class, 'lookupAbn']);
-    Route::get('{slug}',     [CompanyController::class, 'show']);
+    Route::get('abn/{abn}',          [CompanyController::class, 'lookupAbn']);
+    Route::get('{slug}/performance', [CompanyController::class, 'performance']);
+    Route::get('{slug}',             [CompanyController::class, 'show']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [CompanyController::class, 'store']);
@@ -56,13 +63,16 @@ Route::prefix('complaints')->group(function () {
         Route::post('{complaint}/feedback',           [ResolutionFeedbackController::class, 'store']);
         Route::get('{complaint}/replies',             [ComplaintReplyController::class, 'index']);
         Route::post('{complaint}/replies',            [ComplaintReplyController::class, 'store']);
+        Route::post('{complaint}/reopen',             ComplaintReopenController::class);
     });
 });
 
 // Consumer dashboard
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('dashboard/consumer', ConsumerDashboardController::class);
+    Route::get('dashboard/consumer',  ConsumerDashboardController::class);
     Route::get('dashboard/company',   CompanyDashboardController::class);
+    Route::patch('company/settings',  [CompanyController::class, 'updateSettings']);
+    Route::post('company/abn/verify', [AbnVerificationController::class, 'verify']);
 });
 
 // Analytics — Standard or Pro plan required
@@ -86,4 +96,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::get('companies',                     [AdminController::class, 'companies']);
     Route::put('companies/{company}',           [AdminController::class, 'updateCompany']);
     Route::get('users',                         [AdminController::class, 'users']);
+    Route::put('users/{user}',                  [AdminController::class, 'updateUser']);
+    Route::get('moderation',                    [AdminController::class, 'moderationQueue']);
+    Route::put('moderation/{complaint}',        [AdminController::class, 'moderationDecision']);
 });
