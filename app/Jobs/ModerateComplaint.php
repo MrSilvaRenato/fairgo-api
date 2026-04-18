@@ -55,8 +55,8 @@ class ModerateComplaint implements ShouldQueue
             }
         }
 
-        // Rejected complaints are hidden from public
-        if ($result['action'] === 'rejected') {
+        // Flagged and rejected complaints are held from public view until admin reviews
+        if (in_array($result['action'], ['flagged', 'rejected'])) {
             $update['is_public'] = false;
         }
 

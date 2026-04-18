@@ -82,10 +82,11 @@ export default function HomePage() {
     navigate(`/search?q=${encodeURIComponent(query.trim())}`)
   }
 
-  const displayList = useMemo(
-    () => boardMode === 'best' ? leaderboard : [...leaderboard].reverse(),
-    [boardMode, leaderboard]
-  )
+  const displayList = useMemo(() => {
+    // Never surface not_rated companies in the leaderboard — they don't have enough data
+    const rated = leaderboard.filter((c) => c.badge !== 'not_rated')
+    return boardMode === 'best' ? rated : [...rated].reverse()
+  }, [boardMode, leaderboard])
 
   return (
     <div className="-mt-8">
@@ -478,7 +479,7 @@ export default function HomePage() {
                 <span className="italic-display" style={{ color: 'var(--color-ochre-2)' }}>Use it.</span>
               </h2>
               <p className="text-[15px] max-w-md mx-auto mb-8 leading-relaxed" style={{ color: '#C9CFC8' }}>
-                Join Fair Go — the public record where Australian consumer voices create real change.
+                Join Aus Fair Go — the public record where Australian consumer voices create real change.
               </p>
               <div className="flex flex-wrap justify-center gap-2">
                 <Link to="/register" className="btn" style={{ background: 'var(--color-ochre)', color: 'var(--color-ink)' }}>

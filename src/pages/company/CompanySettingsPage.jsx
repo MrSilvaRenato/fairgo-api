@@ -233,7 +233,7 @@ export default function CompanySettingsPage() {
         <h2 className="caps mb-5">Account</h2>
         <div className="space-y-4">
           <ReadField label="Account email" value={company.user?.email ?? '—'} />
-          <ReadField label="Registered on Fair Go" value={
+          <ReadField label="Registered on Aus Fair Go" value={
             company.created_at
               ? new Date(company.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })
               : '—'

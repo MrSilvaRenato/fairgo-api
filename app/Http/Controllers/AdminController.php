@@ -25,6 +25,7 @@ class AdminController extends Controller
             'moderation_pending'   => Complaint::where('moderation_status', 'pending')->count(),
             'moderation_flagged'   => Complaint::where('moderation_status', 'flagged')->count(),
             'moderation_rejected'  => Complaint::where('moderation_status', 'rejected')->count(),
+            'stub_companies'       => Company::where('is_stub', true)->count(),
         ]);
     }
 
@@ -152,13 +153,42 @@ class AdminController extends Controller
             'moderation_note'   => $data['note'] ?? $complaint->moderation_note,
         ];
 
-        if ($data['action'] === 'rejected') {
+        if ($data['action'] === 'approved') {
+            // Restore public visibility — admin has reviewed and cleared it
+            $update['is_public'] = true;
+        } elseif ($data['action'] === 'rejected') {
             $update['is_public'] = false;
         }
 
         $complaint->update($update);
 
         return response()->json($complaint->fresh(['consumer:id,name,email', 'company:id,name,slug']));
+    }
+
+    // GET /admin/stub-companies — companies auto-created from unregistered complaints
+    public function stubCompanies(Request $request)
+    {
+        $query = Company::where('is_stub', true)
+            ->withCount('complaints')
+            ->latest();
+
+        if ($request->q) {
+            $query->where('name', 'like', "%{$request->q}%");
+        }
+
+        return response()->json($query->paginate(25));
+    }
+
+    // POST /admin/stub-companies/{company}/promote — mark stub as a real registered company
+    public function promoteStub(Request $request, Company $company)
+    {
+        if (!$company->is_stub) {
+            return response()->json(['message' => 'Company is already registered.'], 422);
+        }
+
+        $company->update(['is_stub' => false]);
+
+        return response()->json($company->fresh());
     }
 
     // PUT /admin/users/{user}

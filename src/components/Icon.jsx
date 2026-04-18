@@ -1,5 +1,5 @@
 /**
- * Fair Go icon system — stroke-based, 24px grid, currentColor.
+ * Aus Fair Go icon system — stroke-based, 24px grid, currentColor.
  * Replaces emoji across the app for a consistent professional feel.
  */
 export default function Icon({ name, size = 16, className = '', strokeWidth = 1.6 }) {

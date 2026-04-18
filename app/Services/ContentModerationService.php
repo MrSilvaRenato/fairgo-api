@@ -33,13 +33,13 @@ class ContentModerationService
     private const ANTHROPIC_VERSION = '2023-06-01';
 
     private const SYSTEM_PROMPT = <<<PROMPT
-You are a content moderation AI for Fair Go, an Australian consumer complaint platform similar to Reclame Aqui in Brazil.
+You are a content moderation AI for Aus Fair Go, an Australian consumer complaint platform similar to Reclame Aqui in Brazil.
 
 Your job is to review consumer complaints submitted against businesses and ensure the content is appropriate, factual, and does not violate platform rules.
 
 PLATFORM RULES:
 1. Complaints must describe a genuine consumer experience with a specific business
-2. Profanity, swear words, and offensive language must be censored (replaced with [censored by Fair Go])
+2. Profanity, swear words, and offensive language must be censored (replaced with [censored by Aus Fair Go])
 3. Personal information (phone numbers, home addresses, government ID numbers like TFN or ABN of individuals, bank account numbers) must be removed
 4. Threats of physical harm must result in rejection
 5. Defamatory claims — i.e. unverifiable accusations of criminal activity beyond what would be a normal consumer complaint (e.g. "they are running a scam", "they are criminals") should be flagged for human review, not auto-edited
@@ -85,76 +85,149 @@ PROMPT;
     }
 
     /**
-     * Word-list scan used as a safety net when:
+     * Profanity words — censored with [censored by Aus Fair Go] and flagged for review.
+     * Complaint is held from public view until an admin approves it.
+     */
+    private const PROFANITY = [
+        'fuck', 'fucking', 'fucker', 'fucked', 'fuckhead', 'fuk',
+        'shit', 'shitty', 'shitter', 'bullshit',
+        'cunt', 'cunts',
+        'bitch', 'bitches',
+        'asshole', 'arsehole', 'ass', 'arse',
+        'bastard', 'bastards',
+        'dick', 'dicks', 'dickhead',
+        'cock', 'cocks', 'cockhead',
+        'pussy', 'pussies',
+        'motherfucker', 'motherfucking',
+        'wanker', 'wankers', 'wank',
+        'prick', 'pricks',
+        'twat', 'twats',
+        'tosser', 'tossers',
+        'idiot', 'idiots',
+        'imbecile', 'imbeciles',
+        'moron', 'morons',
+        'retard', 'retarded',
+        'stupid', 'dumb', 'dumbass',
+        'loser', 'losers',
+        'liar', 'liars',
+        'pig', 'pigs',
+        'nazi', 'nazis',
+    ];
+
+    /**
+     * Defamation / hate keywords — flag for human review without auto-censoring.
+     * These may be legitimate consumer experiences that deserve nuance.
+     */
+    private const DEFAMATION = [
+        'racist', 'racists', 'racism',
+        'scammer', 'scammers',
+        'criminal', 'criminals',
+        'corrupt',
+        'illegal',
+        'fraud', 'fraudulent',
+        'terrorist', 'terrorists',
+        'pedophile', 'predator',
+        'money laundering',
+        'bribe', 'bribery',
+    ];
+
+    /**
+     * Word-list scan — safety net when:
      *  - MODERATION_DRIVER=log (dev), OR
      *  - Anthropic API is unreachable / returns an error
      *
-     * This is NOT a replacement for AI moderation — it only catches the most
-     * obvious cases (spam, severe profanity) so the platform isn't completely
-     * unprotected during local dev or API outages.
+     * Policy:
+     *  - Profanity   → words censored, action = flagged (held for admin review, NOT published)
+     *  - Defamation  → action = flagged (held for admin review, NOT published)
+     *  - Spam        → action = rejected (hidden immediately)
+     *  - Clean       → action = approved
      */
     private function localScan(string $title, string $description, ?string $resolution): array
     {
         $text = strtolower($title . ' ' . $description . ' ' . ($resolution ?? ''));
 
-        // Severe profanity — censor and mark edited
-        $profanity = ['fuck', 'shit', 'cunt', 'bitch', 'asshole', 'bastard', 'dick', 'cock', 'pussy', 'motherfucker', 'wanker', 'arsehole'];
-        $foundProfanity = [];
-        foreach ($profanity as $word) {
-            if (str_contains($text, $word)) {
-                $foundProfanity[] = $word;
-            }
-        }
+        // ── Spam check ───────────────────────────────────────────────────────
+        // Reject only when the DESCRIPTION is gibberish or meaningless.
+        // A short title is fine — "Unknown charge", "No refund" are legitimate.
+        // We require: description has at least 5 words AND is not just the title repeated.
+        $descWords      = str_word_count(trim($description), 0);
+        $descNorm       = strtolower(trim($description));
+        $titleNorm      = strtolower(trim($title));
+        $isRepeat       = $descNorm === $titleNorm || str_starts_with($descNorm, $titleNorm);
+        $isGibberish    = $descWords <= 4 || ($isRepeat && $descWords <= 6);
 
-        // Pure spam — single word / gibberish repeated, very short with no real content
-        $words      = str_word_count($description, 0);
-        $isSpam     = ($words <= 3 && str_word_count($title, 0) <= 3);
-
-        if ($isSpam && empty($foundProfanity)) {
+        if ($isGibberish) {
             return [
                 'action'                    => 'rejected',
                 'edited_title'              => null,
                 'edited_description'        => null,
                 'edited_expected_resolution'=> null,
                 'flags'                     => ['spam'],
-                'reason'                    => 'Content appears to be spam or gibberish.',
+                'reason'                    => 'Description is too short or does not describe a genuine consumer experience.',
                 'edits_summary'             => [],
             ];
         }
 
-        if (!empty($foundProfanity)) {
-            // Censor each word
-            $censor = fn(string $s) => preg_replace_callback(
-                '/\b(' . implode('|', array_map('preg_quote', $foundProfanity)) . ')\b/i',
-                fn($m) => '[censored by Fair Go]',
-                $s
-            );
+        // ── Profanity check ──────────────────────────────────────────────────
+        $foundProfanity = array_filter(
+            self::PROFANITY,
+            fn($w) => (bool) preg_match('/\b' . preg_quote($w, '/') . '\b/i', $text)
+        );
+        $foundProfanity = array_values($foundProfanity);
 
-            $editedTitle       = $censor($title);
-            $editedDesc        = $censor($description);
-            $editedResolution  = $resolution ? $censor($resolution) : null;
+        // ── Defamation check ─────────────────────────────────────────────────
+        $foundDefamation = array_filter(
+            self::DEFAMATION,
+            fn($w) => str_contains($text, strtolower($w))
+        );
+        $foundDefamation = array_values($foundDefamation);
 
-            $changed = $editedTitle !== $title || $editedDesc !== $description || $editedResolution !== $resolution;
-
+        // ── Nothing found ────────────────────────────────────────────────────
+        if (empty($foundProfanity) && empty($foundDefamation)) {
             return [
-                'action'                    => $changed ? 'edited' : 'approved',
-                'edited_title'              => $changed && $editedTitle !== $title       ? $editedTitle      : null,
-                'edited_description'        => $changed && $editedDesc !== $description  ? $editedDesc       : null,
-                'edited_expected_resolution'=> $changed && $editedResolution !== $resolution ? $editedResolution : null,
-                'flags'                     => ['profanity'],
-                'reason'                    => 'Profanity was automatically censored.',
-                'edits_summary'             => ['Profanity replaced with [censored by Fair Go]'],
+                'action'                    => 'approved',
+                'edited_title'              => null,
+                'edited_description'        => null,
+                'edited_expected_resolution'=> null,
+                'flags'                     => [],
+                'reason'                    => 'No issues found.',
+                'edits_summary'             => [],
             ];
         }
 
+        // ── Build flags ──────────────────────────────────────────────────────
+        $flags = [];
+        if (!empty($foundProfanity))   $flags[] = 'profanity';
+        if (!empty($foundDefamation))  $flags[] = 'defamation';
+
+        // ── Censor profanity in content ──────────────────────────────────────
+        $editedTitle      = $title;
+        $editedDesc       = $description;
+        $editedResolution = $resolution;
+        $edits            = [];
+
+        if (!empty($foundProfanity)) {
+            $pattern = '/\b(' . implode('|', array_map(fn($w) => preg_quote($w, '/'), $foundProfanity)) . ')\b/i';
+            $censor  = fn(string $s) => preg_replace($pattern, '[censored by Aus Fair Go]', $s);
+
+            $editedTitle      = $censor($title);
+            $editedDesc       = $censor($description);
+            $editedResolution = $resolution ? $censor($resolution) : null;
+            $edits[]          = 'Profanity replaced with [censored by Aus Fair Go]';
+        }
+
+        if (!empty($foundDefamation)) {
+            $edits[] = 'Potential defamation detected — held for human review';
+        }
+
         return [
-            'action'                    => 'approved',
-            'edited_title'              => null,
-            'edited_description'        => null,
-            'edited_expected_resolution'=> null,
-            'flags'                     => [],
-            'reason'                    => 'Local scan: no issues found.',
-            'edits_summary'             => [],
+            'action'                    => 'flagged',   // ALWAYS held — never auto-published
+            'edited_title'              => $editedTitle !== $title             ? $editedTitle      : null,
+            'edited_description'        => $editedDesc !== $description        ? $editedDesc       : null,
+            'edited_expected_resolution'=> $editedResolution !== $resolution   ? $editedResolution : null,
+            'flags'                     => $flags,
+            'reason'                    => 'Content flagged for review: ' . implode(', ', $edits),
+            'edits_summary'             => $edits,
         ];
     }
 

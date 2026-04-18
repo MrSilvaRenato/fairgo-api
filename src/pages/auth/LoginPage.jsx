@@ -41,7 +41,7 @@ export default function LoginPage() {
             <div>
               <p className="text-sm font-semibold" style={{ color: 'var(--color-clay)' }}>Account suspended</p>
               <p className="text-xs mt-0.5" style={{ color: 'var(--color-ink-2)' }}>
-                This account has been suspended by Fair Go. Contact <a href="mailto:support@fairgo.com.au" className="underline">support@fairgo.com.au</a> if you believe this is an error.
+                This account has been suspended by Aus Fair Go. Contact <a href="mailto:support@ausfairgo.com.au" className="underline">support@ausfairgo.com.au</a> if you believe this is an error.
               </p>
             </div>
           </div>
@@ -70,7 +70,7 @@ export default function LoginPage() {
             {hasDraft ? 'Sign in to continue' : 'Welcome back'}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            {hasDraft ? 'Your complaint will be submitted right after' : 'Sign in to your Fair Go account'}
+            {hasDraft ? 'Your complaint will be submitted right after' : 'Sign in to your Aus Fair Go account'}
           </p>
         </div>
 

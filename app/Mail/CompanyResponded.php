@@ -18,7 +18,7 @@ class CompanyResponded extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Company has responded to your complaint — Fair Go');
+        return new Envelope(subject: 'Company has responded to your complaint — Aus Fair Go');
     }
 
     public function content(): Content

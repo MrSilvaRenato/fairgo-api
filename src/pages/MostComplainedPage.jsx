@@ -31,7 +31,7 @@ export default function MostComplainedPage() {
 
   useSeoMeta({
     title: 'Most complained about companies',
-    description: 'See which Australian businesses receive the most consumer complaints on Fair Go. Updated in real-time.',
+    description: 'See which Australian businesses receive the most consumer complaints on Aus Fair Go. Updated in real-time.',
   })
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export default function MostComplainedPage() {
       <div>
         <h1 className="font-display text-2xl font-semibold tracking-tight">Most complained about</h1>
         <p className="text-sm text-[color:var(--color-muted)] mt-0.5">
-          Australian businesses ranked by volume of consumer complaints filed on Fair Go.
+          Australian businesses ranked by volume of consumer complaints filed on Aus Fair Go.
         </p>
       </div>
 

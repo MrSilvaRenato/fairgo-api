@@ -14,12 +14,14 @@ class Company extends Model
         'name',
         'slug',
         'abn',
+        'abn_entity_name',
         'industry',
         'description',
         'website',
         'logo_url',
         'logo',
         'claimed',
+        'is_stub',
         'verified_badge',
         'not_recommended',
         'abn_verified',
@@ -29,6 +31,7 @@ class Company extends Model
     {
         return [
             'claimed'         => 'boolean',
+            'is_stub'         => 'boolean',
             'verified_badge'  => 'boolean',
             'not_recommended' => 'boolean',
             'abn_verified'    => 'boolean',

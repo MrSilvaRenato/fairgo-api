@@ -31,6 +31,9 @@ Route::prefix('auth')->group(function () {
     });
 });
 
+// Public ABN verification (used by complaint form)
+Route::get('abn/check/{abn}', [\App\Http\Controllers\AbnCheckController::class, 'check']);
+
 // Search & leaderboard
 Route::get('search',      SearchController::class);
 Route::get('leaderboard',     \App\Http\Controllers\LeaderboardController::class);
@@ -99,4 +102,6 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::put('users/{user}',                  [AdminController::class, 'updateUser']);
     Route::get('moderation',                    [AdminController::class, 'moderationQueue']);
     Route::put('moderation/{complaint}',        [AdminController::class, 'moderationDecision']);
+    Route::get('stub-companies',                [AdminController::class, 'stubCompanies']);
+    Route::post('stub-companies/{company}/promote', [AdminController::class, 'promoteStub']);
 });

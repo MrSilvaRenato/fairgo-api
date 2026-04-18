@@ -1,7 +1,7 @@
 <x-mail::message>
 # {{ $complaint->company->name }} has responded to your complaint
 
-Your complaint has received a response on Fair Go.
+Your complaint has received a response on Aus Fair Go.
 
 **Your complaint:** {{ Str::limit($complaint->description, 120) }}
 

@@ -59,7 +59,7 @@ export default function CompanyProfilePage() {
   useSeoMeta({
     title:       company ? `${company.name} reviews & complaints` : undefined,
     description: company
-      ? `Read ${complaints.length} consumer complaints about ${company.name}. Fair Go score: ${score ? Math.round(score.score) : 'not rated'}. See how ${company.name} handles customer issues.`
+      ? `Read ${complaints.length} consumer complaints about ${company.name}. Aus Fair Go score: ${score ? Math.round(score.score) : 'not rated'}. See how ${company.name} handles customer issues.`
       : undefined,
     url: company ? `${window.location.origin}/companies/${company.slug}` : undefined,
     type: 'profile',
@@ -97,7 +97,7 @@ function Breadcrumb({ company }) {
   return (
     <div className="pt-6 pb-3 flex items-center justify-between text-xs text-[color:var(--color-muted)] font-mono">
       <div className="flex items-center gap-1.5 flex-wrap">
-        <Link to="/" className="hover:text-[color:var(--color-ink)]">fair-go.au</Link>
+        <Link to="/" className="hover:text-[color:var(--color-ink)]">ausfairgo.com.au</Link>
         <Icon name="chevron-r" size={12} />
         <Link to="/" className="hover:text-[color:var(--color-ink)]">companies</Link>
         {company.industry && (
@@ -137,7 +137,7 @@ function Hero({ company, score, band }) {
             {company.verified_badge && (
               <span className="chip font-semibold"
                 style={{ color: 'var(--color-eucalyptus)', borderColor: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
-                <Icon name="verified" size={13} /> Fair Go Verified
+                <Icon name="verified" size={13} /> Aus Fair Go Verified
               </span>
             )}
             {company.not_recommended && (
@@ -173,7 +173,7 @@ function Hero({ company, score, band }) {
 
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 max-w-xl text-sm">
             {company.abn && <Meta label="ABN" value={company.abn} mono />}
-            <Meta label="On Fair Go since" value={company.created_at ? new Date(company.created_at).toLocaleDateString('en-AU', { month: 'short', year: 'numeric' }) : '—'} />
+            <Meta label="On Aus Fair Go since" value={company.created_at ? new Date(company.created_at).toLocaleDateString('en-AU', { month: 'short', year: 'numeric' }) : '—'} />
             {score && score.total_complaints > 0 && (
               <Meta
                 label="Avg response"
@@ -185,19 +185,47 @@ function Hero({ company, score, band }) {
         </div>
 
         <div className="rise" style={{ animationDelay: '80ms' }}>
-          <div className="card p-6 sm:p-7 w-full md:w-[300px]">
-            <div className="flex items-start justify-between mb-3">
-              <div className="caps">Fair Go score</div>
-              {/* trend badge reserved for future API field */}
+          {score?.is_rated ? (
+            <div className="card p-6 sm:p-7 w-full md:w-[300px]">
+              <div className="caps mb-3">Aus Fair Go score</div>
+              <div className="flex justify-center">
+                <ScoreMeter score={score.score ?? 0} band={band} />
+              </div>
+              <p className="text-xs text-[color:var(--color-muted)] text-center mt-3 leading-relaxed">
+                Weighted from {(score.total_complaints ?? 0).toLocaleString()} public complaints,
+                response rate and resolution quality.
+              </p>
             </div>
-            <div className="flex justify-center">
-              <ScoreMeter score={score?.score ?? 0} band={band} />
+          ) : (
+            <div className="card p-6 sm:p-7 w-full md:w-[300px] space-y-4">
+              <div className="caps">Aus Fair Go score</div>
+              {/* Not enough data yet */}
+              <div className="flex flex-col items-center gap-3 py-4 text-center">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center text-3xl"
+                  style={{ background: 'var(--color-paper-2)' }}>
+                  📊
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-[color:var(--color-ink)]">Not enough data yet</p>
+                  <p className="text-xs text-[color:var(--color-muted)] mt-1 leading-relaxed">
+                    {score?.total_complaints > 0
+                      ? `${score.complaints_needed} more complaint${score.complaints_needed !== 1 ? 's' : ''} needed to generate a rating`
+                      : 'No complaints have been filed yet'}
+                  </p>
+                </div>
+              </div>
+              {/* Raw stats while below threshold */}
+              {score && score.total_complaints > 0 && (
+                <div className="space-y-2 border-t pt-4" style={{ borderColor: 'var(--color-line)' }}>
+                  <StatRow label="Complaints filed" value={score.total_complaints} />
+                  <StatRow label="Response rate"    value={`${Math.round((score.response_rate ?? 0) * 100)}%`} />
+                </div>
+              )}
+              <p className="text-[11px] text-[color:var(--color-muted)] leading-relaxed text-center">
+                A minimum of 10 complaints is required to generate a fair and reliable score.
+              </p>
             </div>
-            <p className="text-xs text-[color:var(--color-muted)] text-center mt-3 leading-relaxed">
-              Weighted from {(score?.total_complaints ?? 0).toLocaleString()} public complaints,
-              response rate and resolution quality.
-            </p>
-          </div>
+          )}
         </div>
       </div>
     </section>
@@ -237,11 +265,13 @@ function TrendBadge({ trend }) {
 /* ─── Stats strip ────────────────────────────────────────── */
 function StatsStrip({ score }) {
   if (!score) return null
+  const rated = score.is_rated
+  const none  = score.total_complaints < 1
   const items = [
     { k: 'Public complaints', v: score.total_complaints.toLocaleString(), sub: 'on record' },
-    { k: 'Response rate', v: score.total_complaints < 1 ? '—' : `${Math.round(score.response_rate * 100)}%`, sub: 'within 7 days' },
-    { k: 'Resolution rate', v: score.total_complaints < 1 ? '—' : `${Math.round(score.resolution_rate * 100)}%`, sub: 'of responded cases' },
-    { k: 'Avg. response time', v: score.total_complaints < 1 ? '—' : score.avg_response_hours < 1 ? '<1h' : `${Math.round(score.avg_response_hours)}h`, sub: 'median' },
+    { k: 'Response rate',     v: none ? '—' : `${Math.round(score.response_rate * 100)}%`,   sub: rated ? 'within 7 days' : 'early data' },
+    { k: 'Resolution rate',   v: (!rated || none) ? '—' : `${Math.round(score.resolution_rate * 100)}%`, sub: rated ? 'of responded cases' : 'not enough data' },
+    { k: 'Avg. response time',v: none ? '—' : score.avg_response_hours < 1 ? '<1h' : `${Math.round(score.avg_response_hours)}h`, sub: 'median' },
   ]
   return (
     <section className="pb-12">
@@ -615,7 +645,7 @@ function FileCTA({ company }) {
               </span>
             </h2>
             <p className="mt-4 text-[15px] leading-relaxed" style={{ color: '#C9CFC8' }}>
-              Fair Go complaints are public, searchable, and permanent. The company's score moves when they do the right thing.
+              Aus Fair Go complaints are public, searchable, and permanent. The company's score moves when they do the right thing.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               <Link to={`/complaints/new?company_id=${company.id}`} className="btn" style={{ background: 'var(--color-ochre)', color: 'var(--color-ink)' }}>
@@ -654,6 +684,15 @@ function FileCTA({ company }) {
 }
 
 /* ─── States ─────────────────────────────────────────────── */
+function StatRow({ label, value }) {
+  return (
+    <div className="flex items-center justify-between text-xs">
+      <span className="text-[color:var(--color-muted)]">{label}</span>
+      <span className="font-semibold text-[color:var(--color-ink)]">{value}</span>
+    </div>
+  )
+}
+
 function ProfileSkeleton() {
   return (
     <div className="max-w-6xl mx-auto px-6 py-12 space-y-6 animate-pulse">
@@ -670,7 +709,7 @@ function NotFound() {
   return (
     <div className="max-w-xl mx-auto px-6 py-24 text-center">
       <div className="font-display italic-display text-[36px] mb-3 text-[color:var(--color-ochre)]">Not found.</div>
-      <h2 className="font-display text-[28px] font-semibold mb-3">That company isn't on Fair Go yet.</h2>
+      <h2 className="font-display text-[28px] font-semibold mb-3">That company isn't on Aus Fair Go yet.</h2>
       <p className="text-sm text-[color:var(--color-muted)] mb-6">It may have been removed, or the link is misspelled.</p>
       <Link to="/" className="btn btn-primary">Back to home <Icon name="arrow-r" size={14} /></Link>
     </div>

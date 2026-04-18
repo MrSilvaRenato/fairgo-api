@@ -31,15 +31,15 @@ class ComplaintFiledCompany extends Notification implements ShouldQueue
         $title        = $this->complaint->title;
 
         return (new MailMessage)
-            ->subject('New complaint filed against ' . $this->complaint->company->name . ' — Fair Go')
+            ->subject('New complaint filed against ' . $this->complaint->company->name . ' — Aus Fair Go')
             ->greeting('Hi ' . $notifiable->name . ',')
             ->line($consumer . ' has filed a complaint: **"' . $title . '"**')
-            ->line('This complaint is now **publicly visible** on your Fair Go profile.')
+            ->line('This complaint is now **publicly visible** on your Aus Fair Go profile.')
             ->line('You have **7 days** to respond. Unanswered complaints impact your score.')
             ->action('Respond now', $complaintUrl)
             ->line('Manage all complaints from your dashboard.')
             ->action('Go to dashboard', $dashUrl)
-            ->salutation('Fair Go');
+            ->salutation('Aus Fair Go');
     }
 
     public function toArray(object $notifiable): array

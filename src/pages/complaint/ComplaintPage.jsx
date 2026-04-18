@@ -64,7 +64,7 @@ export default function ComplaintPage() {
       ? `${complaint.title} — complaint against ${complaint.company?.name}`
       : undefined,
     description: complaint
-      ? `Consumer complaint filed against ${complaint.company?.name} on Fair Go. Category: ${complaint.category}. Status: ${complaint.status}. ${complaint.description?.slice(0, 120)}…`
+      ? `Consumer complaint filed against ${complaint.company?.name} on Aus Fair Go. Category: ${complaint.category}. Status: ${complaint.status}. ${complaint.description?.slice(0, 120)}…`
       : undefined,
     url: `${window.location.origin}/complaints/${id}`,
   })
@@ -147,7 +147,7 @@ export default function ComplaintPage() {
             style={{ background: 'var(--color-paper-2)', color: 'var(--color-muted)', border: '1px solid var(--color-line)' }}>
             <span className="shrink-0 mt-0.5">✏️</span>
             <span>
-              <strong style={{ color: 'var(--color-ink-2)' }}>Edited by Fair Go</strong>
+              <strong style={{ color: 'var(--color-ink-2)' }}>Edited by Aus Fair Go</strong>
               {' '}— Some content was automatically removed to comply with our community guidelines (e.g. personal information or offensive language).
             </span>
           </div>

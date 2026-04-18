@@ -18,7 +18,7 @@ class ComplaintSubmitted extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'New complaint received — Fair Go');
+        return new Envelope(subject: 'New complaint received — Aus Fair Go');
     }
 
     public function content(): Content

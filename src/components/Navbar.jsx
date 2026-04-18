@@ -64,9 +64,9 @@ export default function Navbar() {
     <nav className="sticky top-0 z-40 backdrop-blur bg-[color:var(--color-paper)]/85 border-b hairline-2">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center gap-6 whitespace-nowrap">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 shrink-0" aria-label="Fair Go — home">
+        <Link to="/" className="flex items-center gap-2.5 shrink-0" aria-label="Aus Fair Go — home">
           <LogoMark />
-          <span className="font-display text-[22px] font-semibold tracking-tight">Fair Go</span>
+          <span className="font-display text-[22px] font-semibold tracking-tight">Aus Fair Go</span>
         </Link>
 
         {/* Public links — full set on lg, compact on md */}

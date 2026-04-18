@@ -38,12 +38,12 @@ class ComplaintResolvedCompany extends Notification implements ShouldQueue
             ->line(
                 $resolved
                     ? $consumer . ' has marked their complaint as **resolved**. Great work!'
-                    : $consumer . ' has closed their complaint as **unresolved**. This will affect your Fair Go score.'
+                    : $consumer . ' has closed their complaint as **unresolved**. This will affect your Aus Fair Go score.'
             )
             ->line('Complaint: "' . $this->complaint->title . '"')
             ->action('View complaint', $url)
-            ->line('Your Fair Go score has been recalculated.')
-            ->salutation('Fair Go');
+            ->line('Your Aus Fair Go score has been recalculated.')
+            ->salutation('Aus Fair Go');
     }
 
     public function toArray(object $notifiable): array

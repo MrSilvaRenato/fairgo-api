@@ -28,6 +28,11 @@ export default function ComplaintFormPage() {
   const [companySearch, setCompanySearch]   = useState('')
   const [companies, setCompanies]           = useState([])
   const [selectedCompany, setSelectedCompany] = useState(null)
+  const [showUnregistered, setShowUnregistered] = useState(false)
+  const [unregName, setUnregName]           = useState('')
+  const [unregAbn, setUnregAbn]             = useState('')
+  const [abnResult, setAbnResult]           = useState(null)   // { valid, entity_name, error }
+  const [abnChecking, setAbnChecking]       = useState(false)
   const [errors, setErrors]                 = useState({})
   const [loading, setLoading]               = useState(false)
   const [draftRestored, setDraftRestored]   = useState(false)
@@ -48,6 +53,8 @@ export default function ComplaintFormPage() {
 
   const searchCompanies = async (q) => {
     setCompanySearch(q)
+    setShowUnregistered(false)
+    setAbnResult(null)
     if (q.length < 2) { setCompanies([]); return }
     try {
       const res = await api.get('/complaints/company-search', { params: { q } })
@@ -57,10 +64,43 @@ export default function ComplaintFormPage() {
 
   const selectCompany = (company) => {
     setSelectedCompany(company)
-    setForm((f) => ({ ...f, company_id: String(company.id) }))
+    setForm((f) => ({ ...f, company_id: String(company.id), company_name: '', company_abn: '' }))
     setCompanies([])
     setCompanySearch(company.name)
+    setShowUnregistered(false)
+    setAbnResult(null)
   }
+
+  const openUnregistered = () => {
+    setShowUnregistered(true)
+    setUnregName(companySearch)
+    setCompanies([])
+    setSelectedCompany(null)
+    setForm((f) => ({ ...f, company_id: '' }))
+  }
+
+  const checkAbn = async () => {
+    const abn = unregAbn.replace(/\s+/g, '')
+    if (abn.length < 11) { setAbnResult({ valid: false, error: 'ABN must be 11 digits.' }); return }
+    setAbnChecking(true)
+    setAbnResult(null)
+    try {
+      const res = await api.get(`/abn/check/${abn}`)
+      setAbnResult(res.data)
+      if (res.data.valid) {
+        setForm((f) => ({ ...f, company_id: '', company_name: unregName, company_abn: abn }))
+      } else {
+        setForm((f) => ({ ...f, company_name: '', company_abn: '' }))
+      }
+    } catch {
+      setAbnResult({ valid: false, error: 'ABN lookup service unavailable. Please try again.' })
+    } finally {
+      setAbnChecking(false)
+    }
+  }
+
+  const [modAlert, setModAlert] = useState(null) // 'flagged' | 'edited' | null
+  const [submittedId, setSubmittedId] = useState(null)
 
   const submit = async (e) => {
     e.preventDefault()
@@ -75,14 +115,78 @@ export default function ComplaintFormPage() {
 
     setLoading(true)
     try {
-      const res = await api.post('/complaints/', form)
+      const payload = { ...form }
+      if (!payload.company_id && unregName && unregAbn) {
+        payload.company_name = unregName
+        payload.company_abn  = unregAbn.replace(/\s+/g, '')
+        delete payload.company_id
+      }
+      const res = await api.post('/complaints/', payload)
       sessionStorage.removeItem(DRAFT_KEY)
-      navigate(`/complaints/${res.data.id}`)
+      const status = res.data.moderation_status
+      if (status === 'flagged' || status === 'edited') {
+        setModAlert(status)
+        setSubmittedId(res.data.id)
+      } else {
+        navigate(`/complaints/${res.data.id}`)
+      }
     } catch (err) {
       if (err.response?.status === 422) setErrors(err.response.data.errors ?? {})
     } finally {
       setLoading(false)
     }
+  }
+
+  /* ── Moderation hold screen ── */
+  if (modAlert) {
+    return (
+      <div className="max-w-xl mx-auto">
+        <div className="card p-8 text-center space-y-5">
+          <div className="text-5xl">⏳</div>
+          <div>
+            <h2 className="font-display text-xl font-semibold text-[color:var(--color-ink)]">
+              Your complaint is under review
+            </h2>
+            <p className="text-sm text-[color:var(--color-muted)] mt-1">Complaint #{submittedId}</p>
+          </div>
+
+          <div className="text-left px-4 py-4 rounded-2xl space-y-3 text-sm"
+            style={{ background: 'var(--color-paper-2)', border: '1px solid var(--color-line)' }}>
+            <p className="font-semibold text-[color:var(--color-ink)]">
+              ⚠️ We have detected content that requires review before publishing.
+            </p>
+            <p className="text-[color:var(--color-ink-2)] leading-relaxed">
+              {modAlert === 'flagged'
+                ? 'Our system identified potential profanity, defamatory language, or content that may breach our community guidelines. Your complaint has been submitted but will not be visible publicly until a Aus Fair Go moderator reviews and approves it.'
+                : 'Some content in your complaint was automatically edited to comply with our guidelines (e.g. offensive language was removed). Your complaint is pending final review before being published.'}
+            </p>
+            <div className="pt-1 border-t" style={{ borderColor: 'var(--color-line)' }}>
+              <p className="text-[color:var(--color-muted)] text-xs leading-relaxed">
+                <strong className="text-[color:var(--color-ink-2)]">What happens next:</strong> A Aus Fair Go moderator will review your complaint. If it complies with our{' '}
+                <a href="/how-it-works" className="underline hover:text-[color:var(--color-eucalyptus)]">community guidelines</a>,
+                it will be published and the company notified. If it breaches our policy, it will be removed and you will be notified.
+                Most reviews are completed within 24 hours.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <button
+              onClick={() => navigate(`/complaints/${submittedId}`)}
+              className="flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold border transition"
+              style={{ borderColor: 'var(--color-line)', color: 'var(--color-ink-2)' }}>
+              View my complaint
+            </button>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold text-[color:var(--color-paper)]"
+              style={{ background: 'var(--color-eucalyptus)' }}>
+              Go to my dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -111,43 +215,169 @@ export default function ComplaintFormPage() {
 
           {/* Company search */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Company <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-[color:var(--color-ink)] mb-1.5">
+              Company <span className="text-[color:var(--color-clay)]">*</span>
             </label>
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input
-                value={companySearch}
-                onChange={(e) => searchCompanies(e.target.value)}
-                placeholder="Search by company name…"
-                className="input pl-9"
-                required={!form.company_id}
-              />
-              {companies.length > 0 && (
-                <ul className="absolute z-10 w-full bg-white border border-gray-100 rounded-xl shadow-xl mt-1 overflow-hidden">
-                  {companies.map((c) => (
-                    <li key={c.id} onClick={() => selectCompany(c)}
-                      className="px-4 py-3 cursor-pointer hover:bg-gray-50 transition flex items-center justify-between">
-                      <span className="font-medium text-sm text-gray-900">{c.name}</span>
-                      {c.industry && <span className="text-xs text-gray-400 capitalize">{c.industry}</span>}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            {selectedCompany && (
-              <div className="mt-2 flex items-center gap-2 text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg">
-                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span className="font-medium">{selectedCompany.name}</span> selected
+
+            {!showUnregistered ? (
+              <>
+                <div className="relative">
+                  <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    value={companySearch}
+                    onChange={(e) => searchCompanies(e.target.value)}
+                    placeholder="Search by company name…"
+                    className="input pl-9"
+                  />
+                  {companies.length > 0 && (
+                    <ul className="absolute z-10 w-full bg-[color:var(--color-card)] border hairline rounded-xl shadow-xl mt-1 overflow-hidden">
+                      {companies.map((c) => (
+                        <li key={c.id} onClick={() => selectCompany(c)}
+                          className="px-4 py-3 cursor-pointer hover:bg-[color:var(--color-paper-2)] transition flex items-center justify-between">
+                          <span className="font-medium text-sm text-[color:var(--color-ink)]">{c.name}</span>
+                          {c.industry && <span className="text-xs text-[color:var(--color-muted)] capitalize">{c.industry}</span>}
+                        </li>
+                      ))}
+                      {/* Not found option at the bottom of the dropdown */}
+                      <li
+                        onClick={openUnregistered}
+                        className="px-4 py-3 cursor-pointer border-t hairline hover:bg-[#FDF6E8] transition flex items-center gap-2"
+                        style={{ borderColor: 'var(--color-ochre)' }}>
+                        <span className="text-sm font-medium" style={{ color: 'var(--color-ochre)' }}>
+                          🏢 "{companySearch}" is not listed — file anyway
+                        </span>
+                      </li>
+                    </ul>
+                  )}
+                  {/* Show not-found prompt when search has no results */}
+                  {companySearch.length >= 2 && companies.length === 0 && !selectedCompany && (
+                    <div className="mt-2 rounded-xl border p-3 flex items-center justify-between gap-3"
+                      style={{ borderColor: 'var(--color-ochre)', background: '#FDF6E8' }}>
+                      <p className="text-sm text-[color:var(--color-ink-2)]">
+                        <span className="font-medium text-[color:var(--color-ink)]">"{companySearch}"</span> not found in our database.
+                      </p>
+                      <button type="button" onClick={openUnregistered}
+                        className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-xl transition"
+                        style={{ background: 'var(--color-ochre)', color: 'var(--color-ink)' }}>
+                        File anyway
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {selectedCompany && (
+                  <div className="mt-2 flex items-center gap-2 text-sm px-3 py-2 rounded-xl"
+                    style={{ color: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="font-medium">{selectedCompany.name}</span> selected
+                  </div>
+                )}
+              </>
+            ) : (
+              /* ── Unregistered company panel ── */
+              <div className="rounded-2xl border p-4 space-y-4"
+                style={{ borderColor: 'var(--color-ochre)', background: '#FDF6E8' }}>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-[color:var(--color-ink)]">
+                    🏢 Company not in our database
+                  </p>
+                  <button type="button" onClick={() => { setShowUnregistered(false); setAbnResult(null); setForm(f => ({ ...f, company_id: '', company_name: '', company_abn: '' })) }}
+                    className="text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] transition">
+                    ← Back to search
+                  </button>
+                </div>
+                <p className="text-xs text-[color:var(--color-ink-2)] leading-relaxed">
+                  Please provide the company's name and ABN so we can verify they are a registered Australian business before your complaint is filed.
+                </p>
+
+                {/* Company name */}
+                <div>
+                  <label className="block text-xs font-semibold text-[color:var(--color-ink)] mb-1">
+                    Company name <span className="text-[color:var(--color-clay)]">*</span>
+                  </label>
+                  <input
+                    value={unregName}
+                    onChange={(e) => { setUnregName(e.target.value); setAbnResult(null); setForm(f => ({ ...f, company_name: '', company_abn: '' })) }}
+                    placeholder="e.g. Acme Pty Ltd"
+                    className="input text-sm"
+                  />
+                </div>
+
+                {/* ABN + check button */}
+                <div>
+                  <label className="block text-xs font-semibold text-[color:var(--color-ink)] mb-1">
+                    ABN (Australian Business Number) <span className="text-[color:var(--color-clay)]">*</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      value={unregAbn}
+                      onChange={(e) => { setUnregAbn(e.target.value); setAbnResult(null); setForm(f => ({ ...f, company_name: '', company_abn: '' })) }}
+                      placeholder="e.g. 51 824 753 556"
+                      className="input text-sm flex-1"
+                      maxLength={14}
+                    />
+                    <button
+                      type="button"
+                      onClick={checkAbn}
+                      disabled={abnChecking || unregAbn.replace(/\s+/g, '').length < 11}
+                      className="btn btn-secondary shrink-0 text-sm">
+                      {abnChecking ? (
+                        <span className="flex items-center gap-1.5">
+                          <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                          </svg>
+                          Checking…
+                        </span>
+                      ) : 'Verify ABN'}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-[color:var(--color-muted)] mt-1">
+                    Find an ABN at <a href="https://abr.business.gov.au" target="_blank" rel="noopener noreferrer" className="underline">abr.business.gov.au</a>
+                  </p>
+                </div>
+
+                {/* ABN result */}
+                {abnResult && (
+                  abnResult.valid ? (
+                    <div className="flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm"
+                      style={{ background: 'var(--color-eucalyptus-3)', color: 'var(--color-eucalyptus)' }}>
+                      <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <div>
+                        <span className="font-semibold">ABN verified.</span>
+                        {abnResult.entity_name && !abnResult.stub && (
+                          <span className="ml-1 text-[color:var(--color-ink-2)]">Registered as: <strong className="text-[color:var(--color-ink)]">{abnResult.entity_name}</strong></span>
+                        )}
+                        <p className="text-xs mt-0.5 text-[color:var(--color-ink-2)]">
+                          Your complaint will be filed and Aus Fair Go will be notified to add this company to the database.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm"
+                      style={{ background: 'var(--color-clay-soft)', color: 'var(--color-clay)' }}>
+                      <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <div>
+                        <span className="font-semibold">ABN of this company is wrong.</span>
+                        <p className="text-xs mt-0.5">
+                          {abnResult.error ?? 'This ABN could not be verified against the Australian Business Register. Please check the number and try again.'}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                )}
               </div>
             )}
-            {errors.company_id && <p className="text-red-500 text-xs mt-1.5">{errors.company_id[0]}</p>}
+
+            {errors.company_id && <p className="text-[color:var(--color-clay)] text-xs mt-1.5">{errors.company_id[0]}</p>}
+            {errors.company_abn && <p className="text-[color:var(--color-clay)] text-xs mt-1.5">{errors.company_abn[0]}</p>}
           </div>
 
           {/* Category */}
@@ -242,7 +472,7 @@ export default function ComplaintFormPage() {
           <div className="pt-2">
             <button
               type="submit"
-              disabled={loading || !form.company_id || !form.category}
+              disabled={loading || (!form.company_id && !(abnResult?.valid && unregName && unregAbn)) || !form.category}
               className="btn-primary w-full justify-center flex">
               {loading ? (
                 <span className="flex items-center gap-2">

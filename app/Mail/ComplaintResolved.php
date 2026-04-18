@@ -19,7 +19,7 @@ class ComplaintResolved extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         $status = $this->complaint->status === 'resolved' ? 'resolved' : 'marked unresolved';
-        return new Envelope(subject: "Complaint {$status} — Fair Go");
+        return new Envelope(subject: "Complaint {$status} — Aus Fair Go");
     }
 
     public function content(): Content

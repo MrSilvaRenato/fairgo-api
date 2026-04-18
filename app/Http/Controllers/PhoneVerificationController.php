@@ -36,7 +36,7 @@ class PhoneVerificationController extends Controller
 
         $this->sms->send(
             $phone,
-            "Your Fair Go verification code is: {$code}. Valid for 10 minutes."
+            "Your Aus Fair Go verification code is: {$code}. Valid for 10 minutes."
         );
 
         return response()->json(['message' => 'Code sent.']);

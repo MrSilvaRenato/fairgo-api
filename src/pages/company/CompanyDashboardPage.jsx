@@ -114,7 +114,7 @@ export default function CompanyDashboardPage() {
                 {band === 'not_rated' ? '—' : Math.round(score.score)}
               </p>
               <p className="caps mt-1" style={{ color: b.text }}>{b.label}</p>
-              <p className="text-[10px] text-[color:var(--color-muted)] mt-0.5">Fair Go score</p>
+              <p className="text-[10px] text-[color:var(--color-muted)] mt-0.5">Aus Fair Go score</p>
             </div>
           )}
         </div>
@@ -374,7 +374,7 @@ function TrustBadge({ slug }) {
         </Link>
       </div>
       <p className="text-xs text-[color:var(--color-muted)] mb-3">
-        Paste this on your website to display your live Fair Go score.
+        Paste this on your website to display your live Aus Fair Go score.
       </p>
       <div className="relative">
         <pre className="bg-[color:var(--color-paper-2)] border hairline rounded-xl p-3 text-xs text-[color:var(--color-ink-2)] overflow-x-auto whitespace-pre-wrap break-all font-mono">

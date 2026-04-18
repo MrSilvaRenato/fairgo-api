@@ -24,7 +24,7 @@ export default function SearchPage() {
 
   useSeoMeta({
     title: q ? `Search: "${q}"` : 'Search',
-    description: q ? `Search results for "${q}" — companies and complaints on Fair Go.` : undefined,
+    description: q ? `Search results for "${q}" — companies and complaints on Aus Fair Go.` : undefined,
   })
 
   useEffect(() => {

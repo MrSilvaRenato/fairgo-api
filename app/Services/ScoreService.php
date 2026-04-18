@@ -7,7 +7,7 @@ use App\Models\CompanyScore;
 use App\Models\Complaint;
 
 /**
- * Fair Go Score — inspired by Reclame Aqui's reputation model.
+ * Aus Fair Go Score — inspired by Reclame Aqui's reputation model.
  *
  * Core philosophy:
  *   - Response rate is a GATE, not a reward. Ignoring complaints = 0.
@@ -32,7 +32,7 @@ class ScoreService
     private const WINDOW_MONTHS = 6;
 
     /**
-     * Fair Go Verified badge — mirrors Reclame Aqui's RA1000 criteria:
+     * Aus Fair Go Verified badge — mirrors Reclame Aqui's RA1000 criteria:
      *   response_rate  ≥ 90%   (RA: >90%)
      *   solution_rate  ≥ 90%   (RA: ≥90%)
      *   deal_again     ≥ 70%   (RA: ≥70%)
@@ -73,7 +73,27 @@ class ScoreService
 
         if ($total === 0) {
             $score = $this->upsert($company, $zero);
-            $this->updateBadges($company, $score);
+            // No complaints → strip any previous badge/flag; don't penalise
+            $company->update(['verified_badge' => false, 'not_recommended' => false]);
+            return $score;
+        }
+
+        // ── Below minimum threshold — store raw stats, no score yet ──────────
+        if ($total < CompanyScore::MIN_FOR_RATING) {
+            $responded    = $complaints->filter(
+                fn($c) => in_array($c->status, ['responded', 'resolved', 'unresolved'])
+            )->count();
+
+            $score = $this->upsert($company, [
+                'response_rate'      => $total > 0 ? round($responded / $total, 4) : 0,
+                'resolution_rate'    => 0,
+                'avg_response_hours' => 0,
+                'satisfaction_score' => 0,
+                'total_complaints'   => $total,
+                'score'              => 0,
+            ]);
+
+            // Do NOT set verified_badge or not_recommended — too early to judge
             return $score;
         }
 
@@ -124,7 +144,7 @@ class ScoreService
             ? ($ratedFeedbacks->avg('rating') - 1) / 4
             : $solutionRate;
 
-        // ── Final score — Reclame Aqui formula adapted for Fair Go ───────────
+        // ── Final score — Reclame Aqui formula adapted for Aus Fair Go ───────────
         // RA:  AR = ((IR×2) + (MA×10×3) + (IS×3) + (IN×2)) / 100  → score 0–10
         // FG:  same weights, all inputs normalised 0–1, output × 100 → score 0–100
         //
@@ -159,6 +179,11 @@ class ScoreService
      */
     private function updateBadges(Company $company, CompanyScore $score): void
     {
+        // Never assign badges below the minimum threshold
+        if ($score->total_complaints < CompanyScore::MIN_FOR_RATING) {
+            return;
+        }
+
         $total        = $score->total_complaints;
         $finalScore   = $score->score;
         $responseRate = $score->response_rate;
@@ -182,7 +207,7 @@ class ScoreService
 
         $accountAgeMonths = $company->created_at->diffInMonths(now());
 
-        // Fair Go Verified = RA1000 equivalent
+        // Aus Fair Go Verified = RA1000 equivalent
         $verified = (
             $total          >= self::VERIFIED_MIN_COMPLAINTS    &&
             $responseRate   >= self::VERIFIED_MIN_RESPONSE_RATE &&

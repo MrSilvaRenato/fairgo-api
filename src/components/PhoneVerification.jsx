@@ -73,7 +73,7 @@ export default function PhoneVerification({ onVerified, compact = false }) {
           <div>
             <p className="font-medium text-sm text-[color:var(--color-ink)]">Verify your phone number</p>
             <p className="text-xs text-[color:var(--color-ink-2)] mt-0.5">
-              Required before submitting. Keeps Fair Go genuine — one complaint per real person.
+              Required before submitting. Keeps Aus Fair Go genuine — one complaint per real person.
             </p>
           </div>
         </div>

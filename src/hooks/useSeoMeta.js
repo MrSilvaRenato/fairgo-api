@@ -1,15 +1,15 @@
 import { useEffect } from 'react'
 
-const DEFAULT_TITLE       = 'Fair Go — public consumer accountability'
-const DEFAULT_DESCRIPTION = 'Fair Go helps Australian consumers resolve complaints and hold businesses accountable through transparent public records.'
-const DEFAULT_IMAGE       = 'https://fairgo.com.au/og-default.png' // swap for prod URL
+const DEFAULT_TITLE       = 'Aus Fair Go — public consumer accountability'
+const DEFAULT_DESCRIPTION = 'Aus Fair Go helps Australian consumers resolve complaints and hold businesses accountable through transparent public records.'
+const DEFAULT_IMAGE       = 'https://ausfairgo.com.au/og-default.png' // swap for prod URL
 
 /**
  * Sets <title>, meta description, and Open Graph / Twitter card tags.
  * Resets to defaults when the component unmounts.
  *
  * @param {Object} opts
- * @param {string} opts.title        - Page <title> (will be appended with " | Fair Go")
+ * @param {string} opts.title        - Page <title> (will be appended with " | Aus Fair Go")
  * @param {string} [opts.description]
  * @param {string} [opts.image]      - OG image URL
  * @param {string} [opts.url]        - Canonical URL (defaults to window.location.href)
@@ -17,7 +17,7 @@ const DEFAULT_IMAGE       = 'https://fairgo.com.au/og-default.png' // swap for p
  */
 export default function useSeoMeta({ title, description, image, url, type = 'website' } = {}) {
   useEffect(() => {
-    const fullTitle = title ? `${title} | Fair Go` : DEFAULT_TITLE
+    const fullTitle = title ? `${title} | Aus Fair Go` : DEFAULT_TITLE
     const desc      = description ?? DEFAULT_DESCRIPTION
     const img       = image ?? DEFAULT_IMAGE
     const canonical = url ?? window.location.href
@@ -43,7 +43,7 @@ export default function useSeoMeta({ title, description, image, url, type = 'web
     setMeta('meta[property="og:image"]',        'content', img)
     setMeta('meta[property="og:url"]',          'content', canonical)
     setMeta('meta[property="og:type"]',         'content', type)
-    setMeta('meta[property="og:site_name"]',    'content', 'Fair Go')
+    setMeta('meta[property="og:site_name"]',    'content', 'Aus Fair Go')
     setMeta('meta[name="twitter:card"]',        'content', 'summary_large_image')
     setMeta('meta[name="twitter:title"]',       'content', fullTitle)
     setMeta('meta[name="twitter:description"]', 'content', desc)

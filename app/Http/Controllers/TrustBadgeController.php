@@ -21,7 +21,7 @@ class TrustBadgeController extends Controller
             'resolution_rate' => $score ? round($score->resolution_rate * 100) : null,
             'total_complaints'=> $score?->total_complaints ?? 0,
             'verified'        => $company->verified_badge,
-            'profile_url'     => config('app.frontend_url', 'https://fairgo.com.au') . '/companies/' . $company->slug,
+            'profile_url'     => config('app.frontend_url', 'https://ausfairgo.com.au') . '/companies/' . $company->slug,
         ])->withHeaders(['Access-Control-Allow-Origin' => '*']);
     }
 
@@ -29,7 +29,7 @@ class TrustBadgeController extends Controller
     public function embedScript(string $slug)
     {
         $apiBase    = config('app.url') . '/api';
-        $frontendUrl = config('app.frontend_url', 'https://fairgo.com.au');
+        $frontendUrl = config('app.frontend_url', 'https://ausfairgo.com.au');
 
         $js = <<<JS
 (function () {
@@ -73,8 +73,8 @@ class TrustBadgeController extends Controller
         '<span style="line-height:1.35;">' +
         '<strong style="display:block;font-size:13px;color:#111;">' + d.name + '</strong>' +
         '<span style="display:block;font-size:11px;color:' + c.label + ';font-weight:600;text-transform:capitalize;">' + label + '</span>' +
-        (d.verified ? '<span style="display:block;font-size:10px;color:#16a34a;">✓ Fair Go Verified</span>' : '') +
-        '<span style="display:block;font-size:10px;color:#9ca3af;margin-top:1px;">fairgo.com.au</span>' +
+        (d.verified ? '<span style="display:block;font-size:10px;color:#16a34a;">✓ Aus Fair Go Verified</span>' : '') +
+        '<span style="display:block;font-size:10px;color:#9ca3af;margin-top:1px;">ausfairgo.com.au</span>' +
         '</span>' +
         '</a>';
     })

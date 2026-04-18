@@ -12,7 +12,7 @@ A new complaint has been submitted against **{{ $complaint->company->name }}**.
 View Complaint
 </x-mail::button>
 
-Log in to your Fair Go dashboard to respond within 5 business days.
+Log in to your Aus Fair Go dashboard to respond within 5 business days.
 
 Thanks,
 {{ config('app.name') }}

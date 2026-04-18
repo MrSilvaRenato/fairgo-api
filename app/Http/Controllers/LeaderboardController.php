@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
+use App\Models\CompanyScore;
 use Illuminate\Http\Request;
 
 class LeaderboardController extends Controller
@@ -11,8 +12,9 @@ class LeaderboardController extends Controller
     {
         $industry = $request->query('industry');
 
+        // Only include companies that have crossed the minimum rating threshold
         $query = Company::with('score')
-            ->whereHas('score', fn($q) => $q->where('total_complaints', '>=', 1));
+            ->whereHas('score', fn($q) => $q->where('total_complaints', '>=', CompanyScore::MIN_FOR_RATING));
 
         if ($industry && $industry !== 'all') {
             $query->where('industry', $industry);

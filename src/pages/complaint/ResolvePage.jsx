@@ -232,7 +232,7 @@ export default function ResolvePage() {
 
       {isReopen && (
         <p className="text-xs text-center text-[color:var(--color-muted)] mt-4">
-          Only the latest rating counts towards {complaint.company?.name}'s Fair Go score — no double counting.
+          Only the latest rating counts towards {complaint.company?.name}'s Aus Fair Go score — no double counting.
         </p>
       )}
     </div>

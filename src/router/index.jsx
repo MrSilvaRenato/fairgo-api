@@ -17,6 +17,9 @@ import BillingPage from '../pages/company/BillingPage'
 import AdminPage from '../pages/admin/AdminPage'
 import SearchPage from '../pages/SearchPage'
 import MostComplainedPage from '../pages/MostComplainedPage'
+import CommunityGuidelinesPage from '../pages/legal/CommunityGuidelinesPage'
+import TermsPage from '../pages/legal/TermsPage'
+import PrivacyPage from '../pages/legal/PrivacyPage'
 
 const router = createBrowserRouter([
   {
@@ -38,6 +41,9 @@ const router = createBrowserRouter([
       { path: '/admin',                    element: <AdminPage /> },
       { path: '/search',                   element: <SearchPage /> },
       { path: '/most-complained',          element: <MostComplainedPage /> },
+      { path: '/community-guidelines',    element: <CommunityGuidelinesPage /> },
+      { path: '/terms',                   element: <TermsPage /> },
+      { path: '/privacy',                 element: <PrivacyPage /> },
       // Step 15 – /dashboard
       // Step 16 – /company/dashboard
       // Step 21 – /admin

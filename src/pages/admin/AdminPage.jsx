@@ -38,6 +38,7 @@ export default function AdminPage() {
   const [stats, setStats]       = useState(null)
   const [complaints, setComplaints] = useState([])
   const [companies, setCompanies]   = useState([])
+  const [stubs, setStubs]           = useState([])
   const [users, setUsers]           = useState([])
   const [moderation, setModeration] = useState([])
   const [q, setQ]               = useState('')
@@ -55,6 +56,12 @@ export default function AdminPage() {
     if (tab === 'moderation') {
       api.get('/admin/moderation', { params: { status: modFilter, ...(q ? { q } : {}) } })
         .then((r) => setModeration(r.data.data))
+        .finally(() => setLoading(false))
+      return
+    }
+    if (tab === 'unregistered') {
+      api.get('/admin/stub-companies', { params: q ? { q } : {} })
+        .then((r) => setStubs(r.data.data))
         .finally(() => setLoading(false))
       return
     }
@@ -86,6 +93,13 @@ export default function AdminPage() {
     api.get('/admin/stats').then((r) => setStats(r.data))
   }
 
+  /* Promote stub company to registered */
+  const promoteStub = async (id) => {
+    await api.post(`/admin/stub-companies/${id}/promote`)
+    setStubs((p) => p.filter((c) => c.id !== id))
+    api.get('/admin/stats').then((r) => setStats(r.data))
+  }
+
   /* Company actions */
   const updateCompany = async (id, data) => {
     const res = await api.put(`/admin/companies/${id}`, data)
@@ -98,7 +112,7 @@ export default function AdminPage() {
     setUsers((p) => p.map((u) => u.id === id ? { ...u, ...res.data } : u))
   }
 
-  const TABS = ['complaints', 'moderation', 'companies', 'users']
+  const TABS = ['complaints', 'moderation', 'companies', 'unregistered', 'users']
 
   return (
     <div className="max-w-5xl mx-auto space-y-5">
@@ -111,14 +125,15 @@ export default function AdminPage() {
 
       {/* Stats strip */}
       {stats && (
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-7 gap-3">
           {[
             { label: 'Users',       value: stats.total_users },
             { label: 'Companies',   value: stats.total_companies },
             { label: 'Complaints',  value: stats.total_complaints },
             { label: 'Open',        value: stats.open_complaints,        accent: stats.open_complaints > 0 },
             { label: 'Resolved',    value: stats.resolved,               green: true },
-            { label: '🤖 Flagged',  value: stats.moderation_flagged,     accent: stats.moderation_flagged > 0 },
+            { label: '🤖 Flagged',       value: stats.moderation_flagged, accent: stats.moderation_flagged > 0 },
+            { label: '🏢 Unregistered', value: stats.stub_companies,      accent: stats.stub_companies > 0 },
           ].map((s) => (
             <div key={s.label} className="card p-4">
               <p className={`font-display text-[28px] font-semibold leading-none ${
@@ -130,8 +145,29 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* Unregistered companies alert banner */}
+      {stats?.stub_companies > 0 && (
+        <div className="rounded-2xl border border-[color:var(--color-ochre)] bg-[#FDF6E8] p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-[color:var(--color-ochre)] flex items-center justify-center shrink-0 text-lg">
+            🏢
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-[color:var(--color-ink)]">
+              {stats.stub_companies} unregistered compan{stats.stub_companies === 1 ? 'y' : 'ies'} need to be added to the database
+            </p>
+            <p className="text-xs text-[color:var(--color-ink-2)] mt-0.5">
+              Consumers filed complaints against companies not yet in Aus Fair Go. Review their ABN and register them.
+            </p>
+          </div>
+          <button onClick={() => setTab('unregistered')}
+            className="btn btn-secondary shrink-0 text-xs">
+            Review
+          </button>
+        </div>
+      )}
+
       {/* Tabs */}
-      <div className="card p-1 flex gap-1">
+      <div className="card p-1 flex gap-1 flex-wrap">
         {TABS.map((t) => (
           <button key={t} onClick={() => { setTab(t); setQ('') }}
             className={`flex-1 py-2 rounded-xl text-sm font-medium capitalize transition ${
@@ -141,6 +177,10 @@ export default function AdminPage() {
             }`}>
             {t === 'moderation' && stats?.moderation_flagged > 0
               ? `Moderation (${stats.moderation_flagged})`
+              : t === 'unregistered' && stats?.stub_companies > 0
+              ? `Unregistered (${stats.stub_companies})`
+              : t === 'unregistered'
+              ? 'Unregistered'
               : t.charAt(0).toUpperCase() + t.slice(1)
             }
           </button>
@@ -424,6 +464,60 @@ export default function AdminPage() {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* ── Unregistered companies tab ── */}
+      {tab === 'unregistered' && !loading && (
+        <div className="space-y-3">
+          {stubs.length === 0 && (
+            <div className="card p-10 text-sm text-[color:var(--color-muted)] text-center">
+              <p className="text-3xl mb-3">✅</p>
+              <p>No unregistered companies. All complaints are against known businesses.</p>
+            </div>
+          )}
+          {stubs.map((c) => (
+            <div key={c.id} className="card p-4 flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-[color:var(--color-paper-2)] flex items-center justify-center shrink-0 text-lg font-bold text-[color:var(--color-muted)]">
+                {c.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="text-sm font-semibold text-[color:var(--color-ink)]">{c.name}</span>
+                  <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
+                    style={{ color: 'var(--color-ochre)', background: '#FDF6E8', border: '1px solid var(--color-ochre)' }}>
+                    🏢 Not registered
+                  </span>
+                  {c.abn_verified && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
+                      style={{ color: '#1d4ed8', background: '#eff6ff' }}>
+                      ✓ ABN Verified
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-[color:var(--color-muted)]">
+                  ABN: <span className="font-mono font-medium text-[color:var(--color-ink-2)]">{c.abn ?? '—'}</span>
+                  {c.abn_entity_name && (
+                    <span className="ml-2 text-[color:var(--color-ink-2)]">· {c.abn_entity_name}</span>
+                  )}
+                  <span className="ml-2">· {c.complaints_count ?? 0} complaint{c.complaints_count !== 1 ? 's' : ''} filed</span>
+                  <span className="ml-2">· First seen {new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Link to={`/companies/${c.slug}`} target="_blank"
+                  className="text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] px-2.5 py-1.5 rounded-xl hover:bg-[color:var(--color-paper-2)] transition font-medium">
+                  View
+                </Link>
+                <button
+                  onClick={() => promoteStub(c.id)}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-xl transition"
+                  style={{ background: 'var(--color-eucalyptus)', color: 'var(--color-paper)' }}>
+                  ✓ Mark as registered
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
