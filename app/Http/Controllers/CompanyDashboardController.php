@@ -21,6 +21,9 @@ class CompanyDashboardController extends Controller
                     ->where('author_type', 'consumer')
                     ->whereNull('company_read_at'),
             ])
+            // Never expose complaints that are under moderation review or archived
+            ->whereNotIn('moderation_status', ['flagged', 'rejected'])
+            ->where('status', '!=', 'removed')
             ->latest()
             ->get();
 

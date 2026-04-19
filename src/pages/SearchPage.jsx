@@ -121,7 +121,15 @@ export default function SearchPage() {
                         className="flex items-center gap-3 p-4 hover:bg-[color:var(--color-paper-2)] transition">
                         <CompanyLogo company={c} size="sm" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-[color:var(--color-ink)]">{c.name}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-sm font-semibold text-[color:var(--color-ink)]">{c.name}</p>
+                            {c.claimed && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0"
+                                style={{ color: '#166534', background: '#f0fdf4' }}>
+                                ✅ Actively Managed
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-[color:var(--color-muted)] mt-0.5 capitalize">
                             {c.industry}
                             {c.total > 0 && <span className="ml-1">· {c.total} complaint{c.total !== 1 ? 's' : ''}</span>}

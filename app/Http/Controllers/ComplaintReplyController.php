@@ -14,7 +14,8 @@ class ComplaintReplyController extends Controller
         if (!$complaint->is_public) {
             $user    = request()->user();
             $company = $user?->company;
-            if (!$user || ($user->id !== $complaint->consumer_id && $company?->id !== $complaint->company_id)) {
+            $isAdmin = $user?->role === 'admin';
+            if (!$user || (!$isAdmin && $user->id !== $complaint->consumer_id && $company?->id !== $complaint->company_id)) {
                 abort(403);
             }
         }
@@ -27,8 +28,8 @@ class ComplaintReplyController extends Controller
                 // Consumer opening thread → mark company replies as read
                 $complaint->replies()
                     ->where('author_type', 'company')
-                    ->whereNull('read_at')
-                    ->update(['read_at' => now()]);
+                    ->whereNull('consumer_read_at')
+                    ->update(['consumer_read_at' => now()]);
             } elseif ($company?->id === $complaint->company_id) {
                 // Company opening thread → mark consumer replies as read
                 $complaint->replies()
@@ -68,9 +69,9 @@ class ComplaintReplyController extends Controller
             'user_id'         => $user->id,
             'author_type'     => $isConsumer ? 'consumer' : 'company',
             'content'         => $data['content'],
-            // Writer has read their own message; recipient hasn't
-            'read_at'         => $isConsumer ? now() : null,   // consumer-side read
-            'company_read_at' => $isCompany  ? now() : null,   // company-side read
+            // Writer has already read their own message; recipient hasn't
+            'consumer_read_at' => $isConsumer ? now() : null,  // consumer-side read
+            'company_read_at'  => $isCompany  ? now() : null,  // company-side read
         ]);
 
         if ($isCompany) {

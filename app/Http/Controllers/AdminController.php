@@ -161,19 +161,39 @@ class AdminController extends Controller
             'note'   => 'nullable|string|max:500',
         ]);
 
-        $update = [
-            'moderation_status' => $data['action'],
-            'moderation_note'   => $data['note'] ?? $complaint->moderation_note,
-        ];
+        $note = $data['note'] ?? $complaint->moderation_note;
 
         if ($data['action'] === 'approved') {
-            // Restore public visibility — admin has reviewed and cleared it
-            $update['is_public'] = true;
-        } elseif ($data['action'] === 'rejected') {
-            $update['is_public'] = false;
-        }
+            // Clear for publication — restore visibility
+            $complaint->update([
+                'moderation_status' => 'approved',
+                'moderation_note'   => $note,
+                'is_public'         => true,
+            ]);
 
-        $complaint->update($update);
+            // Recalculate score now it's public
+            \App\Jobs\CalculateCompanyScore::dispatch($complaint->company_id);
+
+        } elseif ($data['action'] === 'rejected') {
+            // Archive: mark removed, keep private, record reason
+            $complaint->update([
+                'moderation_status' => 'rejected',
+                'moderation_note'   => $note,
+                'is_public'         => false,
+                'status'            => 'removed',
+            ]);
+
+            // Recalculate score — removed complaint should no longer affect it
+            \App\Jobs\CalculateCompanyScore::dispatch($complaint->company_id);
+
+            // Notify the consumer their complaint was removed
+            $complaint->load('consumer', 'company:id,name');
+            if ($complaint->consumer) {
+                $complaint->consumer->notify(
+                    new \App\Notifications\ComplaintRemovedConsumer($complaint, $note)
+                );
+            }
+        }
 
         return response()->json($complaint->fresh(['consumer:id,name,email', 'company:id,name,slug']));
     }

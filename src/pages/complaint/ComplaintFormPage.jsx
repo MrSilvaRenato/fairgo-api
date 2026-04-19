@@ -24,6 +24,8 @@ export default function ComplaintFormPage() {
     company_id: searchParams.get('company_id') ?? '',
     title: '', description: '', expected_resolution: '',
     category: '', is_public: true,
+    incident_date: '', reference_number: '', amount_involved: '',
+    contact_attempted: false,
   })
   const [companySearch, setCompanySearch]   = useState('')
   const [companies, setCompanies]           = useState([])
@@ -128,13 +130,47 @@ export default function ComplaintFormPage() {
         setModAlert(status)
         setSubmittedId(res.data.id)
       } else {
-        navigate(`/complaints/${res.data.id}`)
+        navigate('/dashboard')
       }
     } catch (err) {
       if (err.response?.status === 422) setErrors(err.response.data.errors ?? {})
     } finally {
       setLoading(false)
     }
+  }
+
+  /* ── Business account gate ── */
+  if (user && user.role !== 'consumer') {
+    return (
+      <div className="max-w-xl mx-auto">
+        <div className="card p-8 text-center space-y-4">
+          <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto">
+            <span className="text-3xl">🏢</span>
+          </div>
+          <div>
+            <h2 className="font-display text-xl font-semibold text-[color:var(--color-ink)]">
+              Business accounts can't file complaints
+            </h2>
+            <p className="text-sm text-[color:var(--color-muted)] mt-2 leading-relaxed">
+              You're logged in as a <strong>business representative</strong>. Complaints can only be submitted
+              by consumers using a personal account.
+            </p>
+          </div>
+          <div className="text-left bg-[color:var(--color-paper-2)] rounded-xl p-4 text-sm text-[color:var(--color-ink-2)] space-y-1.5">
+            <p>✅ To file a personal complaint, <strong>create a separate consumer account</strong> using a personal email address.</p>
+            <p>✅ Your business dashboard remains unaffected.</p>
+          </div>
+          <div className="flex flex-col gap-2 pt-2">
+            <a href="/register" className="btn btn-primary justify-center">
+              Create a consumer account
+            </a>
+            <a href="/company/dashboard" className="btn btn-secondary justify-center">
+              Back to my business dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   /* ── Moderation hold screen ── */
@@ -172,10 +208,10 @@ export default function ComplaintFormPage() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button
-              onClick={() => navigate(`/complaints/${submittedId}`)}
+              onClick={() => navigate('/dashboard')}
               className="flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold border transition"
               style={{ borderColor: 'var(--color-line)', color: 'var(--color-ink-2)' }}>
-              View my complaint
+              View in my dashboard
             </button>
             <button
               onClick={() => navigate('/dashboard')}
@@ -434,6 +470,84 @@ export default function ComplaintFormPage() {
             />
           </Field>
 
+          {/* ── Evidence & details ───────────────────────────────── */}
+          <div className="rounded-2xl border p-5 space-y-4"
+            style={{ borderColor: 'var(--color-line)', background: 'var(--color-paper-2)' }}>
+            <div>
+              <p className="text-sm font-semibold text-[color:var(--color-ink)]">🔎 Evidence &amp; Details</p>
+              <p className="text-xs text-[color:var(--color-muted)] mt-0.5">
+                Helps verify the complaint and speeds up resolution. The more detail you provide, the more credible your case.
+              </p>
+            </div>
+
+            {/* Incident date + reference number */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Field label="Date of incident *" error={errors.incident_date?.[0]}>
+                <input
+                  type="date"
+                  value={form.incident_date}
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setForm({ ...form, incident_date: e.target.value })}
+                  className="input"
+                  required
+                />
+              </Field>
+              <Field
+                label="Reference / Order number"
+                hint="Optional"
+                error={errors.reference_number?.[0]}
+              >
+                <input
+                  type="text"
+                  value={form.reference_number}
+                  onChange={(e) => setForm({ ...form, reference_number: e.target.value })}
+                  placeholder="e.g. ORD-12345, INV-0089, Case #77"
+                  className="input"
+                  maxLength={120}
+                />
+              </Field>
+            </div>
+
+            {/* Amount involved */}
+            <Field
+              label="Amount involved (AUD)"
+              hint="Optional — leave blank if not financial"
+              error={errors.amount_involved?.[0]}
+            >
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[color:var(--color-muted)] font-medium select-none">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.amount_involved}
+                  onChange={(e) => setForm({ ...form, amount_involved: e.target.value })}
+                  placeholder="0.00"
+                  className="input pl-7"
+                />
+              </div>
+            </Field>
+
+            {/* Contact attempted */}
+            <label className="flex items-start gap-3 cursor-pointer">
+              <div className="relative mt-0.5 shrink-0">
+                <input type="checkbox" className="sr-only peer"
+                  checked={form.contact_attempted}
+                  onChange={(e) => setForm({ ...form, contact_attempted: e.target.checked })} />
+                <div className="w-10 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-500 transition" />
+                <div className="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition peer-checked:translate-x-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-[color:var(--color-ink)]">
+                  I have already attempted to resolve this with the company
+                </p>
+                <p className="text-xs text-[color:var(--color-muted)] mt-0.5">
+                  e.g. called support, sent an email, submitted a refund request — and did not get a satisfactory response.
+                </p>
+              </div>
+            </label>
+          </div>
+
           {/* Visibility toggle */}
           <label className="flex items-start gap-3 cursor-pointer group">
             <div className="relative mt-0.5">
@@ -472,7 +586,7 @@ export default function ComplaintFormPage() {
           <div className="pt-2">
             <button
               type="submit"
-              disabled={loading || (!form.company_id && !(abnResult?.valid && unregName && unregAbn)) || !form.category}
+              disabled={loading || (!form.company_id && !(abnResult?.valid && unregName && unregAbn)) || !form.category || !form.incident_date}
               className="btn-primary w-full justify-center flex">
               {loading ? (
                 <span className="flex items-center gap-2">

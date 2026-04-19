@@ -24,6 +24,10 @@ class Complaint extends Model
         'moderation_flags',
         'moderation_note',
         'moderation_edited',
+        'incident_date',
+        'reference_number',
+        'amount_involved',
+        'contact_attempted',
     ];
 
     protected function casts(): array
@@ -34,6 +38,9 @@ class Complaint extends Model
             'reopened_at'        => 'datetime',
             'moderation_flags'   => 'array',
             'moderation_edited'  => 'boolean',
+            'incident_date'      => 'date:Y-m-d',
+            'amount_involved'    => 'decimal:2',
+            'contact_attempted'  => 'boolean',
         ];
     }
 

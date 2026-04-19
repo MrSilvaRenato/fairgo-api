@@ -6,7 +6,10 @@ const api = axios.create({
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
-  withCredentials: true,
+  // withCredentials is intentionally omitted — the app uses Bearer token auth only.
+  // Sending session cookies caused old company_admin sessions to bleed into new
+  // consumer requests, because Sanctum's stateful guard takes the cookie over
+  // the Bearer token when both are present.
 })
 
 api.interceptors.request.use((config) => {

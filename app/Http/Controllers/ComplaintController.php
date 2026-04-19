@@ -16,6 +16,16 @@ class ComplaintController extends Controller
 {
     public function store(Request $request, AbnLookupService $abnService)
     {
+        // Only consumers can file complaints — block business accounts and admins
+        $role = $request->user()->role;
+        if ($role !== 'consumer') {
+            return response()->json([
+                'message' => $role === 'company_admin'
+                    ? 'Business accounts cannot file complaints. Please use a personal consumer account.'
+                    : 'You do not have permission to file complaints.',
+            ], 403);
+        }
+
         $data = $request->validate([
             'company_id'          => 'required_without:company_name|nullable|exists:companies,id',
             'company_name'        => 'required_without:company_id|nullable|string|max:255',
@@ -25,6 +35,11 @@ class ComplaintController extends Controller
             'expected_resolution' => 'nullable|string|max:1000',
             'category'            => 'required|in:billing,delivery,service,refund,fraud,other',
             'is_public'           => 'boolean',
+            // Evidence fields
+            'incident_date'       => 'required|date|before_or_equal:today',
+            'reference_number'    => 'nullable|string|max:120',
+            'amount_involved'     => 'nullable|numeric|min:0|max:9999999',
+            'contact_attempted'   => 'boolean',
         ]);
 
         // ── Unregistered company path ────────────────────────────────────────
@@ -62,6 +77,7 @@ class ComplaintController extends Controller
             'is_public'         => $data['is_public'] ?? true,
             'expires_at'        => now()->addDays(7),
             'moderation_status' => 'pending',
+            'contact_attempted' => $data['contact_attempted'] ?? false,
         ]);
 
         $complaint->load(['consumer:id,name,email', 'company:id,name,slug,user_id', 'company.user:id,name,email']);
@@ -92,14 +108,23 @@ class ComplaintController extends Controller
 
     public function show(Complaint $complaint)
     {
-        if (!$complaint->is_public) {
-            $user = request()->user();
-            $isOwner = $user && $user->id === $complaint->consumer_id;
-            $isAdmin = $user && $user->role === 'admin';
-            $isCompany = $user && $user->role === 'company_admin' && $user->company?->id === $complaint->company_id;
-            if (!$isOwner && !$isAdmin && !$isCompany) {
-                abort(403);
-            }
+        // Use optional Sanctum auth — authenticate from Bearer token if present,
+        // but don't require it so public complaints remain accessible to guests.
+        $user      = auth('sanctum')->user();
+        $isOwner   = $user && $user->id === $complaint->consumer_id;
+        $isAdmin   = $user && $user->role === 'admin';
+        $isCompany = $user && $user->role === 'company_admin' && $user->company?->id === $complaint->company_id;
+
+        // Flagged/rejected complaints are under admin review — only owner and admin can see them.
+        // The company is intentionally excluded until the admin clears or rejects the complaint.
+        $underReview = in_array($complaint->moderation_status, ['flagged', 'rejected']);
+        if ($underReview && !$isOwner && !$isAdmin) {
+            abort(403);
+        }
+
+        // Private complaints (not under review) are visible to owner, admin, and the relevant company.
+        if (!$complaint->is_public && !$underReview && !$isOwner && !$isAdmin && !$isCompany) {
+            abort(403);
         }
 
         return response()->json(
@@ -111,6 +136,8 @@ class ComplaintController extends Controller
     {
         $query = Complaint::with(['consumer:id,name', 'company:id,name,slug'])
             ->where('is_public', true)
+            ->where('status', '!=', 'removed')
+            ->whereNotIn('moderation_status', ['flagged', 'rejected'])
             ->latest();
 
         if ($request->company_id) {

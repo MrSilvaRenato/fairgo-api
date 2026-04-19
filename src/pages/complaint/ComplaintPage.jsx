@@ -160,6 +160,45 @@ export default function ComplaintPage() {
             <p className="text-gray-700 whitespace-pre-wrap text-sm">{complaint.expected_resolution}</p>
           </Section>
         )}
+
+        {/* Evidence details — only shown if any are present */}
+        {(complaint.incident_date || complaint.reference_number || complaint.amount_involved != null || complaint.contact_attempted) && (
+          <div className="border-t pt-4 mt-4" style={{ borderColor: 'var(--color-line)' }}>
+            <p className="text-xs font-semibold text-[color:var(--color-muted)] uppercase tracking-wide mb-3">Evidence &amp; Details</p>
+            <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              {complaint.incident_date && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[color:var(--color-muted)]">📅 Incident date</span>
+                  <span className="font-medium text-[color:var(--color-ink)]">
+                    {new Date(complaint.incident_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
+                </div>
+              )}
+              {complaint.reference_number && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[color:var(--color-muted)]">🔢 Reference</span>
+                  <span className="font-medium text-[color:var(--color-ink)] font-mono text-xs bg-[color:var(--color-paper-2)] px-2 py-0.5 rounded">
+                    {complaint.reference_number}
+                  </span>
+                </div>
+              )}
+              {complaint.amount_involved != null && complaint.amount_involved > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[color:var(--color-muted)]">💰 Amount</span>
+                  <span className="font-medium text-[color:var(--color-ink)]">
+                    ${Number(complaint.amount_involved).toLocaleString('en-AU', { minimumFractionDigits: 2 })} AUD
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <span className="text-[color:var(--color-muted)]">📞 Contacted company first</span>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${complaint.contact_attempted ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  {complaint.contact_attempted ? 'Yes' : 'No'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Company response */}

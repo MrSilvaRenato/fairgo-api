@@ -365,6 +365,12 @@ export default function HomePage() {
                           <Icon name="flag" size={10} /> Not recommended
                         </span>
                       )}
+                      {c.claimed && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                          style={{ color: '#166534', borderColor: '#86efac', background: '#f0fdf4' }}>
+                          ✅ Actively Managed
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-[color:var(--color-muted)] capitalize mt-0.5">
                       {c.industry ?? 'Unknown'} · {c.total} complaints

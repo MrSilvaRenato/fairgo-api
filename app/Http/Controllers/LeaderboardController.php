@@ -37,6 +37,7 @@ class LeaderboardController extends Controller
                 'response_rate'   => round(($c->score?->response_rate ?? 0) * 100),
                 'verified_badge'  => (bool) $c->verified_badge,
                 'not_recommended' => (bool) $c->not_recommended,
+                'claimed'         => (bool) $c->claimed,
             ]);
 
         $industries = Company::whereNotNull('industry')

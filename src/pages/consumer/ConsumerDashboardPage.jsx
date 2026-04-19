@@ -170,7 +170,19 @@ function ComplaintRow({ complaint: c, onReopen }) {
               {st.label}
             </span>
             <span className="text-xs text-[color:var(--color-muted)] capitalize">{c.category}</span>
-            {c.is_public && (
+            {c.moderation_status === 'flagged' && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ color: '#92400e', background: '#fef3c7' }}>
+                ⏳ Under review
+              </span>
+            )}
+            {c.status === 'removed' && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ color: 'var(--color-clay)', background: 'var(--color-clay-soft)' }}>
+                🚫 Removed
+              </span>
+            )}
+            {c.is_public && c.moderation_status !== 'flagged' && c.status !== 'removed' && (
               <span className="text-xs text-[color:var(--color-muted)] flex items-center gap-1">
                 <Icon name="globe" size={10} /> Public
               </span>

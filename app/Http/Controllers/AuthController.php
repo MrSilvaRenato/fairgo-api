@@ -73,6 +73,12 @@ class AuthController extends Controller
             $token->delete();
         }
 
+        // Destroy the Laravel session so any stale session cookie becomes invalid,
+        // preventing cross-user session bleed via Sanctum's stateful guard.
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         return response()->json(['message' => 'Logged out successfully.']);
     }
 
@@ -90,7 +96,7 @@ class AuthController extends Controller
         if ($user->role !== 'consumer') return 0;
         return \App\Models\ComplaintReply::whereHas('complaint', fn($q) => $q->where('consumer_id', $user->id))
             ->where('author_type', 'company')
-            ->whereNull('read_at')
+            ->whereNull('consumer_read_at')
             ->count();
     }
 }

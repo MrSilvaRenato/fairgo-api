@@ -16,7 +16,7 @@ class ConsumerDashboardController extends Controller
             ->withCount([
                 'replies as unread_count' => fn($q) => $q
                     ->where('author_type', 'company')
-                    ->whereNull('read_at'),
+                    ->whereNull('consumer_read_at'),
             ])
             ->latest()
             ->get();

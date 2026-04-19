@@ -33,6 +33,7 @@ class SearchController extends Controller
                 'score'    => $c->score?->score,
                 'badge'    => $c->score?->badge,
                 'total'    => $c->score?->total_complaints ?? 0,
+                'claimed'  => (bool) $c->claimed,
             ]);
 
         $complaints = Complaint::with(['company:id,name,slug', 'consumer:id,name'])
