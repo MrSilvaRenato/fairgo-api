@@ -1,15 +1,16 @@
 import { useState } from 'react'
 
 /**
- * Company logo with three-tier fallback:
- *   1. logo_url (company-uploaded)
- *   2. Google Favicon service (high-res, reliable, no API key needed)
- *   3. Initials avatar
+ * Company logo with two-tier fallback:
+ *   1. Google Favicon service (reliable, no API key, works for any domain)
+ *   2. Initials avatar (when no website or favicon not found)
+ *
+ * Note: Clearbit logo API has been shut down — do not use.
  */
-function googleLogoUrl(website) {
+function googleFaviconUrl(website) {
   if (!website) return null
-  // Strip protocol if present, keep just the domain
-  const domain = website.replace(/^https?:\/\//, '').replace(/\/.*$/, '')
+  const domain = website.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase()
+  if (!domain) return null
   return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
 }
 
@@ -22,16 +23,14 @@ export default function CompanyLogo({ company, size = 'md', className = '' }) {
   }
   const sizeClass = sizes[size] ?? sizes.md
 
-  const primarySrc = company?.logo_url || googleLogoUrl(company?.website)
+  // Google Favicon is primary — logo_url only used if explicitly set (future company uploads)
+  const primarySrc = googleFaviconUrl(company?.website) || company?.logo_url || null
   const initials   = (company?.name ?? '?').charAt(0).toUpperCase()
 
-  const [src, setSrc]       = useState(primarySrc)
+  const [src]           = useState(primarySrc)
   const [failed, setFailed] = useState(!primarySrc)
 
-  const handleError = () => {
-    // If Clearbit failed and we haven't fallen back yet, try nothing more — show initials
-    setFailed(true)
-  }
+  const handleError = () => setFailed(true)
 
   if (failed || !src) {
     return (
