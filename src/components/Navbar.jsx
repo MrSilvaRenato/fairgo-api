@@ -136,6 +136,12 @@ export default function Navbar() {
               >
                 Sign in
               </Link>
+              <Link
+                to="/companies/register"
+                className="text-sm text-[color:var(--color-ink-2)] hover:text-[color:var(--color-eucalyptus)] transition-colors font-medium"
+              >
+                For Business
+              </Link>
               <Link to="/register" className="btn btn-primary text-xs">
                 Submit a complaint <Icon name="arrow-r" size={14} />
               </Link>

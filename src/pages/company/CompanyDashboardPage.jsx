@@ -17,9 +17,10 @@ const STATUS = {
 }
 
 export default function CompanyDashboardPage() {
-  const { fetchUser } = useAuthStore()
+  const { fetchUser, user } = useAuthStore()
   const [data, setData]           = useState(null)
   const [loading, setLoading]     = useState(true)
+  const [apiError, setApiError]   = useState(false)
   const [filter, setFilter]       = useState('all')
   const [search, setSearch]       = useState('')
   const [respondingTo, setRespondingTo] = useState(null)
@@ -28,7 +29,7 @@ export default function CompanyDashboardPage() {
     fetchUser().finally(() => {
       api.get('/dashboard/company')
         .then((res) => setData(res.data))
-        .catch(() => setData(null))
+        .catch(() => setApiError(true))
         .finally(() => setLoading(false))
     })
   }, [])
@@ -61,7 +62,21 @@ export default function CompanyDashboardPage() {
   }, [complaints, filter, search])
 
   if (loading) return <Skeleton />
-  if (!data)   return <NoCompanyPrompt />
+
+  // API failed but user IS a company_admin — company exists, transient error
+  if (apiError && user?.role === 'company_admin') {
+    return (
+      <div className="max-w-lg mx-auto py-24 px-4 text-center">
+        <p className="text-4xl mb-4">⚠️</p>
+        <h2 className="font-display text-xl font-semibold mb-2">Couldn't load your dashboard</h2>
+        <p className="text-sm text-[color:var(--color-muted)] mb-6">There was a temporary error. Please refresh the page.</p>
+        <button onClick={() => window.location.reload()} className="btn btn-primary">Refresh</button>
+      </div>
+    )
+  }
+
+  // No company linked to this account at all
+  if (apiError || !data) return <NoCompanyPrompt />
 
   const score = company.score
   const band  = score?.badge ?? 'not_rated'
@@ -396,31 +411,21 @@ function NoCompanyPrompt() {
       <div className="w-16 h-16 bg-[color:var(--color-eucalyptus-3)] rounded-2xl flex items-center justify-center mx-auto mb-5">
         <Icon name="building" size={28} className="text-[color:var(--color-eucalyptus)]" />
       </div>
-      <h2 className="font-display text-2xl font-semibold mb-2">Register your business</h2>
+      <h2 className="font-display text-2xl font-semibold mb-2">No business linked to your account</h2>
       <p className="text-[color:var(--color-muted)] text-sm leading-relaxed mb-8 max-w-sm mx-auto">
-        Your account is ready — now set up your business profile so customers can find you and you can manage complaints.
+        This dashboard is for business owners. If your company is already listed on Aus Fair Go, you can claim it — or register a new business below.
       </p>
-      <div className="card p-6 text-left mb-6 space-y-4">
-        {[
-          { icon: 'search',   title: 'Get discovered',       desc: 'Appear in company searches and public rankings.' },
-          { icon: 'reply',    title: 'Respond to complaints', desc: 'Manage and reply to customer issues in one place.' },
-          { icon: 'sparkle',  title: 'Build your reputation', desc: 'Earn a public trust score that grows as you resolve issues.' },
-        ].map((f) => (
-          <div key={f.title} className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-[color:var(--color-paper-2)] rounded-lg flex items-center justify-center shrink-0">
-              <Icon name={f.icon} size={15} className="text-[color:var(--color-eucalyptus)]" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-[color:var(--color-ink)]">{f.title}</p>
-              <p className="text-xs text-[color:var(--color-muted)] mt-0.5">{f.desc}</p>
-            </div>
-          </div>
-        ))}
+      <div className="flex flex-col gap-3">
+        <Link to="/companies/register" className="btn btn-primary w-full justify-center text-sm py-3">
+          Register a new business
+        </Link>
+        <Link to="/search" className="btn btn-secondary w-full justify-center text-sm py-3">
+          Find &amp; claim your existing company →
+        </Link>
       </div>
-      <Link to="/companies/register" className="btn btn-primary w-full justify-center text-sm py-3">
-        Set up my business profile
-      </Link>
-      <p className="text-xs text-[color:var(--color-muted)] mt-3">Takes less than 2 minutes · Free forever</p>
+      <p className="text-xs text-[color:var(--color-muted)] mt-4">
+        Already registered? <button onClick={() => window.location.reload()} className="underline hover:text-[color:var(--color-ink)]">Refresh the page</button>
+      </p>
     </div>
   )
 }

@@ -16,6 +16,7 @@ use App\Http\Controllers\CompanyDashboardController;
 use App\Http\Controllers\ConsumerDashboardController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\AbnVerificationController;
+use App\Http\Controllers\CompanyClaimController;
 use Illuminate\Support\Facades\Route;
 
 // Auth routes
@@ -51,6 +52,7 @@ Route::prefix('companies')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [CompanyController::class, 'store']);
+        Route::post('{company}/claim', [CompanyClaimController::class, 'store']);
     });
 });
 
@@ -102,6 +104,9 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::put('users/{user}',                  [AdminController::class, 'updateUser']);
     Route::get('moderation',                    [AdminController::class, 'moderationQueue']);
     Route::put('moderation/{complaint}',        [AdminController::class, 'moderationDecision']);
-    Route::get('stub-companies',                [AdminController::class, 'stubCompanies']);
-    Route::post('stub-companies/{company}/promote', [AdminController::class, 'promoteStub']);
+    Route::get('stub-companies',                     [AdminController::class, 'stubCompanies']);
+    Route::post('stub-companies/{company}/promote',  [AdminController::class, 'promoteStub']);
+    Route::get('claims',                             [CompanyClaimController::class, 'index']);
+    Route::post('claims/{claim}/approve',            [CompanyClaimController::class, 'approve']);
+    Route::post('claims/{claim}/reject',             [CompanyClaimController::class, 'reject']);
 });

@@ -134,6 +134,12 @@ function Hero({ company, score, band }) {
                 <Icon name="verified" size={13} /> ABN Verified
               </span>
             )}
+            {company.claimed && (
+              <span className="chip font-semibold"
+                style={{ color: '#166534', borderColor: '#86efac', background: '#f0fdf4' }}>
+                ✅ Actively Managed
+              </span>
+            )}
             {company.verified_badge && (
               <span className="chip font-semibold"
                 style={{ color: 'var(--color-eucalyptus)', borderColor: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
@@ -170,6 +176,28 @@ function Hero({ company, score, band }) {
               <Icon name="share" size={14} /> Share
             </button>
           </div>
+
+          {/* Claim CTA — only show when not yet claimed */}
+          {!company.claimed && (
+            <div className="mt-5">
+              <Link
+                to={`/companies/${company.slug}/claim`}
+                className="inline-flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all group"
+                style={{
+                  borderColor: 'var(--color-eucalyptus)',
+                  background: 'var(--color-eucalyptus-3)',
+                  color: 'var(--color-eucalyptus)',
+                }}
+              >
+                <span className="text-xl">🏢</span>
+                <div className="text-left">
+                  <p className="text-sm font-semibold leading-tight">Is this your business?</p>
+                  <p className="text-xs opacity-80 leading-tight mt-0.5">Claim this profile and manage complaints</p>
+                </div>
+                <span className="ml-1 font-bold text-lg leading-none group-hover:translate-x-0.5 transition-transform">→</span>
+              </Link>
+            </div>
+          )}
 
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 max-w-xl text-sm">
             {company.abn && <Meta label="ABN" value={company.abn} mono />}

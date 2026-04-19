@@ -28,7 +28,7 @@ export default function ConsumerDashboardPage() {
   if (loading) return <Skeleton />
   if (!data)   return null
 
-  const { stats, complaints } = data
+  const { stats, complaints, claims = [] } = data
   const filtered = filter === 'all' ? complaints : complaints.filter((c) => c.status === filter)
 
   const needsAction  = complaints.filter((c) => c.status === 'responded').length
@@ -78,6 +78,11 @@ export default function ConsumerDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Claim notifications */}
+      {claims.map(claim => (
+        <ClaimNotification key={claim.id} claim={claim} />
+      ))}
 
       {/* Action banner */}
       {needsAction > 0 && (
@@ -250,6 +255,56 @@ function ComplaintRow({ complaint: c, onReopen }) {
   )
 }
 
+/* ─── Claim notification ─────────────────────────────────── */
+function ClaimNotification({ claim }) {
+  const cfg = {
+    pending:  { icon: '⏳', label: 'Under review',  border: 'var(--color-ochre)',      bg: '#FDF6E8', fg: '#8A5A1F' },
+    approved: { icon: '✅', label: 'Approved',       border: 'var(--color-eucalyptus)', bg: 'var(--color-eucalyptus-3)', fg: 'var(--color-eucalyptus)' },
+    rejected: { icon: '❌', label: 'Not approved',   border: 'var(--color-clay)',       bg: 'var(--color-clay-soft)',    fg: 'var(--color-clay)' },
+  }[claim.status] ?? {}
+
+  return (
+    <div className="rounded-2xl border p-4 flex items-start gap-4"
+      style={{ borderColor: cfg.border, background: cfg.bg }}>
+      <span className="text-2xl mt-0.5 shrink-0">{cfg.icon}</span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap mb-0.5">
+          <p className="text-sm font-semibold text-[color:var(--color-ink)]">
+            Company claim — {claim.company_name}
+          </p>
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+            style={{ color: cfg.fg, background: 'white', border: `1px solid ${cfg.border}` }}>
+            {cfg.label}
+          </span>
+        </div>
+
+        {claim.status === 'pending' && (
+          <p className="text-xs text-[color:var(--color-ink-2)]">
+            Your claim is being reviewed. We'll update you here once a decision is made.
+          </p>
+        )}
+        {claim.status === 'approved' && (
+          <p className="text-xs text-[color:var(--color-ink-2)]">
+            Your claim was approved! You now have access to the company dashboard.
+          </p>
+        )}
+        {claim.status === 'rejected' && (
+          <p className="text-xs text-[color:var(--color-ink-2)]">
+            Your claim was not approved.
+            {claim.rejection_reason && <span className="ml-1">Reason: <em>{claim.rejection_reason}</em></span>}
+          </p>
+        )}
+      </div>
+
+      {claim.status === 'approved' && (
+        <Link to="/company/dashboard" className="btn btn-secondary shrink-0 text-xs">
+          Go to dashboard →
+        </Link>
+      )}
+    </div>
+  )
+}
+
 function Skeleton() {
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-pulse">
@@ -261,3 +316,4 @@ function Skeleton() {
     </div>
   )
 }
+

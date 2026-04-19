@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
+use App\Models\CompanyClaim;
 use App\Models\Complaint;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -26,6 +27,7 @@ class AdminController extends Controller
             'moderation_flagged'   => Complaint::where('moderation_status', 'flagged')->count(),
             'moderation_rejected'  => Complaint::where('moderation_status', 'rejected')->count(),
             'stub_companies'       => Company::where('is_stub', true)->count(),
+            'pending_claims'       => CompanyClaim::where('status', 'pending')->count(),
         ]);
     }
 
@@ -70,8 +72,7 @@ class AdminController extends Controller
     public function companies(Request $request)
     {
         $query = Company::with(['user:id,name,email', 'score', 'subscription'])
-            ->withCount('complaints')
-            ->latest();
+            ->withCount('complaints');
 
         if ($request->q) {
             $query->where('name', 'like', "%{$request->q}%");
@@ -82,6 +83,18 @@ class AdminController extends Controller
         } elseif ($request->filter === 'flagged') {
             $query->where('not_recommended', true);
         }
+
+        match ($request->sort) {
+            'name'       => $query->orderBy('name'),
+            'name_desc'  => $query->orderByDesc('name'),
+            'complaints' => $query->orderByDesc('complaints_count'),
+            'score'      => $query->orderByDesc(
+                \App\Models\CompanyScore::select('score')
+                    ->whereColumn('company_id', 'companies.id')
+                    ->limit(1)
+            ),
+            default      => $query->latest(),
+        };
 
         return response()->json($query->paginate(25));
     }

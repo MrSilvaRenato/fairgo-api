@@ -29,41 +29,67 @@ class CompanyController extends Controller
 
         $abn = preg_replace('/\s+/', '', $data['abn']);
 
-        if (!$this->abn->isValidAbn($abn)) {
+        if (!$this->abn->validateChecksum($abn)) {
             return response()->json(['errors' => ['abn' => ['Invalid ABN.']]], 422);
-        }
-
-        $slug = Str::slug($data['name']);
-        $base = $slug;
-        $i = 1;
-        while (Company::where('slug', $slug)->exists()) {
-            $slug = "{$base}-{$i}";
-            $i++;
         }
 
         // Strip protocol/trailing slashes so Clearbit gets a clean domain
         $website = isset($data['website']) ? preg_replace('#^https?://#', '', rtrim($data['website'], '/')) : null;
 
-        $company = Company::create([
-            'user_id'     => $request->user()->id,
-            'name'        => $data['name'],
-            'slug'        => $slug,
-            'abn'         => $abn,
-            'industry'    => $data['industry'] ?? null,
-            'description' => $data['description'] ?? null,
-            'website'     => $website,
-            'claimed'     => true,
-        ]);
+        // If an unclaimed company with this ABN already exists, claim it instead of creating a duplicate
+        $existing = Company::where('abn', $abn)->where('claimed', false)->first();
 
-        // Seed free subscription
-        Subscription::create([
-            'company_id' => $company->id,
-            'plan'       => 'free',
-            'status'     => 'active',
-        ]);
+        if ($existing) {
+            $existing->update([
+                'user_id'     => $request->user()->id,
+                'name'        => $data['name'],
+                'abn_verified'=> true,
+                'industry'    => $data['industry'] ?? $existing->industry,
+                'description' => $data['description'] ?? $existing->description,
+                'website'     => $website ?? $existing->website,
+                'logo_url'    => $website ? "https://logo.clearbit.com/{$website}" : $existing->logo_url,
+                'claimed'     => true,
+                'is_stub'     => false,
+            ]);
+            $company = $existing->fresh();
+        } else {
+            // Brand new company — check ABN not already claimed by someone else
+            $claimed = Company::where('abn', $abn)->where('claimed', true)->first();
+            if ($claimed) {
+                return response()->json(['errors' => ['abn' => ['This ABN is already registered on Aus Fair Go.']]], 422);
+            }
 
-        // Update user role
-        $request->user()->update(['role' => 'company_admin']);
+            $slug = Str::slug($data['name']);
+            $base = $slug; $i = 1;
+            while (Company::where('slug', $slug)->exists()) { $slug = "{$base}-{$i}"; $i++; }
+
+            $company = Company::create([
+                'user_id'     => $request->user()->id,
+                'name'        => $data['name'],
+                'slug'        => $slug,
+                'abn'         => $abn,
+                'abn_verified'=> true,
+                'industry'    => $data['industry'] ?? null,
+                'description' => $data['description'] ?? null,
+                'website'     => $website,
+                'logo_url'    => $website ? "https://logo.clearbit.com/{$website}" : null,
+                'claimed'     => true,
+            ]);
+        }
+
+        // Seed free subscription if none exists
+        if (!$company->subscription) {
+            Subscription::create([
+                'company_id' => $company->id,
+                'plan'       => 'free',
+                'status'     => 'active',
+            ]);
+        }
+
+        // Only update role if not already admin
+        if ($request->user()->role !== 'admin') {
+            $request->user()->update(['role' => 'company_admin']);
+        }
 
         return response()->json($company->load('subscription'), 201);
     }

@@ -39,11 +39,16 @@ export default function AdminPage() {
   const [complaints, setComplaints] = useState([])
   const [companies, setCompanies]   = useState([])
   const [stubs, setStubs]           = useState([])
+  const [claims, setClaims]         = useState([])
+  const [claimFilter, setClaimFilter] = useState('pending')
   const [users, setUsers]           = useState([])
   const [moderation, setModeration] = useState([])
   const [q, setQ]               = useState('')
   const [loading, setLoading]   = useState(false)
   const [companyFilter, setCompanyFilter] = useState('all')
+  const [companySort,   setCompanySort]   = useState('latest')
+  const [companiesPage, setCompaniesPage] = useState(1)
+  const [companiesMeta, setCompaniesMeta] = useState(null)   // { total, last_page }
   const [modFilter, setModFilter]         = useState('flagged')
   const [expandedMod, setExpandedMod]     = useState(null)
 
@@ -65,16 +70,37 @@ export default function AdminPage() {
         .finally(() => setLoading(false))
       return
     }
-    const map = { complaints: '/admin/complaints', companies: '/admin/companies', users: '/admin/users' }
-    const params = { ...(q ? { q } : {}), ...(tab === 'companies' && companyFilter !== 'all' ? { filter: companyFilter } : {}) }
+    if (tab === 'claims') {
+      api.get('/admin/claims', { params: { status: claimFilter } })
+        .then((r) => setClaims(r.data.data))
+        .finally(() => setLoading(false))
+      return
+    }
+    if (tab === 'companies') {
+      const params = {
+        ...(q ? { q } : {}),
+        ...(companyFilter !== 'all' ? { filter: companyFilter } : {}),
+        ...(companySort !== 'latest' ? { sort: companySort } : {}),
+        page: companiesPage,
+      }
+      api.get('/admin/companies', { params })
+        .then((r) => {
+          setCompanies(r.data.data)
+          setCompaniesMeta({ total: r.data.total, last_page: r.data.last_page, current_page: r.data.current_page })
+        })
+        .finally(() => setLoading(false))
+      return
+    }
+
+    const map = { complaints: '/admin/complaints', users: '/admin/users' }
+    const params = { ...(q ? { q } : {}) }
     api.get(map[tab], { params })
       .then((r) => {
         if (tab === 'complaints') setComplaints(r.data.data)
-        if (tab === 'companies')  setCompanies(r.data.data)
         if (tab === 'users')      setUsers(r.data.data)
       })
       .finally(() => setLoading(false))
-  }, [tab, q, companyFilter, modFilter])
+  }, [tab, q, companyFilter, companySort, companiesPage, modFilter, claimFilter])
 
   useEffect(() => { load() }, [load])
 
@@ -90,6 +116,18 @@ export default function AdminPage() {
     setModeration((p) => p.filter((c) => c.id !== id))
     setExpandedMod(null)
     // refresh stats
+    api.get('/admin/stats').then((r) => setStats(r.data))
+  }
+
+  /* Claim actions */
+  const approveClaim = async (id) => {
+    await api.post(`/admin/claims/${id}/approve`)
+    setClaims((p) => p.filter((c) => c.id !== id))
+    api.get('/admin/stats').then((r) => setStats(r.data))
+  }
+  const rejectClaim = async (id, reason) => {
+    await api.post(`/admin/claims/${id}/reject`, { rejection_reason: reason })
+    setClaims((p) => p.filter((c) => c.id !== id))
     api.get('/admin/stats').then((r) => setStats(r.data))
   }
 
@@ -112,7 +150,7 @@ export default function AdminPage() {
     setUsers((p) => p.map((u) => u.id === id ? { ...u, ...res.data } : u))
   }
 
-  const TABS = ['complaints', 'moderation', 'companies', 'unregistered', 'users']
+  const TABS = ['complaints', 'moderation', 'companies', 'unregistered', 'claims', 'users']
 
   return (
     <div className="max-w-5xl mx-auto space-y-5">
@@ -125,7 +163,7 @@ export default function AdminPage() {
 
       {/* Stats strip */}
       {stats && (
-        <div className="grid grid-cols-3 sm:grid-cols-7 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-3">
           {[
             { label: 'Users',       value: stats.total_users },
             { label: 'Companies',   value: stats.total_companies },
@@ -134,6 +172,7 @@ export default function AdminPage() {
             { label: 'Resolved',    value: stats.resolved,               green: true },
             { label: '🤖 Flagged',       value: stats.moderation_flagged, accent: stats.moderation_flagged > 0 },
             { label: '🏢 Unregistered', value: stats.stub_companies,      accent: stats.stub_companies > 0 },
+            { label: '📋 Claims',       value: stats.pending_claims ?? 0, accent: (stats.pending_claims ?? 0) > 0 },
           ].map((s) => (
             <div key={s.label} className="card p-4">
               <p className={`font-display text-[28px] font-semibold leading-none ${
@@ -175,13 +214,10 @@ export default function AdminPage() {
                 ? 'bg-[color:var(--color-eucalyptus)] text-[color:var(--color-paper)] shadow-sm'
                 : 'text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]'
             }`}>
-            {t === 'moderation' && stats?.moderation_flagged > 0
-              ? `Moderation (${stats.moderation_flagged})`
-              : t === 'unregistered' && stats?.stub_companies > 0
-              ? `Unregistered (${stats.stub_companies})`
-              : t === 'unregistered'
-              ? 'Unregistered'
-              : t.charAt(0).toUpperCase() + t.slice(1)
+            {t === 'moderation'   && stats?.moderation_flagged > 0 ? `Moderation (${stats.moderation_flagged})`
+            : t === 'unregistered' && stats?.stub_companies > 0   ? `Unregistered (${stats.stub_companies})`
+            : t === 'claims'       && stats?.pending_claims > 0   ? `Claims (${stats.pending_claims})`
+            : t.charAt(0).toUpperCase() + t.slice(1)
             }
           </button>
         ))}
@@ -192,17 +228,30 @@ export default function AdminPage() {
         <div className="relative flex-1 max-w-sm">
           <Icon name="search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)]" />
           <input
-            value={q} onChange={(e) => setQ(e.target.value)}
+            value={q} onChange={(e) => { setQ(e.target.value); setCompaniesPage(1) }}
             placeholder={`Search ${tab}…`}
             className="input pl-9 text-sm w-full"
           />
         </div>
         {tab === 'companies' && (
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             {['all', 'verified', 'flagged'].map((f) => (
-              <button key={f} onClick={() => setCompanyFilter(f)}
+              <button key={f} onClick={() => { setCompanyFilter(f); setCompaniesPage(1) }}
                 className={`chip capitalize ${companyFilter === f ? 'chip-active' : ''}`}>
                 {f}
+              </button>
+            ))}
+            <span className="w-px bg-[color:var(--color-border)] mx-1 self-stretch" />
+            {[
+              { value: 'latest',     label: 'Newest' },
+              { value: 'name',       label: 'A → Z'  },
+              { value: 'name_desc',  label: 'Z → A'  },
+              { value: 'complaints', label: 'Most complained' },
+              { value: 'score',      label: 'Highest score' },
+            ].map((s) => (
+              <button key={s.value} onClick={() => { setCompanySort(s.value); setCompaniesPage(1) }}
+                className={`chip ${companySort === s.value ? 'chip-active' : ''}`}>
+                {s.label}
               </button>
             ))}
           </div>
@@ -212,6 +261,16 @@ export default function AdminPage() {
             {['flagged', 'pending', 'edited', 'rejected'].map((f) => (
               <button key={f} onClick={() => setModFilter(f)}
                 className={`chip capitalize ${modFilter === f ? 'chip-active' : ''}`}>
+                {f}
+              </button>
+            ))}
+          </div>
+        )}
+        {tab === 'claims' && (
+          <div className="flex gap-1.5">
+            {['pending', 'approved', 'rejected', 'all'].map((f) => (
+              <button key={f} onClick={() => setClaimFilter(f)}
+                className={`chip capitalize ${claimFilter === f ? 'chip-active' : ''}`}>
                 {f}
               </button>
             ))}
@@ -399,6 +458,7 @@ export default function AdminPage() {
 
       {/* ── Companies tab ── */}
       {tab === 'companies' && !loading && (
+        <>
         <div className="card overflow-hidden">
           {companies.length === 0 && (
             <p className="p-10 text-sm text-[color:var(--color-muted)] text-center">No companies found.</p>
@@ -465,6 +525,15 @@ export default function AdminPage() {
             ))}
           </ul>
         </div>
+        {companiesMeta && companiesMeta.last_page > 1 && (
+          <Pagination
+            current={companiesMeta.current_page}
+            total={companiesMeta.last_page}
+            totalItems={companiesMeta.total}
+            onChange={setCompaniesPage}
+          />
+        )}
+        </>
       )}
 
       {/* ── Unregistered companies tab ── */}
@@ -517,6 +586,21 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Claims tab ── */}
+      {tab === 'claims' && !loading && (
+        <div className="space-y-3">
+          {claims.length === 0 && (
+            <div className="card p-10 text-sm text-[color:var(--color-muted)] text-center">
+              <p className="text-3xl mb-3">📋</p>
+              <p>No {claimFilter === 'all' ? '' : claimFilter} claims.</p>
+            </div>
+          )}
+          {claims.map((cl) => (
+            <ClaimCard key={cl.id} claim={cl} onApprove={approveClaim} onReject={rejectClaim} />
           ))}
         </div>
       )}
@@ -607,6 +691,175 @@ export default function AdminPage() {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+/* ─── Claim card ─────────────────────────────────────────── */
+function ClaimCard({ claim, onApprove, onReject }) {
+  const [showReject, setShowReject] = useState(false)
+  const [reason, setReason]         = useState('')
+
+  const PROOF_LABELS = {
+    asic_extract:         'ASIC Company Extract',
+    director_certificate: 'Director Certificate',
+    employment_contract:  'Employment Contract',
+    business_card:        'Business Card',
+    other:                'Other',
+  }
+
+  const statusColor = {
+    pending:  { fg: '#8A5A1F', bg: '#F3E2C3' },
+    approved: { fg: 'var(--color-eucalyptus)', bg: 'var(--color-eucalyptus-3)' },
+    rejected: { fg: 'var(--color-clay)', bg: 'var(--color-clay-soft)' },
+  }[claim.status] ?? {}
+
+  return (
+    <div className="card p-5">
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 rounded-xl bg-[color:var(--color-paper-2)] flex items-center justify-center shrink-0 text-xl font-bold text-[color:var(--color-muted)]">
+          {claim.company?.name?.charAt(0)?.toUpperCase() ?? '?'}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-0.5">
+            <span className="font-semibold text-sm text-[color:var(--color-ink)]">{claim.company?.name ?? '—'}</span>
+            <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full capitalize"
+              style={{ color: statusColor.fg, background: statusColor.bg }}>
+              {claim.status}
+            </span>
+          </div>
+          <p className="text-xs text-[color:var(--color-muted)] mb-3">
+            <span className="font-medium text-[color:var(--color-ink-2)]">{claim.claimant_name}</span>
+            {' · '}{claim.claimant_position}
+            {' · '}<a href={`mailto:${claim.claimant_email}`} className="hover:underline">{claim.claimant_email}</a>
+            {' · '}{claim.claimant_phone}
+          </p>
+
+          <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-xs mb-3">
+            <div>
+              <span className="text-[color:var(--color-muted)]">ABN provided: </span>
+              <span className="font-mono font-medium text-[color:var(--color-ink-2)]">{claim.abn_confirmation || '—'}</span>
+            </div>
+            <div>
+              <span className="text-[color:var(--color-muted)]">Proof type: </span>
+              <span className="font-medium text-[color:var(--color-ink-2)]">{PROOF_LABELS[claim.proof_type] ?? claim.proof_type ?? '—'}</span>
+            </div>
+          </div>
+
+          {claim.message && (
+            <div className="bg-[color:var(--color-paper-2)] rounded-xl px-3 py-2 text-xs text-[color:var(--color-ink-2)] leading-relaxed mb-3">
+              {claim.message}
+            </div>
+          )}
+
+          <p className="text-[11px] text-[color:var(--color-muted)]">
+            Submitted {new Date(claim.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          </p>
+        </div>
+
+        {claim.status === 'pending' && (
+          <div className="flex flex-col gap-2 shrink-0">
+            <button
+              onClick={() => onApprove(claim.id)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-xl transition"
+              style={{ background: 'var(--color-eucalyptus)', color: 'var(--color-paper)' }}>
+              ✓ Approve
+            </button>
+            <button
+              onClick={() => setShowReject(!showReject)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-xl border transition"
+              style={{ color: 'var(--color-clay)', borderColor: 'var(--color-clay)' }}>
+              ✗ Reject
+            </button>
+          </div>
+        )}
+      </div>
+
+      {showReject && (
+        <div className="mt-3 border-t pt-3" style={{ borderColor: 'var(--color-line)' }}>
+          <textarea
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            placeholder="Reason for rejection (will be kept internal)…"
+            rows={2}
+            className="input w-full text-sm resize-none mb-2"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => { if (reason.trim().length >= 10) { onReject(claim.id, reason); setShowReject(false) } }}
+              disabled={reason.trim().length < 10}
+              className="text-xs font-semibold px-3 py-1.5 rounded-xl disabled:opacity-50 transition"
+              style={{ background: 'var(--color-clay)', color: 'white' }}>
+              Confirm rejection
+            </button>
+            <button onClick={() => setShowReject(false)} className="text-xs px-3 py-1.5 rounded-xl hover:bg-[color:var(--color-paper-2)] transition">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ─── Pagination ─────────────────────────────────────────── */
+function Pagination({ current, total, totalItems, onChange }) {
+  // Build page window: always show first, last, current ±2
+  const pages = []
+  for (let i = 1; i <= total; i++) {
+    if (i === 1 || i === total || (i >= current - 2 && i <= current + 2)) {
+      pages.push(i)
+    }
+  }
+  // Insert ellipsis markers
+  const withGaps = []
+  let prev = 0
+  for (const p of pages) {
+    if (p - prev > 1) withGaps.push('…')
+    withGaps.push(p)
+    prev = p
+  }
+
+  return (
+    <div className="flex items-center justify-between px-1">
+      <p className="text-xs text-[color:var(--color-muted)]">
+        Page <span className="font-medium text-[color:var(--color-ink)]">{current}</span> of{' '}
+        <span className="font-medium text-[color:var(--color-ink)]">{total}</span>
+        {' '}· {totalItems.toLocaleString()} companies total
+      </p>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onChange(current - 1)}
+          disabled={current === 1}
+          className="p-1.5 rounded-lg text-sm disabled:opacity-30 hover:bg-[color:var(--color-paper-2)] transition"
+        >
+          ‹
+        </button>
+        {withGaps.map((p, i) =>
+          p === '…' ? (
+            <span key={`gap-${i}`} className="px-1 text-xs text-[color:var(--color-muted)]">…</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onChange(p)}
+              className={`min-w-[30px] h-7 px-1.5 rounded-lg text-xs font-medium transition ${
+                p === current
+                  ? 'bg-[color:var(--color-eucalyptus)] text-[color:var(--color-paper)]'
+                  : 'hover:bg-[color:var(--color-paper-2)] text-[color:var(--color-ink-2)]'
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+        <button
+          onClick={() => onChange(current + 1)}
+          disabled={current === total}
+          className="p-1.5 rounded-lg text-sm disabled:opacity-30 hover:bg-[color:var(--color-paper-2)] transition"
+        >
+          ›
+        </button>
+      </div>
     </div>
   )
 }
