@@ -73,11 +73,13 @@ class AuthController extends Controller
             $token->delete();
         }
 
-        // Destroy the Laravel session so any stale session cookie becomes invalid,
-        // preventing cross-user session bleed via Sanctum's stateful guard.
-        Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        // Destroy the Laravel session when one exists (stateful/browser requests).
+        // Pure Bearer-token requests have no session; skip to avoid RuntimeException.
+        if ($request->hasSession()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return response()->json(['message' => 'Logged out successfully.']);
     }
