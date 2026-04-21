@@ -40,43 +40,43 @@ class ModerateComplaint implements ShouldQueue
             'moderation_edited' => false,
         ];
 
-        // Apply AI edits to the complaint content
-        // if ($result['action'] === 'edited') {
-        //     $update['moderation_edited'] = true;
+        Apply AI edits to the complaint content
+        if ($result['action'] === 'edited') {
+            $update['moderation_edited'] = true;
 
-        //     if ($result['edited_title']) {
-        //         $update['title'] = $result['edited_title'];
-        //     }
-        //     if ($result['edited_description']) {
-        //         $update['description'] = $result['edited_description'];
-        //     }
-        //     if ($result['edited_expected_resolution']) {
-        //         $update['expected_resolution'] = $result['edited_expected_resolution'];
-        //     }
-        // }
+            if ($result['edited_title']) {
+                $update['title'] = $result['edited_title'];
+            }
+            if ($result['edited_description']) {
+                $update['description'] = $result['edited_description'];
+            }
+            if ($result['edited_expected_resolution']) {
+                $update['expected_resolution'] = $result['edited_expected_resolution'];
+            }
+        }
 
-        // Apply AI edits whenever edited fields are returned,
-// even if the complaint is still flagged for human review.
-$hasEdits =
-    !empty($result['edited_title']) ||
-    !empty($result['edited_description']) ||
-    !empty($result['edited_expected_resolution']);
+//         // Apply AI edits whenever edited fields are returned,
+// // even if the complaint is still flagged for human review.
+// $hasEdits =
+//     !empty($result['edited_title']) ||
+//     !empty($result['edited_description']) ||
+//     !empty($result['edited_expected_resolution']);
 
-if ($hasEdits) {
-    $update['moderation_edited'] = true;
+// if ($hasEdits) {
+//     $update['moderation_edited'] = true;
 
-    if (!empty($result['edited_title'])) {
-        $update['title'] = $result['edited_title'];
-    }
+//     if (!empty($result['edited_title'])) {
+//         $update['title'] = $result['edited_title'];
+//     }
 
-    if (!empty($result['edited_description'])) {
-        $update['description'] = $result['edited_description'];
-    }
+//     if (!empty($result['edited_description'])) {
+//         $update['description'] = $result['edited_description'];
+//     }
 
-    if (!empty($result['edited_expected_resolution'])) {
-        $update['expected_resolution'] = $result['edited_expected_resolution'];
-    }
-}
+//     if (!empty($result['edited_expected_resolution'])) {
+//         $update['expected_resolution'] = $result['edited_expected_resolution'];
+//     }
+// }
 
         // Flagged and rejected complaints are held from public view until admin reviews
         if (in_array($result['action'], ['flagged', 'rejected'])) {
