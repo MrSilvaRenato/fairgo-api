@@ -64,14 +64,33 @@ class ComplaintReplyController extends Controller
             'content' => 'required|string|max:2000',
         ]);
 
+        // Moderate the reply content before saving
+        $content = $data['content'];
+        try {
+            $moderation = app(\App\Services\ContentModerationService::class);
+            $result = $moderation->moderate($content, '', '');
+            if ($result['action'] === 'flagged') {
+                return response()->json([
+                    'message'    => 'Your reply contains content that violates our community guidelines. Please revise and resubmit.',
+                    'error_code' => 'reply_flagged',
+                ], 422);
+            }
+            if ($result['action'] === 'edited' && !empty($result['edited_title'])) {
+                $content = $result['edited_title'];
+            }
+        } catch (\Exception $e) {
+            // Moderation failure — allow reply through
+            \Log::error('Reply moderation failed: ' . $e->getMessage());
+        }
+
         $reply = ComplaintReply::create([
             'complaint_id'    => $complaint->id,
             'user_id'         => $user->id,
             'author_type'     => $isConsumer ? 'consumer' : 'company',
-            'content'         => $data['content'],
+            'content'         => $content,
             // Writer has already read their own message; recipient hasn't
-            'consumer_read_at' => $isConsumer ? now() : null,  // consumer-side read
-            'company_read_at'  => $isCompany  ? now() : null,  // company-side read
+            'consumer_read_at' => $isConsumer ? now() : null,
+            'company_read_at'  => $isCompany  ? now() : null,
         ]);
 
         if ($isCompany) {

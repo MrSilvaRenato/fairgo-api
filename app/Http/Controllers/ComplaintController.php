@@ -92,19 +92,24 @@ class ComplaintController extends Controller
         $complaint->load(['consumer:id,name,email', 'company:id,name,slug,user_id', 'company.user:id,name,email']);
 
         CalculateCompanyScore::dispatch($complaint->company_id);
-        ModerateComplaint::dispatch($complaint->id);
 
-        // Notify consumer — confirmation
-        $request->user()->notify(new ComplaintFiledConsumer($complaint));
-
-        // Notify company admin — new complaint alert
-        $companyUser = $complaint->company->user;
-        if ($companyUser) {
-            $companyUser->notify(new ComplaintFiledCompany($complaint));
-        }
-
-        // Re-fetch after moderation job ran (sync queue updates the record inline)
+        // Run moderation synchronously so we can return the result to the frontend
+        // and decide whether to show the moderation hold screen
+        ModerateComplaint::dispatchSync($complaint->id);
         $complaint->refresh();
+
+        // Only notify company if complaint passed moderation (approved/edited)
+        // Flagged complaints are hidden from company until admin reviews
+        $companyUser = $complaint->company->user;
+        if (in_array($complaint->moderation_status, ['approved', 'edited', null])) {
+            $request->user()->notify(new ComplaintFiledConsumer($complaint));
+            if ($companyUser) {
+                $companyUser->notify(new ComplaintFiledCompany($complaint));
+            }
+        } else {
+            // Still notify consumer their complaint was received (but under review)
+            $request->user()->notify(new ComplaintFiledConsumer($complaint));
+        }
 
         return response()->json(
             array_merge(
