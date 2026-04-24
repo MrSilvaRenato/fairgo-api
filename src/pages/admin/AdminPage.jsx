@@ -163,22 +163,22 @@ export default function AdminPage() {
 
       {/* Stats strip */}
       {stats && (
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3">
           {[
             { label: 'Users',       value: stats.total_users },
             { label: 'Companies',   value: stats.total_companies },
             { label: 'Complaints',  value: stats.total_complaints },
             { label: 'Open',        value: stats.open_complaints,        accent: stats.open_complaints > 0 },
             { label: 'Resolved',    value: stats.resolved,               green: true },
-            { label: '🤖 Flagged',       value: stats.moderation_flagged, accent: stats.moderation_flagged > 0 },
-            { label: '🏢 Unregistered', value: stats.stub_companies,      accent: stats.stub_companies > 0 },
-            { label: '📋 Claims',       value: stats.pending_claims ?? 0, accent: (stats.pending_claims ?? 0) > 0 },
+            { label: '🤖 Flagged',  value: stats.moderation_flagged,     accent: stats.moderation_flagged > 0 },
+            { label: '🏢 Unreg.',   value: stats.stub_companies,         accent: stats.stub_companies > 0 },
+            { label: '📋 Claims',   value: stats.pending_claims ?? 0,    accent: (stats.pending_claims ?? 0) > 0 },
           ].map((s) => (
-            <div key={s.label} className="card p-4">
-              <p className={`font-display text-[28px] font-semibold leading-none ${
+            <div key={s.label} className="card p-3 sm:p-4">
+              <p className={`font-display text-xl sm:text-[28px] font-semibold leading-none ${
                 s.green ? 'text-[color:var(--color-eucalyptus)]' : s.accent ? 'text-[color:var(--color-ochre)]' : 'text-[color:var(--color-ink)]'
               }`}>{s.value}</p>
-              <p className="text-xs text-[color:var(--color-muted)] mt-1">{s.label}</p>
+              <p className="text-[10px] sm:text-xs text-[color:var(--color-muted)] mt-1 leading-tight">{s.label}</p>
             </div>
           ))}
         </div>
@@ -206,17 +206,19 @@ export default function AdminPage() {
       )}
 
       {/* Tabs */}
-      <div className="card p-1 flex gap-1 flex-wrap">
+      <div className="card p-1 grid grid-cols-3 sm:flex gap-1">
         {TABS.map((t) => (
           <button key={t} onClick={() => { setTab(t); setQ('') }}
-            className={`flex-1 py-2 rounded-xl text-sm font-medium capitalize transition ${
+            className={`sm:flex-1 py-2 px-1 rounded-xl text-xs sm:text-sm font-medium capitalize transition text-center leading-tight ${
               tab === t
                 ? 'bg-[color:var(--color-eucalyptus)] text-[color:var(--color-paper)] shadow-sm'
                 : 'text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]'
             }`}>
-            {t === 'moderation'   && stats?.moderation_flagged > 0 ? `Moderation (${stats.moderation_flagged})`
-            : t === 'unregistered' && stats?.stub_companies > 0   ? `Unregistered (${stats.stub_companies})`
+            {t === 'moderation'   && stats?.moderation_flagged > 0 ? `Mod (${stats.moderation_flagged})`
+            : t === 'unregistered' && stats?.stub_companies > 0   ? `Unreg (${stats.stub_companies})`
             : t === 'claims'       && stats?.pending_claims > 0   ? `Claims (${stats.pending_claims})`
+            : t === 'moderation'   ? 'Moderation'
+            : t === 'unregistered' ? 'Unreg.'
             : t.charAt(0).toUpperCase() + t.slice(1)
             }
           </button>
@@ -224,8 +226,8 @@ export default function AdminPage() {
       </div>
 
       {/* Search + sub-filters */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-2">
+        <div className="relative w-full">
           <Icon name="search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)]" />
           <input
             value={q} onChange={(e) => { setQ(e.target.value); setCompaniesPage(1) }}
@@ -234,40 +236,44 @@ export default function AdminPage() {
           />
         </div>
         {tab === 'companies' && (
-          <div className="flex flex-wrap gap-1.5">
-            {['all', 'verified', 'flagged'].map((f) => (
-              <button key={f} onClick={() => { setCompanyFilter(f); setCompaniesPage(1) }}
-                className={`chip capitalize ${companyFilter === f ? 'chip-active' : ''}`}>
-                {f}
-              </button>
-            ))}
-            <span className="w-px bg-[color:var(--color-border)] mx-1 self-stretch" />
-            {[
-              { value: 'latest',     label: 'Newest' },
-              { value: 'name',       label: 'A → Z'  },
-              { value: 'name_desc',  label: 'Z → A'  },
-              { value: 'complaints', label: 'Most complained' },
-              { value: 'score',      label: 'Highest score' },
-            ].map((s) => (
-              <button key={s.value} onClick={() => { setCompanySort(s.value); setCompaniesPage(1) }}
-                className={`chip ${companySort === s.value ? 'chip-active' : ''}`}>
-                {s.label}
-              </button>
-            ))}
+          <div className="overflow-x-auto -mx-1 px-1 pb-1">
+            <div className="flex gap-1.5 min-w-max">
+              {['all', 'verified', 'flagged'].map((f) => (
+                <button key={f} onClick={() => { setCompanyFilter(f); setCompaniesPage(1) }}
+                  className={`chip capitalize ${companyFilter === f ? 'chip-active' : ''}`}>
+                  {f}
+                </button>
+              ))}
+              <span className="w-px bg-[color:var(--color-border)] mx-1 self-stretch" />
+              {[
+                { value: 'latest',     label: 'Newest' },
+                { value: 'name',       label: 'A → Z'  },
+                { value: 'name_desc',  label: 'Z → A'  },
+                { value: 'complaints', label: 'Most complained' },
+                { value: 'score',      label: 'Top score' },
+              ].map((s) => (
+                <button key={s.value} onClick={() => { setCompanySort(s.value); setCompaniesPage(1) }}
+                  className={`chip ${companySort === s.value ? 'chip-active' : ''}`}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {tab === 'moderation' && (
-          <div className="flex gap-1.5">
-            {['flagged', 'pending', 'edited', 'rejected'].map((f) => (
-              <button key={f} onClick={() => setModFilter(f)}
-                className={`chip capitalize ${modFilter === f ? 'chip-active' : ''}`}>
-                {f}
-              </button>
-            ))}
+          <div className="overflow-x-auto -mx-1 px-1 pb-1">
+            <div className="flex gap-1.5 min-w-max">
+              {['flagged', 'pending', 'edited', 'rejected'].map((f) => (
+                <button key={f} onClick={() => setModFilter(f)}
+                  className={`chip capitalize ${modFilter === f ? 'chip-active' : ''}`}>
+                  {f}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {tab === 'claims' && (
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5 flex-wrap">
             {['pending', 'approved', 'rejected', 'all'].map((f) => (
               <button key={f} onClick={() => setClaimFilter(f)}
                 className={`chip capitalize ${claimFilter === f ? 'chip-active' : ''}`}>
@@ -296,57 +302,59 @@ export default function AdminPage() {
               const st  = STATUS[c.status] ?? STATUS.open
               const mst = MOD_STATUS[c.moderation_status]
               return (
-                <li key={c.id} className={`p-4 flex items-start gap-3 hover:bg-[color:var(--color-paper-2)] transition ${
+                <li key={c.id} className={`p-3 sm:p-4 hover:bg-[color:var(--color-paper-2)] transition ${
                   c.status === 'removed' ? 'opacity-50' : ''
                 }`}>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-                        style={{ color: st.fg, background: st.bg }}>
-                        {st.label}
-                      </span>
-                      {mst && c.moderation_status !== 'approved' && (
-                        <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-                          style={{ color: mst.fg, background: mst.bg }}>
-                          🤖 {mst.label}
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                        <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                          style={{ color: st.fg, background: st.bg }}>
+                          {st.label}
                         </span>
-                      )}
-                      <span className="text-xs text-[color:var(--color-muted)] capitalize">{c.category}</span>
-                      {!c.is_public && (
-                        <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-                          style={{ color: 'var(--color-muted)', background: 'var(--color-paper-2)' }}>
-                          Private
-                        </span>
-                      )}
+                        {mst && c.moderation_status !== 'approved' && (
+                          <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                            style={{ color: mst.fg, background: mst.bg }}>
+                            🤖 {mst.label}
+                          </span>
+                        )}
+                        <span className="text-[11px] text-[color:var(--color-muted)] capitalize">{c.category}</span>
+                        {!c.is_public && (
+                          <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                            style={{ color: 'var(--color-muted)', background: 'var(--color-paper-2)' }}>
+                            Private
+                          </span>
+                        )}
+                      </div>
+                      <Link to={`/complaints/${c.id}`}
+                        className="text-sm font-semibold text-[color:var(--color-ink)] hover:text-[color:var(--color-eucalyptus)] transition line-clamp-1">
+                        {c.title || c.description?.slice(0, 80)}
+                      </Link>
+                      <p className="text-xs text-[color:var(--color-muted)] mt-0.5 line-clamp-1">
+                        <span className="font-medium text-[color:var(--color-ink-2)]">{c.consumer?.name}</span>
+                        {' → '}
+                        <span className="font-medium text-[color:var(--color-ink-2)]">{c.company?.name}</span>
+                        {' · '}
+                        {new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
                     </div>
-                    <Link to={`/complaints/${c.id}`}
-                      className="text-sm font-semibold text-[color:var(--color-ink)] hover:text-[color:var(--color-eucalyptus)] transition line-clamp-1">
-                      {c.title || c.description?.slice(0, 80)}
-                    </Link>
-                    <p className="text-xs text-[color:var(--color-muted)] mt-0.5">
-                      <span className="font-medium text-[color:var(--color-ink-2)]">{c.consumer?.name}</span>
-                      {' → '}
-                      <span className="font-medium text-[color:var(--color-ink-2)]">{c.company?.name}</span>
-                      {' · '}
-                      {new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {c.status !== 'removed' ? (
-                      <button onClick={() => updateComplaint(c.id, { status: 'removed', is_public: false })}
-                        className="text-xs text-[color:var(--color-clay)] hover:bg-[color:var(--color-clay-soft)] px-2.5 py-1.5 rounded-xl transition font-medium">
-                        Remove
-                      </button>
-                    ) : (
-                      <button onClick={() => updateComplaint(c.id, { status: 'open', is_public: true })}
-                        className="text-xs text-[color:var(--color-eucalyptus)] hover:bg-[color:var(--color-eucalyptus-3)] px-2.5 py-1.5 rounded-xl transition font-medium">
-                        Restore
-                      </button>
-                    )}
-                    <Link to={`/complaints/${c.id}`}
-                      className="text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] transition">
-                      <Icon name="arrow-r" size={15} />
-                    </Link>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {c.status !== 'removed' ? (
+                        <button onClick={() => updateComplaint(c.id, { status: 'removed', is_public: false })}
+                          className="text-xs text-[color:var(--color-clay)] hover:bg-[color:var(--color-clay-soft)] px-2 py-1.5 rounded-xl transition font-medium">
+                          Remove
+                        </button>
+                      ) : (
+                        <button onClick={() => updateComplaint(c.id, { status: 'open', is_public: true })}
+                          className="text-xs text-[color:var(--color-eucalyptus)] hover:bg-[color:var(--color-eucalyptus-3)] px-2 py-1.5 rounded-xl transition font-medium">
+                          Restore
+                        </button>
+                      )}
+                      <Link to={`/complaints/${c.id}`}
+                        className="p-1.5 text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] transition">
+                        <Icon name="arrow-r" size={14} />
+                      </Link>
+                    </div>
                   </div>
                 </li>
               )
@@ -465,61 +473,56 @@ export default function AdminPage() {
           )}
           <ul className="divide-y divide-[color:var(--color-border)]">
             {companies.map((c) => (
-              <li key={c.id} className="p-4 flex items-center gap-3 hover:bg-[color:var(--color-paper-2)] transition">
-                <CompanyLogo company={c} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Link to={`/companies/${c.slug}`}
-                      className="text-sm font-semibold text-[color:var(--color-ink)] hover:text-[color:var(--color-eucalyptus)] transition">
-                      {c.name}
-                    </Link>
-                    {c.verified_badge && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                        style={{ color: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
-                        <Icon name="verified" size={10} /> Verified
-                      </span>
-                    )}
-                    {c.not_recommended && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                        style={{ color: 'var(--color-clay)', background: 'var(--color-clay-soft)' }}>
-                        ⚠ Not Recommended
-                      </span>
-                    )}
+              <li key={c.id} className="p-3 sm:p-4 hover:bg-[color:var(--color-paper-2)] transition">
+                <div className="flex items-center gap-3">
+                  <CompanyLogo company={c} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Link to={`/companies/${c.slug}`}
+                        className="text-sm font-semibold text-[color:var(--color-ink)] hover:text-[color:var(--color-eucalyptus)] transition">
+                        {c.name}
+                      </Link>
+                      {c.verified_badge && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                          style={{ color: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
+                          <Icon name="verified" size={10} /> Verified
+                        </span>
+                      )}
+                      {c.not_recommended && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                          style={{ color: 'var(--color-clay)', background: 'var(--color-clay-soft)' }}>
+                          ⚠ Not Rec.
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[color:var(--color-muted)] mt-0.5 truncate">
+                      <span className="capitalize">{c.subscription?.plan ?? 'free'}</span>
+                      {' · '}{c.complaints_count ?? 0} complaints
+                      {c.score && <span className="font-semibold text-[color:var(--color-ink-2)]"> · {Math.round(c.score.score)}</span>}
+                    </p>
                   </div>
-                  <p className="text-xs text-[color:var(--color-muted)] mt-0.5">
-                    {c.user?.email}
-                    {' · '}
-                    <span className="capitalize">{c.subscription?.plan ?? 'free'} plan</span>
-                    {' · '}
-                    {c.complaints_count ?? 0} complaint{c.complaints_count !== 1 ? 's' : ''}
-                    {c.score && (
-                      <span className="font-semibold text-[color:var(--color-ink-2)] ml-1">
-                        · Score {Math.round(c.score.score)}
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => updateCompany(c.id, { verified_badge: !c.verified_badge })}
-                    title={c.verified_badge ? 'Remove verified badge' : 'Grant verified badge'}
-                    className={`p-1.5 rounded-lg transition ${
-                      c.verified_badge
-                        ? 'text-[color:var(--color-eucalyptus)] bg-[color:var(--color-eucalyptus-3)]'
-                        : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-paper-2)]'
-                    }`}>
-                    <Icon name="verified" size={16} />
-                  </button>
-                  <button
-                    onClick={() => updateCompany(c.id, { not_recommended: !c.not_recommended })}
-                    title={c.not_recommended ? 'Remove flag' : 'Flag as not recommended'}
-                    className={`p-1.5 rounded-lg transition text-sm leading-none ${
-                      c.not_recommended
-                        ? 'text-[color:var(--color-clay)] bg-[color:var(--color-clay-soft)]'
-                        : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-paper-2)]'
-                    }`}>
-                    ⚠
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => updateCompany(c.id, { verified_badge: !c.verified_badge })}
+                      title={c.verified_badge ? 'Remove verified badge' : 'Grant verified badge'}
+                      className={`p-1.5 rounded-lg transition ${
+                        c.verified_badge
+                          ? 'text-[color:var(--color-eucalyptus)] bg-[color:var(--color-eucalyptus-3)]'
+                          : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-paper-2)]'
+                      }`}>
+                      <Icon name="verified" size={15} />
+                    </button>
+                    <button
+                      onClick={() => updateCompany(c.id, { not_recommended: !c.not_recommended })}
+                      title={c.not_recommended ? 'Remove flag' : 'Flag as not recommended'}
+                      className={`p-1.5 rounded-lg transition text-sm leading-none ${
+                        c.not_recommended
+                          ? 'text-[color:var(--color-clay)] bg-[color:var(--color-clay-soft)]'
+                          : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-paper-2)]'
+                      }`}>
+                      ⚠
+                    </button>
+                  </div>
                 </div>
               </li>
             ))}
@@ -546,43 +549,38 @@ export default function AdminPage() {
             </div>
           )}
           {stubs.map((c) => (
-            <div key={c.id} className="card p-4 flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-[color:var(--color-paper-2)] flex items-center justify-center shrink-0 text-lg font-bold text-[color:var(--color-muted)]">
-                {c.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="text-sm font-semibold text-[color:var(--color-ink)]">{c.name}</span>
-                  <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-                    style={{ color: 'var(--color-ochre)', background: '#FDF6E8', border: '1px solid var(--color-ochre)' }}>
-                    🏢 Not registered
-                  </span>
-                  {c.abn_verified && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-                      style={{ color: '#1d4ed8', background: '#eff6ff' }}>
-                      ✓ ABN Verified
-                    </span>
-                  )}
+            <div key={c.id} className="card p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[color:var(--color-paper-2)] flex items-center justify-center shrink-0 text-lg font-bold text-[color:var(--color-muted)]">
+                  {c.name.charAt(0).toUpperCase()}
                 </div>
-                <p className="text-xs text-[color:var(--color-muted)]">
-                  ABN: <span className="font-mono font-medium text-[color:var(--color-ink-2)]">{c.abn ?? '—'}</span>
-                  {c.abn_entity_name && (
-                    <span className="ml-2 text-[color:var(--color-ink-2)]">· {c.abn_entity_name}</span>
-                  )}
-                  <span className="ml-2">· {c.complaints_count ?? 0} complaint{c.complaints_count !== 1 ? 's' : ''} filed</span>
-                  <span className="ml-2">· First seen {new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                </p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                    <span className="text-sm font-semibold text-[color:var(--color-ink)]">{c.name}</span>
+                    {c.abn_verified && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                        style={{ color: '#1d4ed8', background: '#eff6ff' }}>
+                        ✓ ABN OK
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-[color:var(--color-muted)]">
+                    ABN: <span className="font-mono font-medium text-[color:var(--color-ink-2)]">{c.abn ?? '—'}</span>
+                    {c.abn_entity_name && <span className="ml-1 text-[color:var(--color-ink-2)]">· {c.abn_entity_name}</span>}
+                    <span className="ml-1">· {c.complaints_count ?? 0} complaints</span>
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex gap-2 mt-3">
                 <Link to={`/companies/${c.slug}`} target="_blank"
-                  className="text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] px-2.5 py-1.5 rounded-xl hover:bg-[color:var(--color-paper-2)] transition font-medium">
-                  View
+                  className="flex-1 text-center text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] px-3 py-2 rounded-xl hover:bg-[color:var(--color-paper-2)] transition font-medium border border-[color:var(--color-border)]">
+                  View profile
                 </Link>
                 <button
                   onClick={() => promoteStub(c.id)}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-xl transition"
+                  className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl transition"
                   style={{ background: 'var(--color-eucalyptus)', color: 'var(--color-paper)' }}>
-                  ✓ Mark as registered
+                  ✓ Mark registered
                 </button>
               </div>
             </div>
@@ -613,52 +611,47 @@ export default function AdminPage() {
           )}
           <ul className="divide-y divide-[color:var(--color-border)]">
             {users.map((u) => (
-              <li key={u.id} className={`p-4 flex items-center gap-3 hover:bg-[color:var(--color-paper-2)] transition ${
+              <li key={u.id} className={`p-3 sm:p-4 hover:bg-[color:var(--color-paper-2)] transition ${
                 u.banned ? 'opacity-50' : ''
               }`}>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold"
-                  style={{ background: 'var(--color-eucalyptus-3)', color: 'var(--color-eucalyptus)' }}>
-                  {u.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-[color:var(--color-ink)]">{u.name}</span>
-                    <RoleBadge role={u.role} />
-                    {u.reputation_flag === 'serial_complainer' && (
-                      <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-                        style={{ color: 'var(--color-clay)', background: 'var(--color-clay-soft)' }}>
-                        ⚠ Serial complainer
-                      </span>
-                    )}
-                    {u.reputation_flag === 'verified_consumer' && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-                        style={{ color: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
-                        <Icon name="verified" size={10} /> Trusted consumer
-                      </span>
-                    )}
-                    {u.banned && (
-                      <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-                        style={{ color: 'var(--color-clay)', background: 'var(--color-clay-soft)' }}>
-                        Banned
-                      </span>
-                    )}
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold"
+                    style={{ background: 'var(--color-eucalyptus-3)', color: 'var(--color-eucalyptus)' }}>
+                    {u.name.charAt(0).toUpperCase()}
                   </div>
-                  <p className="text-xs text-[color:var(--color-muted)] mt-0.5">
-                    {u.email}
-                    {u.company && <span className="ml-1">· {u.company.name}</span>}
-                    {u.complaints_count > 0 && (
-                      <span className="ml-1">· {u.complaints_count} complaint{u.complaints_count !== 1 ? 's' : ''}</span>
-                    )}
-                    {u.reputation_score != null && u.role === 'consumer' && (
-                      <span className="ml-1">· Rep: {u.reputation_score}/100</span>
-                    )}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-sm font-semibold text-[color:var(--color-ink)]">{u.name}</span>
+                      <RoleBadge role={u.role} />
+                      {u.reputation_flag === 'serial_complainer' && (
+                        <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                          style={{ color: 'var(--color-clay)', background: 'var(--color-clay-soft)' }}>
+                          ⚠ Serial
+                        </span>
+                      )}
+                      {u.reputation_flag === 'verified_consumer' && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                          style={{ color: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
+                          <Icon name="verified" size={10} /> Trusted
+                        </span>
+                      )}
+                      {u.banned && (
+                        <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                          style={{ color: 'var(--color-clay)', background: 'var(--color-clay-soft)' }}>
+                          Banned
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[color:var(--color-muted)] mt-0.5 truncate">
+                      {u.email}
+                      {u.company && <span className="ml-1">· {u.company.name}</span>}
+                      {u.complaints_count > 0 && <span className="ml-1">· {u.complaints_count} complaints</span>}
+                    </p>
+                  </div>
                   {u.role !== 'admin' && (
                     <button
                       onClick={() => updateUser(u.id, { banned: !u.banned })}
-                      className={`text-xs px-2.5 py-1.5 rounded-xl transition font-medium ${
+                      className={`text-xs px-2.5 py-1.5 rounded-xl transition font-medium shrink-0 ${
                         u.banned
                           ? 'text-[color:var(--color-eucalyptus)] hover:bg-[color:var(--color-eucalyptus-3)]'
                           : 'text-[color:var(--color-clay)] hover:bg-[color:var(--color-clay-soft)]'
@@ -715,9 +708,9 @@ function ClaimCard({ claim, onApprove, onReject }) {
   }[claim.status] ?? {}
 
   return (
-    <div className="card p-5">
-      <div className="flex items-start gap-4">
-        <div className="w-12 h-12 rounded-xl bg-[color:var(--color-paper-2)] flex items-center justify-center shrink-0 text-xl font-bold text-[color:var(--color-muted)]">
+    <div className="card p-4 sm:p-5">
+      <div className="flex items-start gap-3 sm:gap-4">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[color:var(--color-paper-2)] flex items-center justify-center shrink-0 text-lg font-bold text-[color:var(--color-muted)]">
           {claim.company?.name?.charAt(0)?.toUpperCase() ?? '?'}
         </div>
         <div className="flex-1 min-w-0">
@@ -728,20 +721,18 @@ function ClaimCard({ claim, onApprove, onReject }) {
               {claim.status}
             </span>
           </div>
-          <p className="text-xs text-[color:var(--color-muted)] mb-3">
-            <span className="font-medium text-[color:var(--color-ink-2)]">{claim.claimant_name}</span>
-            {' · '}{claim.claimant_position}
-            {' · '}<a href={`mailto:${claim.claimant_email}`} className="hover:underline">{claim.claimant_email}</a>
-            {' · '}{claim.claimant_phone}
-          </p>
+          <div className="text-xs text-[color:var(--color-muted)] mb-3 space-y-0.5">
+            <p><span className="font-medium text-[color:var(--color-ink-2)]">{claim.claimant_name}</span> · {claim.claimant_position}</p>
+            <p><a href={`mailto:${claim.claimant_email}`} className="hover:underline">{claim.claimant_email}</a> · {claim.claimant_phone}</p>
+          </div>
 
-          <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-xs mb-3">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mb-3">
             <div>
-              <span className="text-[color:var(--color-muted)]">ABN provided: </span>
+              <span className="text-[color:var(--color-muted)]">ABN: </span>
               <span className="font-mono font-medium text-[color:var(--color-ink-2)]">{claim.abn_confirmation || '—'}</span>
             </div>
             <div>
-              <span className="text-[color:var(--color-muted)]">Proof type: </span>
+              <span className="text-[color:var(--color-muted)]">Proof: </span>
               <span className="font-medium text-[color:var(--color-ink-2)]">{PROOF_LABELS[claim.proof_type] ?? claim.proof_type ?? '—'}</span>
             </div>
           </div>
@@ -755,24 +746,24 @@ function ClaimCard({ claim, onApprove, onReject }) {
           <p className="text-[11px] text-[color:var(--color-muted)]">
             Submitted {new Date(claim.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </p>
-        </div>
 
-        {claim.status === 'pending' && (
-          <div className="flex flex-col gap-2 shrink-0">
-            <button
-              onClick={() => onApprove(claim.id)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-xl transition"
-              style={{ background: 'var(--color-eucalyptus)', color: 'var(--color-paper)' }}>
-              ✓ Approve
-            </button>
-            <button
-              onClick={() => setShowReject(!showReject)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-xl border transition"
-              style={{ color: 'var(--color-clay)', borderColor: 'var(--color-clay)' }}>
-              ✗ Reject
-            </button>
-          </div>
-        )}
+          {claim.status === 'pending' && (
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => onApprove(claim.id)}
+                className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl transition"
+                style={{ background: 'var(--color-eucalyptus)', color: 'var(--color-paper)' }}>
+                ✓ Approve
+              </button>
+              <button
+                onClick={() => setShowReject(!showReject)}
+                className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl border transition"
+                style={{ color: 'var(--color-clay)', borderColor: 'var(--color-clay)' }}>
+                ✗ Reject
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {showReject && (
