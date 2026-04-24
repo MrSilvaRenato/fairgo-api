@@ -25,6 +25,7 @@ export default function SearchPage() {
   useSeoMeta({
     title: q ? `Search: "${q}"` : 'Search',
     description: q ? `Search results for "${q}" — companies and complaints on Aus Fair Go.` : undefined,
+    url: `https://ausfairgo.com.au/search${q ? `?q=${encodeURIComponent(q)}` : ''}`,
   })
 
   useEffect(() => {

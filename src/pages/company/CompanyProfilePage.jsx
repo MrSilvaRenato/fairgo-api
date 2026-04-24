@@ -65,6 +65,50 @@ export default function CompanyProfilePage() {
     type: 'profile',
   })
 
+  // Schema.org JSON-LD structured data
+  useEffect(() => {
+    if (!company) return
+
+    const schemaId = 'schema-company-profile'
+    const existing = document.getElementById(schemaId)
+    if (existing) existing.remove()
+
+    const ratingCount = complaints.length
+    const ratingValue = score ? Math.round(score.score * 10) / 10 : null
+
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: company.name,
+      url: company.website ?? undefined,
+      description: `Consumer complaints and reviews for ${company.name} on Aus Fair Go.`,
+      ...(company.industry ? { knowsAbout: company.industry } : {}),
+      ...(ratingValue && ratingCount > 0
+        ? {
+            aggregateRating: {
+              '@type': 'AggregateRating',
+              ratingValue: ratingValue,
+              bestRating: 100,
+              worstRating: 0,
+              ratingCount: ratingCount,
+              description: `Aus Fair Go accountability score out of 100`,
+            },
+          }
+        : {}),
+      sameAs: company.website ? [company.website] : undefined,
+    }
+
+    const script = document.createElement('script')
+    script.id = schemaId
+    script.type = 'application/ld+json'
+    script.textContent = JSON.stringify(schema)
+    document.head.appendChild(script)
+
+    return () => {
+      document.getElementById(schemaId)?.remove()
+    }
+  }, [company, complaints, score])
+
   if (loading) return <ProfileSkeleton />
   if (!company) return <NotFound />
 

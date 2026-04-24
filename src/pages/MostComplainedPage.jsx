@@ -30,8 +30,9 @@ export default function MostComplainedPage() {
   const [loading, setLoading]   = useState(true)
 
   useSeoMeta({
-    title: 'Most complained about companies',
+    title: 'Most complained about companies in Australia',
     description: 'See which Australian businesses receive the most consumer complaints on Aus Fair Go. Updated in real-time.',
+    url: 'https://ausfairgo.com.au/most-complained',
   })
 
   useEffect(() => {

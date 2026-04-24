@@ -69,6 +69,40 @@ export default function ComplaintPage() {
     url: `${window.location.origin}/complaints/${id}`,
   })
 
+  // Schema.org JSON-LD for complaint detail page
+  useEffect(() => {
+    if (!complaint) return
+
+    const schemaId = 'schema-complaint'
+    document.getElementById(schemaId)?.remove()
+
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'UserReview',
+      name: complaint.title,
+      reviewBody: complaint.description,
+      datePublished: complaint.created_at,
+      dateModified: complaint.updated_at,
+      url: `${window.location.origin}/complaints/${complaint.id}`,
+      author: { '@type': 'Person', name: 'Anonymous Consumer' },
+      itemReviewed: {
+        '@type': 'Organization',
+        name: complaint.company?.name,
+        ...(complaint.company?.slug
+          ? { url: `${window.location.origin}/companies/${complaint.company.slug}` }
+          : {}),
+      },
+    }
+
+    const script = document.createElement('script')
+    script.id = schemaId
+    script.type = 'application/ld+json'
+    script.textContent = JSON.stringify(schema)
+    document.head.appendChild(script)
+
+    return () => { document.getElementById(schemaId)?.remove() }
+  }, [complaint])
+
   if (loading) return <LoadingSkeleton />
   if (error) return (
     <div className="max-w-2xl mx-auto py-16 text-center">

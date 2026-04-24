@@ -5,6 +5,7 @@ import useAuthStore from '../store/authStore'
 import CompanyLogo from '../components/CompanyLogo'
 import Icon from '../components/Icon'
 import { BAND } from '../components/ScoreMeter'
+import useSeoMeta from '../hooks/useSeoMeta'
 
 /* ── display config ─────────────────────────────────────── */
 const STATUS_STYLE = {
@@ -20,6 +21,12 @@ const STATUS_STYLE = {
 export default function HomePage() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
+
+  useSeoMeta({
+    title: 'Australian consumer complaints & business accountability',
+    description: 'Aus Fair Go gives Australian consumers a voice. File complaints, track resolutions, and hold businesses accountable. Completely transparent.',
+    url: 'https://ausfairgo.com.au/',
+  })
 
   const [query, setQuery] = useState('')
   const [results, setResults] = useState({ companies: [], complaints: [] })
