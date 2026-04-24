@@ -40,7 +40,7 @@ class ModerateComplaint implements ShouldQueue
             'moderation_edited' => false,
         ];
 
-        Apply AI edits to the complaint content
+        // Apply AI edits to the complaint content
         if ($result['action'] === 'edited') {
             $update['moderation_edited'] = true;
 

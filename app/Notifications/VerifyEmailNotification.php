@@ -3,18 +3,13 @@
 namespace App\Notifications;
 
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\URL;
 
 class VerifyEmailNotification extends VerifyEmail
 {
-    /**
-     * Override the verification URL to point to the React frontend,
-     * so clicking the link in the email lands on the SPA, not the Laravel backend.
-     *
-     * Frontend route: /email/verify?id=X&hash=Y&expires=Z&signature=S
-     */
     protected function verificationUrl($notifiable): string
     {
         $backendUrl = URL::temporarySignedRoute(
@@ -23,7 +18,6 @@ class VerifyEmailNotification extends VerifyEmail
             ['id' => $notifiable->getKey(), 'hash' => sha1($notifiable->getEmailForVerification())]
         );
 
-        // Parse the signed backend URL and rebuild as a frontend URL
         $parsed = parse_url($backendUrl);
         parse_str($parsed['query'] ?? '', $params);
 
@@ -35,5 +29,17 @@ class VerifyEmailNotification extends VerifyEmail
             'expires'   => $params['expires'] ?? '',
             'signature' => $params['signature'] ?? '',
         ]);
+    }
+
+    public function toMail($notifiable): MailMessage
+    {
+        $url = $this->verificationUrl($notifiable);
+
+        return (new MailMessage)
+            ->subject('Verify your email — Aus Fair Go')
+            ->view('emails.verify-email', [
+                'url'  => $url,
+                'name' => $notifiable->name,
+            ]);
     }
 }
