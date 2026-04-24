@@ -15,16 +15,7 @@
           <!-- Logo / Header -->
           <tr>
             <td align="center" style="padding-bottom:28px;">
-              <table cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="background:#2d5a45;border-radius:16px;width:44px;height:44px;text-align:center;vertical-align:middle;">
-                    <span style="color:#c9a84c;font-size:22px;font-weight:900;font-family:Georgia,serif;line-height:44px;display:block;">F</span>
-                  </td>
-                  <td style="padding-left:12px;vertical-align:middle;">
-                    <span style="font-size:18px;font-weight:700;color:#1a2e23;letter-spacing:-0.3px;">Aus Fair Go</span>
-                  </td>
-                </tr>
-              </table>
+              <img src="https://ausfairgo.com.au/logo.png" alt="Aus Fair Go" width="56" height="56" style="display:block;border-radius:50%;" />
             </td>
           </tr>
 
