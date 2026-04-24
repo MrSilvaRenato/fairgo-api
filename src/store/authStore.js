@@ -7,21 +7,29 @@ const useAuthStore = create((set) => ({
   loading: false,
 
   register: async (data) => {
-    // Clear any existing session first so stale role/user never bleeds through
     set({ user: null, token: null, loading: true })
     localStorage.removeItem('token')
-    const res = await api.post('/auth/register', data)
-    localStorage.setItem('token', res.data.token)
-    set({ user: res.data.user, token: res.data.token, loading: false })
+    try {
+      const res = await api.post('/auth/register', data)
+      localStorage.setItem('token', res.data.token)
+      set({ user: res.data.user, token: res.data.token, loading: false })
+    } catch (err) {
+      set({ loading: false })
+      throw err
+    }
   },
 
   login: async (data) => {
-    // Clear any existing session first
     set({ user: null, token: null, loading: true })
     localStorage.removeItem('token')
-    const res = await api.post('/auth/login', data)
-    localStorage.setItem('token', res.data.token)
-    set({ user: res.data.user, token: res.data.token, loading: false })
+    try {
+      const res = await api.post('/auth/login', data)
+      localStorage.setItem('token', res.data.token)
+      set({ user: res.data.user, token: res.data.token, loading: false })
+    } catch (err) {
+      set({ loading: false })
+      throw err
+    }
   },
 
   logout: async () => {
