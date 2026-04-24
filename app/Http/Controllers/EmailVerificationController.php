@@ -15,12 +15,6 @@ class EmailVerificationController extends Controller
             return response()->json(['message' => 'Invalid verification link.'], 403);
         }
 
-        // Validate expiry manually
-        $expires = $request->query('expires');
-        if (!$expires || now()->timestamp > (int) $expires) {
-            return response()->json(['message' => 'Verification link has expired.'], 403);
-        }
-
         if ($user->hasVerifiedEmail()) {
             return response()->json(['message' => 'Email already verified.']);
         }
