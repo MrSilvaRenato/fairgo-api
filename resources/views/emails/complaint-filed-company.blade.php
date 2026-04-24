@@ -1,5 +1,5 @@
-<x-emails.layout>
-  <table width="100%" cellpadding="0" cellspacing="0">
+@include('emails.partials.header', ['subject' => 'New complaint filed — Aus Fair Go'])
+
     <tr>
       <td align="center" style="padding-bottom:24px;">
         <div style="width:56px;height:56px;background:#fef3e2;border-radius:14px;display:inline-block;text-align:center;line-height:56px;font-size:26px;">⚠️</div>
@@ -18,8 +18,6 @@
         </p>
       </td>
     </tr>
-
-    <!-- Info box -->
     <tr>
       <td style="background:#fef9f0;border:1px solid #f5e4c0;border-radius:12px;padding:16px 20px;">
         <table width="100%" cellpadding="0" cellspacing="0">
@@ -41,10 +39,7 @@
         </table>
       </td>
     </tr>
-
     <tr><td style="padding-bottom:24px;"></td></tr>
-
-    <!-- Button -->
     <tr>
       <td align="center" style="padding-bottom:16px;">
         <a href="{{ $complaintUrl }}" style="display:inline-block;background:#2d5a45;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:12px;">
@@ -54,12 +49,9 @@
     </tr>
     <tr>
       <td align="center" style="padding-bottom:28px;">
-        <a href="{{ $dashUrl }}" style="font-size:13px;color:#2d5a45;text-decoration:underline;">
-          Go to your dashboard
-        </a>
+        <a href="{{ $dashUrl }}" style="font-size:13px;color:#2d5a45;text-decoration:underline;">Go to your dashboard</a>
       </td>
     </tr>
-
     <tr>
       <td style="border-top:1px solid #eee8dc;padding-top:20px;">
         <p style="margin:0;font-size:12px;color:#aab5b0;text-align:center;">
@@ -67,5 +59,5 @@
         </p>
       </td>
     </tr>
-  </table>
-</x-emails.layout>
+
+@include('emails.partials.footer')
