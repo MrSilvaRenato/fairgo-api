@@ -29,21 +29,14 @@ class ComplaintResolvedCompany extends Notification implements ShouldQueue
         $consumer = $this->complaint->consumer->name ?? 'The customer';
 
         return (new MailMessage)
-            ->subject(
-                $resolved
-                    ? 'Complaint resolved — ' . $this->complaint->title
-                    : 'Complaint closed as unresolved — ' . $this->complaint->title
-            )
-            ->greeting('Hi ' . $notifiable->name . ',')
-            ->line(
-                $resolved
-                    ? $consumer . ' has marked their complaint as **resolved**. Great work!'
-                    : $consumer . ' has closed their complaint as **unresolved**. This will affect your Aus Fair Go score.'
-            )
-            ->line('Complaint: "' . $this->complaint->title . '"')
-            ->action('View complaint', $url)
-            ->line('Your Aus Fair Go score has been recalculated.')
-            ->salutation('Aus Fair Go');
+            ->subject($resolved ? 'Complaint resolved — Aus Fair Go' : 'Complaint unresolved — Aus Fair Go')
+            ->view('emails.complaint-resolved-company', [
+                'name'     => $notifiable->name,
+                'consumer' => $consumer,
+                'title'    => $this->complaint->title,
+                'resolved' => $resolved,
+                'url'      => $url,
+            ]);
     }
 
     public function toArray(object $notifiable): array
