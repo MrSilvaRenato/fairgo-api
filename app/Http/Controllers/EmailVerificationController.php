@@ -2,15 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
 
 class EmailVerificationController extends Controller
 {
-    /**
-     * Verify the email address via the signed URL params sent from the frontend.
-     * The frontend passes id, hash, expires, signature as query params.
-     */
     public function verify(Request $request)
     {
         $user = \App\Models\User::findOrFail($request->query('id'));
@@ -20,8 +15,9 @@ class EmailVerificationController extends Controller
             return response()->json(['message' => 'Invalid verification link.'], 403);
         }
 
-        // Validate the signed URL (expires + signature)
-        if (!$request->hasValidSignature()) {
+        // Validate expiry manually
+        $expires = $request->query('expires');
+        if (!$expires || now()->timestamp > (int) $expires) {
             return response()->json(['message' => 'Verification link has expired.'], 403);
         }
 
@@ -34,9 +30,6 @@ class EmailVerificationController extends Controller
         return response()->json(['message' => 'Email verified successfully.']);
     }
 
-    /**
-     * Resend the verification email to the authenticated user.
-     */
     public function resend(Request $request)
     {
         $user = $request->user();
