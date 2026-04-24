@@ -25,7 +25,12 @@ class AuthController extends Controller
             'role'     => $data['role'] ?? 'consumer',
         ]);
 
-        $user->sendEmailVerificationNotification();
+        // Send verification email — wrapped so a mail config issue never breaks registration
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (\Exception $e) {
+            \Log::error('Verification email failed for user ' . $user->id . ': ' . $e->getMessage());
+        }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 

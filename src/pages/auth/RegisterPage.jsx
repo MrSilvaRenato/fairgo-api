@@ -31,7 +31,11 @@ export default function RegisterPage() {
         navigate(next)
       }
     } catch (err) {
-      if (err.response?.status === 422) setErrors(err.response.data.errors ?? {})
+      if (err.response?.status === 422) {
+        setErrors(err.response.data.errors ?? {})
+      } else {
+        setErrors({ email: ['Something went wrong. Please try again.'] })
+      }
     }
   }
 
