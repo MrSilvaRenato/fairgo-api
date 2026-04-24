@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import api from '../../lib/axios'
+import useAuthStore from '../../store/authStore'
 
 export default function EmailVerifyPage() {
   const [searchParams] = useSearchParams()
   const [status, setStatus] = useState('verifying') // verifying | success | error
   const [message, setMessage] = useState('')
+  const { fetchUser } = useAuthStore()
 
   useEffect(() => {
     const id        = searchParams.get('id')
@@ -20,7 +22,7 @@ export default function EmailVerifyPage() {
     }
 
     api.get(`/auth/email/verify?id=${id}&hash=${hash}&expires=${expires}&signature=${signature}`)
-      .then(() => setStatus('success'))
+      .then(() => { fetchUser(); setStatus('success') })
       .catch(err => {
         setStatus('error')
         setMessage(err.response?.data?.message ?? 'Verification failed. The link may have expired.')
