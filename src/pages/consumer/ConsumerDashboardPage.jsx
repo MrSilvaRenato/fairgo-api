@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import api from '../../lib/axios'
 import useAuthStore from '../../store/authStore'
 import Icon from '../../components/Icon'
+import EmailVerifyBanner from '../../components/EmailVerifyBanner'
 
 const STATUS = {
   open:              { label: 'Open',              fg: 'var(--color-eucalyptus)',  bg: 'var(--color-eucalyptus-3)' },
@@ -44,6 +45,8 @@ export default function ConsumerDashboardPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+
+      <EmailVerifyBanner />
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4">

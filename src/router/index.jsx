@@ -21,6 +21,7 @@ import ClaimPage from '../pages/company/ClaimPage'
 import CommunityGuidelinesPage from '../pages/legal/CommunityGuidelinesPage'
 import TermsPage from '../pages/legal/TermsPage'
 import PrivacyPage from '../pages/legal/PrivacyPage'
+import EmailVerifyPage from '../pages/auth/EmailVerifyPage'
 
 const router = createBrowserRouter([
   {
@@ -46,6 +47,7 @@ const router = createBrowserRouter([
       { path: '/community-guidelines',    element: <CommunityGuidelinesPage /> },
       { path: '/terms',                   element: <TermsPage /> },
       { path: '/privacy',                 element: <PrivacyPage /> },
+      { path: '/email/verify',            element: <EmailVerifyPage /> },
       // Step 15 – /dashboard
       // Step 16 – /company/dashboard
       // Step 21 – /admin

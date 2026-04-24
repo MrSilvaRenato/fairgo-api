@@ -17,12 +17,21 @@ class ComplaintController extends Controller
     public function store(Request $request, AbnLookupService $abnService)
     {
         // Only consumers can file complaints — block business accounts and admins
-        $role = $request->user()->role;
+        $user = $request->user();
+        $role = $user->role;
         if ($role !== 'consumer') {
             return response()->json([
                 'message' => $role === 'company_admin'
                     ? 'Business accounts cannot file complaints. Please use a personal consumer account.'
                     : 'You do not have permission to file complaints.',
+            ], 403);
+        }
+
+        // Require verified email
+        if (!$user->hasVerifiedEmail()) {
+            return response()->json([
+                'message' => 'Please verify your email address before filing a complaint.',
+                'error_code' => 'email_unverified',
             ], 403);
         }
 

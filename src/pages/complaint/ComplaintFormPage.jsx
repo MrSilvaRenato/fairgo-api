@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../lib/axios'
 import useAuthStore from '../../store/authStore'
 import PhoneVerification from '../../components/PhoneVerification'
+import EmailVerifyBanner from '../../components/EmailVerifyBanner'
 
 const CATEGORIES = [
   { value: 'billing',  label: 'Billing issue',        icon: '💳' },
@@ -171,6 +172,11 @@ export default function ComplaintFormPage() {
         </div>
       </div>
     )
+  }
+
+  /* ── Email not verified gate ── */
+  if (user && !user.email_verified_at) {
+    return <EmailUnverifiedGate />
   }
 
   /* ── Moderation hold screen ── */
@@ -600,6 +606,30 @@ export default function ComplaintFormPage() {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+function EmailUnverifiedGate() {
+  return (
+    <div className="max-w-xl mx-auto">
+      <div className="card p-8 text-center space-y-4">
+        <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto">
+          <span className="text-3xl">✉️</span>
+        </div>
+        <div>
+          <h2 className="font-display text-xl font-semibold text-[color:var(--color-ink)]">
+            Verify your email first
+          </h2>
+          <p className="text-sm text-[color:var(--color-ink-2)] mt-1">
+            You need to verify your email address before filing a complaint.
+          </p>
+        </div>
+        <EmailVerifyBanner />
+        <a href="/dashboard" className="btn btn-secondary w-full justify-center">
+          Back to dashboard
+        </a>
       </div>
     </div>
   )

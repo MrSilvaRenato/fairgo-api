@@ -24,11 +24,16 @@ Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login',    [AuthController::class, 'login']);
 
+    // Email verification — verify uses signed URL (public), resend requires auth
+    Route::get('email/verify', [\App\Http\Controllers\EmailVerificationController::class, 'verify'])
+        ->name('verification.verify');
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout',        [AuthController::class, 'logout']);
         Route::get('me',             [AuthController::class, 'me']);
         Route::post('phone/send',    [PhoneVerificationController::class, 'send']);
         Route::post('phone/verify',  [PhoneVerificationController::class, 'verify']);
+        Route::post('email/resend',  [\App\Http\Controllers\EmailVerificationController::class, 'resend']);
     });
 });
 

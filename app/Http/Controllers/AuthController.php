@@ -25,6 +25,8 @@ class AuthController extends Controller
             'role'     => $data['role'] ?? 'consumer',
         ]);
 
+        $user->sendEmailVerificationNotification();
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
