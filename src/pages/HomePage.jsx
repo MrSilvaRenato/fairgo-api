@@ -44,6 +44,22 @@ export default function HomePage() {
   const [boardMode, setBoardMode]       = useState('best')
   const [claimedOnly, setClaimedOnly]   = useState(false)
   const [moreOpen, setMoreOpen]         = useState(false)
+
+  // Actively managed companies browse
+  const [managedQuery, setManagedQuery]   = useState('')
+  const [managedList,  setManagedList]    = useState([])
+  const [managedLoading, setManagedLoading] = useState(true)
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setManagedLoading(true)
+      api.get('/complaints/company-search', { params: { claimed: true, q: managedQuery } })
+        .then((r) => setManagedList(r.data ?? []))
+        .catch(() => {})
+        .finally(() => setManagedLoading(false))
+    }, managedQuery ? 300 : 0)
+    return () => clearTimeout(t)
+  }, [managedQuery])
   const moreRef                         = useRef(null)
   const VISIBLE_PILLS                   = 4
 
@@ -258,6 +274,77 @@ export default function HomePage() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* ═══════════════ ACTIVELY MANAGED ═══════════════ */}
+      <section id="actively-managed" className="mb-16">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+          <div>
+            <div className="caps mb-1" style={{ color: 'var(--color-eucalyptus)' }}>✅ Actively managed</div>
+            <h2 className="font-display text-[32px] font-semibold tracking-tight">
+              Businesses on the platform
+            </h2>
+            <p className="text-sm text-[color:var(--color-muted)] mt-1">
+              These companies have registered and are actively managing their reputation.
+            </p>
+          </div>
+        </div>
+
+        {/* Search input */}
+        <div className="relative mb-5 max-w-sm">
+          <Icon name="search" size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)] pointer-events-none" />
+          <input
+            value={managedQuery}
+            onChange={(e) => setManagedQuery(e.target.value)}
+            placeholder="Filter by name…"
+            className="input pl-9 text-sm"
+          />
+        </div>
+
+        {managedLoading ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="card p-4 flex items-center gap-3 animate-pulse">
+                <div className="w-10 h-10 rounded-xl bg-[color:var(--color-paper-2)] shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-[color:var(--color-paper-2)] rounded w-2/3" />
+                  <div className="h-3 bg-[color:var(--color-paper-2)] rounded w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : managedList.length === 0 ? (
+          <div className="card p-10 text-center">
+            <p className="font-display italic-display text-[20px] mb-1">No businesses found.</p>
+            <p className="text-sm text-[color:var(--color-muted)]">Try a different search term.</p>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {managedList.map((c) => {
+              const b = BAND[c.badge] ?? BAND.not_rated
+              return (
+                <Link key={c.id} to={`/companies/${c.slug}`}
+                  className="card p-4 flex items-center gap-3 hover:bg-[color:var(--color-paper-2)]/60 transition group">
+                  <CompanyLogo company={c} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-[color:var(--color-ink)] truncate group-hover:underline underline-offset-4 decoration-[color:var(--color-ink)]/30">
+                      {c.name}
+                    </p>
+                    <p className="text-xs text-[color:var(--color-muted)] capitalize mt-0.5">
+                      {c.industry ?? 'Unknown'}
+                      {c.total > 0 && <> · {c.total} complaint{c.total !== 1 ? 's' : ''}</>}
+                    </p>
+                  </div>
+                  {c.badge !== 'not_rated' && (
+                    <span className="text-[10px] font-semibold caps shrink-0" style={{ color: b.text }}>
+                      {b.label}
+                    </span>
+                  )}
+                </Link>
+              )
+            })}
+          </div>
+        )}
       </section>
 
       {/* ═══════════════ LEADERBOARD ═══════════════ */}

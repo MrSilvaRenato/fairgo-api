@@ -133,10 +133,29 @@ class CompanyController extends Controller
 
     public function search(Request $request)
     {
-        $companies = Company::where('name', 'like', '%' . $request->q . '%')
-            ->select('id', 'name', 'slug', 'industry')
-            ->limit(10)
-            ->get();
+        $query = Company::with('score')->select('id', 'name', 'slug', 'industry', 'website', 'logo_url', 'claimed');
+
+        if ($request->filled('q')) {
+            $query->where('name', 'like', '%' . $request->q . '%');
+        }
+
+        if ($request->boolean('claimed')) {
+            $query->where('claimed', true);
+        }
+
+        $companies = $query->orderBy('name')->limit(20)->get()
+            ->map(fn($c) => [
+                'id'       => $c->id,
+                'name'     => $c->name,
+                'slug'     => $c->slug,
+                'industry' => $c->industry,
+                'website'  => $c->website,
+                'logo_url' => $c->logo_url,
+                'claimed'  => (bool) $c->claimed,
+                'score'    => round($c->score?->score ?? 0, 1),
+                'badge'    => $c->score?->badge ?? 'not_rated',
+                'total'    => $c->score?->total_complaints ?? 0,
+            ]);
 
         return response()->json($companies);
     }
