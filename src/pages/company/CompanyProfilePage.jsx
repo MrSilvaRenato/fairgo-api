@@ -172,7 +172,7 @@ function Hero({ company, score, band }) {
                 <Icon name="building" size={13} /> {company.industry}
               </span>
             )}
-            {company.abn_verified && (
+            {company.claimed && company.abn_verified && (
               <span className="chip font-semibold"
                 style={{ color: '#1d4ed8', borderColor: '#93c5fd', background: '#eff6ff' }}>
                 <Icon name="verified" size={13} /> ABN Verified
@@ -244,7 +244,7 @@ function Hero({ company, score, band }) {
           )}
 
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 max-w-xl text-sm">
-            {company.abn && <Meta label="ABN" value={company.abn} mono />}
+            {company.claimed && company.abn && <Meta label="ABN" value={company.abn} mono />}
             <Meta label="On Aus Fair Go since" value={company.created_at ? new Date(company.created_at).toLocaleDateString('en-AU', { month: 'short', year: 'numeric' }) : '—'} />
             {score && score.total_complaints > 0 && (
               <Meta
