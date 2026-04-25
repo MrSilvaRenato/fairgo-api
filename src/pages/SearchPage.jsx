@@ -1,12 +1,14 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../lib/axios'
+import useAuthStore from '../store/authStore'
 import CompanyLogo from '../components/CompanyLogo'
 import Icon from '../components/Icon'
 import useSeoMeta from '../hooks/useSeoMeta'
 import { BAND } from '../components/ScoreMeter'
 
 export default function SearchPage() {
+  const { user } = useAuthStore()
   const [input, setInput]       = useState('')
   const [companies, setCompanies] = useState([])
   const [loading, setLoading]   = useState(true)
@@ -132,7 +134,8 @@ export default function SearchPage() {
                   </div>
                 ) : (
                   <div className="pt-1 border-t hairline">
-                    <Link to="/register?role=business"
+                    <Link
+                      to={user ? `/companies/${c.slug}/claim` : `/register?role=business&next=/companies/${c.slug}/claim`}
                       className="text-[11px] text-[color:var(--color-muted)] hover:text-[color:var(--color-eucalyptus)] transition">
                       Is this your business?{' '}
                       <span className="underline underline-offset-2">Claim your free dashboard →</span>

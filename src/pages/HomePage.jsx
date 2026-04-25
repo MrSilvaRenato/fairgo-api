@@ -379,7 +379,7 @@ export default function HomePage() {
                     ) : (
                       <div className="pt-1 border-t hairline">
                         <Link
-                          to="/register?role=business"
+                          to={user ? `/companies/${c.slug}/claim` : `/register?role=business&next=/companies/${c.slug}/claim`}
                           className="text-[11px] text-[color:var(--color-muted)] hover:text-[color:var(--color-eucalyptus)] transition">
                           Is this your business?{' '}
                           <span className="underline underline-offset-2">Claim your free dashboard & analytics →</span>
