@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\Company;
+use App\Models\CompanyResponse;
 use App\Models\Complaint;
+use App\Models\ResolutionFeedback;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -124,52 +126,101 @@ class TestDataSeeder extends Seeder
             array_unshift($claimedCompanies, $telstra);
         }
 
-        // ── 4. Complaints — 3 per consumer ─────────────────────────────────
+        // ── 4. Complaints — 7 per consumer ─────────────────────────────────
         $this->command->info('Seeding complaints...');
 
         $complaintTemplates = $this->complaintTemplates();
         $templateIndex = 0;
 
+        // 7 varied status patterns — ensures each company gets a mix of open,
+        // responded and resolved complaints so ScoreService produces real scores.
+        $statusSet = [
+            ['open',        'pending',  now()->addDays(7),  false, false],
+            ['responded',   'approved', now()->addDays(5),  true,  false],
+            ['resolved',    'approved', now()->subDays(1),  true,  true],
+            ['open',        'approved', now()->addDays(6),  false, false],
+            ['unresolved',  'approved', now()->subDays(2),  true,  true],
+            ['responded',   'approved', now()->addDays(4),  true,  false],
+            ['resolved',    'approved', now()->subDays(3),  true,  true],
+        ];
+
+        $responseTemplates = [
+            "Thank you for reaching out. We have investigated your complaint and are working to resolve this as quickly as possible. A dedicated case manager has been assigned to your account.",
+            "We sincerely apologise for your experience. We take all complaints seriously and have escalated this matter to our customer resolution team. You will be contacted within 2 business days.",
+            "We appreciate you bringing this to our attention. Our team has reviewed your account and is processing the necessary adjustments. Please allow 3–5 business days for this to reflect.",
+            "Thank you for your patience. After reviewing your case, we have identified the issue and taken steps to rectify it. We have also implemented process improvements to prevent recurrence.",
+        ];
+
+        $feedbackSets = [
+            ['resolved' => true,  'rating' => 5, 'comment' => 'Issue was resolved quickly and professionally. Very happy with the outcome.', 'would_deal_again' => true],
+            ['resolved' => true,  'rating' => 4, 'comment' => 'Took a while but they did fix it in the end. Communication could be better.', 'would_deal_again' => true],
+            ['resolved' => false, 'rating' => 2, 'comment' => 'They replied but the issue was never fully fixed. Still waiting on the refund.', 'would_deal_again' => false],
+            ['resolved' => true,  'rating' => 5, 'comment' => 'Excellent service once I escalated. Full refund received.', 'would_deal_again' => true],
+            ['resolved' => false, 'rating' => 1, 'comment' => 'Complete waste of time. Nothing was resolved despite multiple follow-ups.', 'would_deal_again' => false],
+            ['resolved' => true,  'rating' => 3, 'comment' => 'Partially resolved — accepted a store credit instead of cash refund.', 'would_deal_again' => true],
+        ];
+
         foreach ($consumers as $consumerIndex => $consumer) {
-            for ($j = 0; $j < 3; $j++) {
+            for ($j = 0; $j < 7; $j++) {
                 // Distribute complaints across companies
-                $company = $claimedCompanies[($consumerIndex * 3 + $j) % count($claimedCompanies)];
+                $company = $claimedCompanies[($consumerIndex * 7 + $j) % count($claimedCompanies)];
                 if (!$company) continue;
 
                 $template = $complaintTemplates[$templateIndex % count($complaintTemplates)];
                 $templateIndex++;
 
-                // Vary statuses across complaints
-                $statusSet = [
-                    [0, 'open',       'pending',  now()->addDays(7)],
-                    [1, 'responded',  'approved', now()->addDays(5)],
-                    [2, 'resolved',   'approved', now()->subDays(1)],
-                ];
-                [$jj, $status, $modStatus, $expires] = $statusSet[$j % 3];
+                [$status, $modStatus, $expires, $hasResponse, $hasFeedback] = $statusSet[$j % 7];
 
                 $existing = Complaint::where('consumer_id', $consumer->id)
                     ->where('company_id', $company->id)
                     ->where('title', $template['title'])
                     ->first();
 
-                if (!$existing) {
-                    Complaint::create([
-                        'consumer_id'        => $consumer->id,
-                        'company_id'         => $company->id,
-                        'title'              => $template['title'],
-                        'description'        => $template['description'],
-                        'expected_resolution'=> $template['resolution'],
-                        'category'           => $template['category'],
-                        'status'             => $status,
-                        'is_public'          => true,
-                        'expires_at'         => $expires,
-                        'moderation_status'  => $modStatus,
-                        'incident_date'      => now()->subDays(rand(2, 30)),
-                        'reference_number'   => 'REF-' . strtoupper(substr(md5(uniqid()), 0, 8)),
-                        'amount_involved'    => $template['amount'],
-                        'contact_attempted'  => (bool) rand(0, 1),
-                        'phone'              => $consumer->phone,
-                    ]);
+                if ($existing) continue;
+
+                $complaint = Complaint::create([
+                    'consumer_id'        => $consumer->id,
+                    'company_id'         => $company->id,
+                    'title'              => $template['title'],
+                    'description'        => $template['description'],
+                    'expected_resolution'=> $template['resolution'],
+                    'category'           => $template['category'],
+                    'status'             => $status,
+                    'is_public'          => true,
+                    'expires_at'         => $expires,
+                    'moderation_status'  => $modStatus,
+                    'incident_date'      => now()->subDays(rand(2, 45)),
+                    'reference_number'   => 'REF-' . strtoupper(substr(md5(uniqid()), 0, 8)),
+                    'amount_involved'    => $template['amount'],
+                    'contact_attempted'  => (bool) rand(0, 1),
+                    'phone'              => $consumer->phone,
+                ]);
+
+                if ($hasResponse) {
+                    $responseExists = CompanyResponse::where('complaint_id', $complaint->id)->exists();
+                    if (!$responseExists) {
+                        CompanyResponse::create([
+                            'complaint_id' => $complaint->id,
+                            'company_id'   => $company->id,
+                            'content'      => $responseTemplates[($consumerIndex + $j) % count($responseTemplates)],
+                            'responded_at' => now()->subDays(rand(1, 10)),
+                        ]);
+                    }
+                }
+
+                if ($hasFeedback) {
+                    $feedbackExists = ResolutionFeedback::where('complaint_id', $complaint->id)->exists();
+                    if (!$feedbackExists) {
+                        $fb = $feedbackSets[($consumerIndex + $j) % count($feedbackSets)];
+                        ResolutionFeedback::create([
+                            'complaint_id'    => $complaint->id,
+                            'consumer_id'     => $consumer->id,
+                            'resolved'        => $fb['resolved'],
+                            'rating'          => $fb['rating'],
+                            'comment'         => $fb['comment'],
+                            'would_deal_again'=> $fb['would_deal_again'],
+                        ]);
+                    }
                 }
             }
         }
