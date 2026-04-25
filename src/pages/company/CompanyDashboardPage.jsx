@@ -386,6 +386,10 @@ function ComplaintCard({ complaint: c, company, respondingTo, setRespondingTo, o
         <div className="mt-4 pt-4 border-t hairline-2">
           <CompanyResponseForm
             complaintId={c.id}
+            consumerName={c.consumer?.name || ''}
+            refNumber={c.reference_number || ''}
+            companyName={c.company?.name || user?.company?.name || ''}
+            category={c.category || 'other'}
             onSubmitted={(response) => onResponseSubmitted(c.id, response)}
           />
         </div>
