@@ -63,8 +63,11 @@ export default function CompanyDashboardPage() {
 
   if (loading) return <Skeleton />
 
-  // API failed but user IS a company_admin — company exists, transient error
-  if (apiError && user?.role === 'company_admin') {
+  // company_admin with no company linked — guide them to register or claim
+  if (!user?.company_id) return <NoCompanyPrompt />
+
+  // API failed but user HAS a company linked — transient error
+  if (apiError && user?.company_id) {
     return (
       <div className="max-w-lg mx-auto py-24 px-4 text-center">
         <p className="text-4xl mb-4">⚠️</p>
@@ -75,8 +78,7 @@ export default function CompanyDashboardPage() {
     )
   }
 
-  // No company linked to this account at all
-  if (apiError || !data) return <NoCompanyPrompt />
+  if (!data) return <NoCompanyPrompt />
 
   const score = company.score
   const band  = score?.badge ?? 'not_rated'
@@ -411,9 +413,9 @@ function NoCompanyPrompt() {
       <div className="w-16 h-16 bg-[color:var(--color-eucalyptus-3)] rounded-2xl flex items-center justify-center mx-auto mb-5">
         <Icon name="building" size={28} className="text-[color:var(--color-eucalyptus)]" />
       </div>
-      <h2 className="font-display text-2xl font-semibold mb-2">No business linked to your account</h2>
+      <h2 className="font-display text-2xl font-semibold mb-2">No business linked to your account yet</h2>
       <p className="text-[color:var(--color-muted)] text-sm leading-relaxed mb-8 max-w-sm mx-auto">
-        This dashboard is for business owners. If your company is already listed on Aus Fair Go, you can claim it — or register a new business below.
+        You've registered as a business, but no company is linked to your account yet. You can register a new business, or claim one already listed in our database.
       </p>
       <div className="flex flex-col gap-3">
         <Link to="/companies/register" className="btn btn-primary w-full justify-center text-sm py-3">
