@@ -44,6 +44,26 @@ class ComplaintReplyController extends Controller
         );
     }
 
+    public function markRead(Complaint $complaint)
+    {
+        $user    = request()->user();
+        $company = $user?->company;
+
+        if ($user->id === $complaint->consumer_id) {
+            $complaint->replies()
+                ->where('author_type', 'company')
+                ->whereNull('consumer_read_at')
+                ->update(['consumer_read_at' => now()]);
+        } elseif ($company?->id === $complaint->company_id) {
+            $complaint->replies()
+                ->where('author_type', 'consumer')
+                ->whereNull('company_read_at')
+                ->update(['company_read_at' => now()]);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
     public function store(Request $request, Complaint $complaint)
     {
         $user    = $request->user();

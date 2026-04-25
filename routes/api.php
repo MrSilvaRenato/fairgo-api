@@ -80,6 +80,7 @@ Route::prefix('complaints')->group(function () {
         Route::post('{complaint}/feedback',           [ResolutionFeedbackController::class, 'store']);
         Route::post('{complaint}/replies',            [ComplaintReplyController::class, 'store']);
         Route::post('{complaint}/reopen',             ComplaintReopenController::class);
+        Route::post('{complaint}/mark-read',          [ComplaintReplyController::class, 'markRead']);
     });
 });
 

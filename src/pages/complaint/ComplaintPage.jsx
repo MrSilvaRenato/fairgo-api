@@ -41,7 +41,11 @@ export default function ComplaintPage() {
         setComplaint(cRes.data)
         setReplies(rRes.data)
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'instant' }), 80)
-        if (localStorage.getItem('token')) useAuthStore.getState().fetchUser()
+        if (localStorage.getItem('token')) {
+          useAuthStore.getState().fetchUser()
+          // Explicitly mark all unread replies as read for this user
+          api.post(`/complaints/${id}/mark-read`).catch(() => {})
+        }
       })
       .catch(() => setError('Complaint not found.'))
       .finally(() => setLoading(false))
