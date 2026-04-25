@@ -57,7 +57,7 @@ export default function PublicLayout() {
                 <FooterLink to="/search">Browse businesses</FooterLink>
                 <FooterLink to="/most-complained">Most complained</FooterLink>
                 <FooterLink to="/register">Submit a complaint</FooterLink>
-                <FooterLink to="/#leaderboard">Leaderboard</FooterLink>
+                <FooterLink href="/#leaderboard">Leaderboard</FooterLink>
               </ul>
             </div>
 
