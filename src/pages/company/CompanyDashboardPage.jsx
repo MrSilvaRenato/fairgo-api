@@ -408,26 +408,86 @@ function TrustBadge({ slug }) {
 
 /* ─── No company prompt ──────────────────────────────────── */
 function NoCompanyPrompt() {
+  const [claims, setClaims] = useState([])
+
+  useEffect(() => {
+    api.get('/dashboard/consumer')
+      .then((r) => setClaims(r.data.claims ?? []))
+      .catch(() => {})
+  }, [])
+
+  const latestClaim = claims[claims.length - 1] ?? null
+
   return (
-    <div className="max-w-lg mx-auto py-16 px-4 text-center">
-      <div className="w-16 h-16 bg-[color:var(--color-eucalyptus-3)] rounded-2xl flex items-center justify-center mx-auto mb-5">
-        <Icon name="building" size={28} className="text-[color:var(--color-eucalyptus)]" />
+    <div className="max-w-lg mx-auto py-12 px-4">
+
+      {/* Claim status banner — shown when there's a claim history */}
+      {latestClaim && (
+        <div className={`card p-5 mb-6 border-l-4 ${
+          latestClaim.status === 'approved' ? 'border-[color:var(--color-eucalyptus)]' :
+          latestClaim.status === 'rejected' ? 'border-[color:var(--color-clay)]' :
+          'border-[color:var(--color-ochre)]'
+        }`}>
+          <div className="flex items-start gap-3">
+            <span className="text-2xl shrink-0">
+              {latestClaim.status === 'approved' ? '✅' : latestClaim.status === 'rejected' ? '❌' : '⏳'}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm" style={{ color: 'var(--color-ink)' }}>
+                Claim for {latestClaim.company_name}
+              </p>
+              {latestClaim.status === 'pending' && (
+                <p className="text-xs mt-1" style={{ color: 'var(--color-ink-2)' }}>
+                  Your claim is under review. We'll notify you by email once a decision is made.
+                </p>
+              )}
+              {latestClaim.status === 'approved' && (
+                <p className="text-xs mt-1" style={{ color: 'var(--color-eucalyptus)' }}>
+                  Approved — please refresh the page to access your dashboard.
+                </p>
+              )}
+              {latestClaim.status === 'rejected' && (
+                <>
+                  <p className="text-xs mt-1" style={{ color: 'var(--color-clay)' }}>
+                    Your claim was not approved.
+                  </p>
+                  {latestClaim.rejection_reason && (
+                    <p className="text-xs mt-1.5 px-3 py-2 rounded-lg" style={{ background: 'var(--color-clay-soft)', color: 'var(--color-clay)' }}>
+                      <span className="font-semibold">Reason: </span>{latestClaim.rejection_reason}
+                    </p>
+                  )}
+                  <p className="text-xs mt-2" style={{ color: 'var(--color-muted)' }}>
+                    You can submit a new claim with additional documentation, or contact{' '}
+                    <a href="mailto:support@ausfairgo.com.au" className="underline">support@ausfairgo.com.au</a>.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main CTA */}
+      <div className="text-center">
+        <div className="w-16 h-16 bg-[color:var(--color-eucalyptus-3)] rounded-2xl flex items-center justify-center mx-auto mb-5">
+          <Icon name="building" size={28} className="text-[color:var(--color-eucalyptus)]" />
+        </div>
+        <h2 className="font-display text-2xl font-semibold mb-2">No business linked yet</h2>
+        <p className="text-[color:var(--color-muted)] text-sm leading-relaxed mb-8 max-w-sm mx-auto">
+          Register a new business or claim one already listed in our database.
+        </p>
+        <div className="flex flex-col gap-3">
+          <Link to="/companies/register" className="btn btn-primary w-full justify-center text-sm py-3">
+            Register a new business
+          </Link>
+          <Link to="/search" className="btn btn-secondary w-full justify-center text-sm py-3">
+            Find &amp; claim your existing company →
+          </Link>
+        </div>
+        <p className="text-xs text-[color:var(--color-muted)] mt-4">
+          Already registered? <button onClick={() => window.location.reload()} className="underline hover:text-[color:var(--color-ink)]">Refresh the page</button>
+        </p>
       </div>
-      <h2 className="font-display text-2xl font-semibold mb-2">No business linked to your account yet</h2>
-      <p className="text-[color:var(--color-muted)] text-sm leading-relaxed mb-8 max-w-sm mx-auto">
-        You've registered as a business, but no company is linked to your account yet. You can register a new business, or claim one already listed in our database.
-      </p>
-      <div className="flex flex-col gap-3">
-        <Link to="/companies/register" className="btn btn-primary w-full justify-center text-sm py-3">
-          Register a new business
-        </Link>
-        <Link to="/search" className="btn btn-secondary w-full justify-center text-sm py-3">
-          Find &amp; claim your existing company →
-        </Link>
-      </div>
-      <p className="text-xs text-[color:var(--color-muted)] mt-4">
-        Already registered? <button onClick={() => window.location.reload()} className="underline hover:text-[color:var(--color-ink)]">Refresh the page</button>
-      </p>
     </div>
   )
 }
