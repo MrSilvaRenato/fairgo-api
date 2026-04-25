@@ -1,5 +1,6 @@
 import { Outlet, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import useAuthStore from '../store/authStore'
 
 function LogoMark({ size = 28 }) {
   return (
@@ -13,6 +14,9 @@ function LogoMark({ size = 28 }) {
 }
 
 export default function PublicLayout() {
+  const { user } = useAuthStore()
+  const isCompany = user?.role === 'company_admin'
+
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-paper)' }}>
       <Navbar />
@@ -65,8 +69,8 @@ export default function PublicLayout() {
               <ul className="space-y-2.5">
                 <FooterLink to="/register?role=business">Register your business</FooterLink>
                 <FooterLink to="/search">Find your company</FooterLink>
-                <FooterLink to="/company/dashboard">Business dashboard</FooterLink>
-                <FooterLink to="/company/billing">Plans &amp; pricing</FooterLink>
+                <FooterLink to={isCompany ? '/company/dashboard' : '/login?next=/company/dashboard'}>Business dashboard</FooterLink>
+                <FooterLink to={isCompany ? '/company/billing' : '/login?next=/company/billing'}>Plans &amp; pricing</FooterLink>
               </ul>
             </div>
 

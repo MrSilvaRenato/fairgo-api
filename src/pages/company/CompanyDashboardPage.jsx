@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, Navigate } from 'react-router-dom'
 import api from '../../lib/axios'
 import useAuthStore from '../../store/authStore'
 import CompanyResponseForm from '../../components/CompanyResponseForm'
@@ -84,6 +84,12 @@ export default function CompanyDashboardPage() {
   }, [complaints, filter, search])
 
   if (loading) return <Skeleton />
+
+  // Not logged in at all — send to login
+  if (!user) return <Navigate to="/login?next=/company/dashboard" replace />
+
+  // Logged in but not a company admin — send to login
+  if (user.role !== 'company_admin') return <Navigate to="/login?next=/company/dashboard" replace />
 
   // company_admin with no company linked — guide them to register or claim
   if (!user?.company_id) return <NoCompanyPrompt />
