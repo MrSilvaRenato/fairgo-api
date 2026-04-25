@@ -65,13 +65,13 @@ Route::prefix('companies')->group(function () {
 Route::prefix('complaints')->group(function () {
     Route::get('/',               [ComplaintController::class, 'index']);
     Route::get('company-search',  [CompanyController::class, 'search']);
-    Route::get('{complaint}',     [ComplaintController::class, 'show']);
+    Route::get('{complaint}',               [ComplaintController::class, 'show']);
+    Route::get('{complaint}/replies',       [ComplaintReplyController::class, 'index']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/',                              [ComplaintController::class, 'store']);
         Route::post('{complaint}/response',           [CompanyResponseController::class, 'store']);
         Route::post('{complaint}/feedback',           [ResolutionFeedbackController::class, 'store']);
-        Route::get('{complaint}/replies',             [ComplaintReplyController::class, 'index']);
         Route::post('{complaint}/replies',            [ComplaintReplyController::class, 'store']);
         Route::post('{complaint}/reopen',             ComplaintReopenController::class);
     });
