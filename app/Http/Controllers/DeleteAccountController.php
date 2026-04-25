@@ -34,6 +34,15 @@ class DeleteAccountController extends Controller
         // Revoke all tokens so all sessions are immediately signed out
         $user->tokens()->delete();
 
+        // Send confirmation email BEFORE scrambling the address
+        try {
+            \Illuminate\Support\Facades\Mail::send(
+                'emails.account-deactivated',
+                ['name' => $user->name],
+                fn ($m) => $m->to($user->email)->subject('Your account has been deactivated — Aus Fair Go')
+            );
+        } catch (\Throwable) {}
+
         // Deactivate: scramble contact info for privacy, keep name for public record
         $user->update([
             'email'          => 'deactivated_' . $user->id . '_' . Str::random(12) . '@deleted.ausfairgo.com',
