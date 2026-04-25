@@ -245,7 +245,10 @@ export default function ComplaintPage() {
                 style={{ color: 'var(--color-eucalyptus)' }}>
                 {complaint.company?.name}
               </Link>
-              <p className="text-xs text-[color:var(--color-muted)] capitalize mt-0.5">{complaint.category?.replace('_', ' ')}</p>
+              <span className="inline-flex items-center gap-1 text-xs font-medium mt-1 px-2 py-0.5 rounded-full capitalize"
+                style={{ background: 'var(--color-paper-2)', color: 'var(--color-ink-2)', border: '1px solid var(--color-line)' }}>
+                {CATEGORY_ICONS[complaint.category]} {complaint.category?.replace('_', ' ')}
+              </span>
             </div>
           </div>
           <span className={`badge ${status.badge} shrink-0`}>{status.label}</span>
