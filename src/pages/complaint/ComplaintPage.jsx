@@ -492,6 +492,7 @@ export default function ComplaintPage() {
       {isCompany && !hasResponse && (
         <CompanyResponseForm
           complaintId={complaint.id}
+          complaint={complaint}
           onSubmitted={response => setComplaint(c => ({ ...c, response, status: 'responded' }))}
         />
       )}
