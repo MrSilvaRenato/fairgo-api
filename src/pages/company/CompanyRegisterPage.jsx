@@ -3,6 +3,17 @@ import { useNavigate } from 'react-router-dom'
 import api from '../../lib/axios'
 import useAuthStore from '../../store/authStore'
 
+function LogoMark({ size = 48 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
+      <circle cx="20" cy="20" r="19" fill="var(--color-eucalyptus)" />
+      <path d="M12 26c6-2 10-6 14-14-1 9-5 14-14 14Z" fill="var(--color-ochre-2)" opacity="0.95" />
+      <path d="M12 26c6-2 10-6 14-14-1 9-5 14-14 14Z" fill="var(--color-paper)" opacity="0.9" transform="translate(-2,-2)" />
+      <path d="M8 30h24" stroke="var(--color-paper)" strokeWidth="1.2" strokeLinecap="round" opacity="0.7" />
+    </svg>
+  )
+}
+
 const INDUSTRIES = [
   'Automotive', 'Banking & Finance', 'Education', 'Energy & Utilities',
   'Food & Beverage', 'Government', 'Health & Medical', 'Insurance',
@@ -78,7 +89,10 @@ export default function CompanyRegisterPage() {
 
   return (
     <div className="max-w-xl mx-auto">
-      <div className="mb-8">
+      <div className="mb-8 text-center">
+        <div className="flex justify-center mb-4">
+          <LogoMark size={52} />
+        </div>
         <h1 className="page-header">Register your business</h1>
         <p className="text-gray-500 text-sm mt-1">
           Claim your company profile and start managing customer complaints.
