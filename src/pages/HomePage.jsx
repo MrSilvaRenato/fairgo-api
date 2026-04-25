@@ -45,21 +45,24 @@ export default function HomePage() {
   const [claimedOnly, setClaimedOnly]   = useState(false)
   const [moreOpen, setMoreOpen]         = useState(false)
 
-  // Actively managed companies browse
-  const [managedQuery, setManagedQuery]   = useState('')
-  const [managedList,  setManagedList]    = useState([])
-  const [managedLoading, setManagedLoading] = useState(true)
+  // Companies browse
+  const [managedQuery,    setManagedQuery]    = useState('')
+  const [managedClaimed,  setManagedClaimed]  = useState(false)
+  const [managedList,     setManagedList]     = useState([])
+  const [managedLoading,  setManagedLoading]  = useState(true)
 
   useEffect(() => {
     const t = setTimeout(() => {
       setManagedLoading(true)
-      api.get('/complaints/company-search', { params: { claimed: true, q: managedQuery } })
+      const params = { q: managedQuery }
+      if (managedClaimed) params.claimed = true
+      api.get('/complaints/company-search', { params })
         .then((r) => setManagedList(r.data ?? []))
         .catch(() => {})
         .finally(() => setManagedLoading(false))
     }, managedQuery ? 300 : 0)
     return () => clearTimeout(t)
-  }, [managedQuery])
+  }, [managedQuery, managedClaimed])
   const moreRef                         = useRef(null)
   const VISIBLE_PILLS                   = 4
 
@@ -276,29 +279,40 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══════════════ ACTIVELY MANAGED ═══════════════ */}
+      {/* ═══════════════ COMPANIES BROWSE ═══════════════ */}
       <section id="actively-managed" className="mb-16">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
-          <div>
-            <div className="caps mb-1" style={{ color: 'var(--color-eucalyptus)' }}>✅ Actively managed</div>
-            <h2 className="font-display text-[32px] font-semibold tracking-tight">
-              Businesses on the platform
-            </h2>
-            <p className="text-sm text-[color:var(--color-muted)] mt-1">
-              These companies have registered and are actively managing their reputation.
-            </p>
-          </div>
+        <div className="mb-6">
+          <div className="caps mb-1">Companies</div>
+          <h2 className="font-display text-[32px] font-semibold tracking-tight">
+            Businesses on the platform
+          </h2>
+          <p className="text-sm text-[color:var(--color-muted)] mt-1">
+            {managedClaimed
+              ? 'Showing businesses that are actively managing their profile.'
+              : 'All Australian businesses registered on Aus Fair Go.'}
+          </p>
         </div>
 
-        {/* Search input */}
-        <div className="relative mb-5 max-w-sm">
-          <Icon name="search" size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)] pointer-events-none" />
-          <input
-            value={managedQuery}
-            onChange={(e) => setManagedQuery(e.target.value)}
-            placeholder="Filter by name…"
-            className="input pl-9 text-sm"
-          />
+        {/* Search + filter row */}
+        <div className="flex gap-2 mb-5 flex-wrap">
+          <div className="relative flex-1 min-w-[180px] max-w-sm">
+            <Icon name="search" size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)] pointer-events-none" />
+            <input
+              value={managedQuery}
+              onChange={(e) => setManagedQuery(e.target.value)}
+              placeholder="Search businesses…"
+              className="input pl-9 text-sm"
+            />
+          </div>
+          <button
+            onClick={() => setManagedClaimed((v) => !v)}
+            className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition shrink-0 ${
+              managedClaimed
+                ? 'bg-[#f0fdf4] border-[#86efac] text-[#166534]'
+                : 'border-[color:var(--color-line)] text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] bg-[color:var(--color-card)]'
+            }`}>
+            ✅ Actively managed
+          </button>
         </div>
 
         {managedLoading ? (

@@ -143,7 +143,7 @@ class CompanyController extends Controller
             $query->where('claimed', true);
         }
 
-        $companies = $query->orderBy('name')->limit(20)->get()
+        $companies = $query->orderBy('name')->limit(200)->get()
             ->map(fn($c) => [
                 'id'       => $c->id,
                 'name'     => $c->name,
