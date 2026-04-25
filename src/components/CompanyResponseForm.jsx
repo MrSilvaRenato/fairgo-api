@@ -429,7 +429,7 @@ function toneStyle(tone) {
 }
 
 /* ── Main component ───────────────────────────────────────────────────────── */
-export default function CompanyResponseForm({ complaintId, complaint, onSubmitted }) {
+export default function CompanyResponseForm({ complaintId, consumerName = '', refNumber = '', companyName = '', category = 'other', onSubmitted }) {
   const [content,       setContent]       = useState('')
   const [loading,       setLoading]       = useState(false)
   const [error,         setError]         = useState('')
@@ -438,10 +438,6 @@ export default function CompanyResponseForm({ complaintId, complaint, onSubmitte
   const [activeTab,     setActiveTab]     = useState('category') // 'category' | 'universal'
   const textareaRef = useRef(null)
 
-  const consumerName = complaint?.consumer_contact?.name || complaint?.consumer?.name || ''
-  const refNumber    = complaint?.reference_number ?? ''
-  const companyName  = complaint?.company?.name ?? ''
-  const category     = complaint?.category ?? 'other'
 
   const categoryTemplates = CATEGORY_TEMPLATES[category] ?? CATEGORY_TEMPLATES.other
   const allTemplates = activeTab === 'universal' ? UNIVERSAL_TEMPLATES : categoryTemplates

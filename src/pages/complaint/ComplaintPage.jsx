@@ -492,7 +492,10 @@ export default function ComplaintPage() {
       {isCompany && !hasResponse && (
         <CompanyResponseForm
           complaintId={complaint.id}
-          complaint={complaint}
+          consumerName={complaint.consumer_contact?.name || complaint.consumer?.name || ''}
+          refNumber={complaint.reference_number || ''}
+          companyName={complaint.company?.name || ''}
+          category={complaint.category || 'other'}
           onSubmitted={response => setComplaint(c => ({ ...c, response, status: 'responded' }))}
         />
       )}
