@@ -200,21 +200,32 @@ export default function ComplaintFormPage() {
 
     setLoading(true)
     try {
-      const payload = new FormData()
       const fields = { ...form, title }
       if (!fields.company_id && unregName && unregAbn) {
         fields.company_name = unregName
         fields.company_abn  = unregAbn.replace(/\s+/g, '')
         delete fields.company_id
       }
-      Object.entries(fields).forEach(([k, v]) => {
-        if (v !== '' && v !== null && v !== undefined) payload.append(k, v)
-      })
-      attachments.forEach(f => payload.append('attachments[]', f))
 
-      const res = await api.post('/complaints/', payload, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      let payload, headers = {}
+      if (attachments.length > 0) {
+        payload = new FormData()
+        Object.entries(fields).forEach(([k, v]) => {
+          if (v === '' || v === null || v === undefined) return
+          if (typeof v === 'boolean') payload.append(k, v ? '1' : '0')
+          else payload.append(k, v)
+        })
+        attachments.forEach(f => payload.append('attachments[]', f))
+        headers['Content-Type'] = 'multipart/form-data'
+      } else {
+        // No files — send clean JSON (booleans stay as booleans)
+        payload = {}
+        Object.entries(fields).forEach(([k, v]) => {
+          if (v !== '' && v !== null && v !== undefined) payload[k] = v
+        })
+      }
+
+      const res = await api.post('/complaints/', payload, { headers })
       sessionStorage.removeItem(DRAFT_KEY)
       const status = res.data.moderation_status
       if (status === 'flagged' || status === 'edited') {
