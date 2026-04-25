@@ -302,6 +302,11 @@ export default function HomePage() {
               Companies actively managing their profile on Aus Fair Go.
             </p>
           </div>
+          <button
+            onClick={() => { setShowAllCompanies((v) => !v); setManagedQuery('') }}
+            className="text-sm text-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)] underline underline-offset-4 transition shrink-0">
+            {showAllCompanies ? '← Show actively managed only' : 'Browse all registered businesses →'}
+          </button>
         </div>
 
         {/* Search — only visible when expanded */}
@@ -363,16 +368,6 @@ export default function HomePage() {
               })}
             </div>
 
-            {/* Show all toggle */}
-            {!managedQuery && (
-              <div className="mt-4 text-center">
-                <button
-                  onClick={() => { setShowAllCompanies((v) => !v); setManagedQuery('') }}
-                  className="text-sm text-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)] underline underline-offset-4 transition">
-                  {showAllCompanies ? 'Show actively managed only ↑' : `Browse all registered businesses →`}
-                </button>
-              </div>
-            )}
           </>
         )}
       </section>
