@@ -346,24 +346,47 @@ export default function HomePage() {
               {displayedCompanies.map((c) => {
                 const b = BAND[c.badge] ?? BAND.not_rated
                 return (
-                  <Link key={c.id} to={`/companies/${c.slug}`}
-                    className="card p-4 flex items-center gap-3 hover:bg-[color:var(--color-paper-2)]/60 transition group">
-                    <CompanyLogo company={c} size="md" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-[color:var(--color-ink)] truncate group-hover:underline underline-offset-4 decoration-[color:var(--color-ink)]/30">
-                        {c.name}
-                      </p>
-                      <p className="text-xs text-[color:var(--color-muted)] capitalize mt-0.5">
-                        {c.industry ?? 'Unknown'}
-                        {c.total > 0 && <> · {c.total} complaint{c.total !== 1 ? 's' : ''}</>}
-                      </p>
-                    </div>
-                    {c.badge !== 'not_rated' && (
-                      <span className="text-[10px] font-semibold caps shrink-0" style={{ color: b.text }}>
-                        {b.label}
-                      </span>
+                  <div key={c.id} className="card p-4 flex flex-col gap-2">
+                    <Link to={`/companies/${c.slug}`}
+                      className="flex items-center gap-3 group">
+                      <CompanyLogo company={c} size="md" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-[color:var(--color-ink)] truncate group-hover:underline underline-offset-4 decoration-[color:var(--color-ink)]/30">
+                          {c.name}
+                        </p>
+                        <p className="text-xs text-[color:var(--color-muted)] capitalize mt-0.5">
+                          {c.industry ?? 'Unknown'}
+                          {c.total > 0 && <> · {c.total} complaint{c.total !== 1 ? 's' : ''}</>}
+                        </p>
+                      </div>
+                      {c.badge !== 'not_rated' && (
+                        <span className="text-[10px] font-semibold caps shrink-0" style={{ color: b.text }}>
+                          {b.label}
+                        </span>
+                      )}
+                    </Link>
+
+                    {c.claimed ? (
+                      <div className="flex items-center gap-1.5 pt-1 border-t hairline">
+                        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 20 20" fill="none">
+                          <circle cx="10" cy="10" r="9" fill="#2F5D4C"/>
+                          <path d="M6 10.5l3 3 5-5" stroke="#F5F0E6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <span className="text-[11px] font-semibold" style={{ color: 'var(--color-eucalyptus)' }}>
+                          Verified & actively managed
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="pt-1 border-t hairline">
+                        <Link
+                          to="/register?role=business"
+                          className="text-[11px] text-[color:var(--color-muted)] hover:text-[color:var(--color-eucalyptus)] transition">
+                          Is this your business?{' '}
+                          <span className="underline underline-offset-2">Claim your free dashboard & analytics →</span>
+                        </Link>
+                      </div>
                     )}
-                  </Link>
+                  </div>
                 )
               })}
             </div>
