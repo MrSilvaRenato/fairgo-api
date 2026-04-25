@@ -740,30 +740,30 @@ function ComplaintFeedRow({ complaint }) {
 
   return (
     <Link to={`/complaints/${complaint.id}`}
-      className=”flex items-center gap-3 px-5 py-3.5 hover:bg-[color:var(--color-paper-2)] transition group”>
+      className="flex items-center gap-3 px-5 py-3.5 hover:bg-[color:var(--color-paper-2)] transition group">
       {/* Status dot */}
-      <span className=”w-2 h-2 rounded-full shrink-0” style={{ background: st.dot }} />
+      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: st.dot }} />
 
       {/* Title + meta */}
-      <div className=”flex-1 min-w-0”>
-        <p className=”text-sm font-medium text-[color:var(--color-ink)] truncate group-hover:underline underline-offset-4 decoration-[color:var(--color-ink)]/30 leading-snug”>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-[color:var(--color-ink)] truncate group-hover:underline underline-offset-4 decoration-[color:var(--color-ink)]/30 leading-snug">
           {complaint.title}
         </p>
-        <p className=”text-xs text-[color:var(--color-muted)] mt-0.5 truncate”>
-          vs <span className=”font-medium text-[color:var(--color-ink-2)]”>{complaint.company?.name}</span>
-          <span className=”mx-1.5 opacity-30”>·</span>
-          <span className=”capitalize”>{complaint.category}</span>
+        <p className="text-xs text-[color:var(--color-muted)] mt-0.5 truncate">
+          vs <span className="font-medium text-[color:var(--color-ink-2)]">{complaint.company?.name}</span>
+          <span className="mx-1.5 opacity-30">·</span>
+          <span className="capitalize">{complaint.category}</span>
         </p>
       </div>
 
       {/* Status label — hidden on smallest screens */}
-      <span className=”hidden sm:inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap”
+      <span className="hidden sm:inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
         style={{ color: st.fg, background: st.bg }}>
         {st.label}
       </span>
 
       {/* Date */}
-      <span className=”text-[11px] text-[color:var(--color-muted)] font-mono shrink-0”>{dateLabel}</span>
+      <span className="text-[11px] text-[color:var(--color-muted)] font-mono shrink-0">{dateLabel}</span>
     </Link>
   )
 }
