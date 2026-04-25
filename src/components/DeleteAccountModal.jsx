@@ -69,10 +69,20 @@ export default function DeleteAccountModal({ onClose, isCompany = false }) {
               All active sessions will be signed out immediately
             </li>
             {isCompany ? (
-              <li className="flex items-start gap-2">
-                <span style={{ color: 'var(--color-clay)' }}>✕</span>
-                Your company profile will be unlinked and return to unclaimed status
-              </li>
+              <>
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-500">⚠</span>
+                  Your <strong>company profile remains permanently on the platform</strong> as a public record — it cannot be removed
+                </li>
+                <li className="flex items-start gap-2">
+                  <span style={{ color: 'var(--color-clay)' }}>✕</span>
+                  Your account access will be removed and the profile will return to unclaimed status
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-500">~</span>
+                  Another authorised representative can re-claim the profile at any time
+                </li>
+              </>
             ) : (
               <li className="flex items-start gap-2">
                 <span className="text-amber-500">~</span>

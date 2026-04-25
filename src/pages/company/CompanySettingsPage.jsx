@@ -270,7 +270,7 @@ export default function CompanySettingsPage() {
           <div>
             <p className="text-sm font-semibold" style={{ color: 'var(--color-ink)' }}>Delete account</p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>
-              Permanently remove your account. Your company profile will return to unclaimed status.
+              Remove your account access. The company profile stays permanently on the platform as a public record — another representative can re-claim it.
             </p>
           </div>
           <button onClick={() => setShowDelete(true)}
