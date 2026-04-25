@@ -62,6 +62,7 @@ export default function HomePage() {
   const [feedCategory, setFeedCategory] = useState('')
   const feedSearchTimer = useRef(null)
   const [feedExpanded, setFeedExpanded] = useState(false)
+  const [feedCatCounts, setFeedCatCounts] = useState({})
 
   const [leaderboard, setLeaderboard] = useState([])
   const [industries, setIndustries] = useState([])
@@ -123,6 +124,15 @@ export default function HomePage() {
     }, 300)
     return () => clearTimeout(t)
   }, [query])
+
+  // Fetch category counts — refresh when status filter changes
+  useEffect(() => {
+    api.get('/complaints/category-counts', {
+      params: feedStatus ? { status: feedStatus } : {},
+    })
+      .then(r => setFeedCatCounts(r.data ?? {}))
+      .catch(() => {})
+  }, [feedStatus])
 
   useEffect(() => {
     clearTimeout(feedSearchTimer.current)
@@ -776,18 +786,29 @@ export default function HomePage() {
           {/* Category pills — expanded */}
           {feedExpanded && (
             <div className="flex gap-1.5 flex-wrap pt-1 border-t hairline">
-              {FEED_CATEGORY_OPTS.map(opt => (
-                <button key={opt.value}
-                  onClick={() => { setFeedCategory(opt.value); setFeedExpanded(false) }}
-                  className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full border transition ${
-                    feedCategory === opt.value
-                      ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
-                      : 'border-[color:var(--color-line)] bg-transparent text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)]'
-                  }`}>
-                  {opt.emoji && <span>{opt.emoji}</span>}
-                  {opt.label}
-                </button>
-              ))}
+              {FEED_CATEGORY_OPTS.map(opt => {
+                const count = opt.value ? (feedCatCounts[opt.value] ?? 0) : Object.values(feedCatCounts).reduce((a, b) => a + b, 0)
+                const active = feedCategory === opt.value
+                return (
+                  <button key={opt.value}
+                    onClick={() => { setFeedCategory(opt.value); setFeedExpanded(false) }}
+                    className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full border transition ${
+                      active
+                        ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                        : 'border-[color:var(--color-line)] bg-transparent text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)]'
+                    }`}>
+                    {opt.emoji && <span>{opt.emoji}</span>}
+                    {opt.label}
+                    {count > 0 && (
+                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full leading-none ${
+                        active
+                          ? 'bg-white/20 text-white'
+                          : 'bg-[color:var(--color-paper-2)] text-[color:var(--color-muted)]'
+                      }`}>{count}</span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           )}
 

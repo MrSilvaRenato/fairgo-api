@@ -32,6 +32,20 @@ class AdminController extends Controller
     }
 
     // GET /admin/complaints
+    public function complaintCategoryCounts(Request $request)
+    {
+        $query = Complaint::query();
+
+        if ($request->status)            $query->where('status', $request->status);
+        if ($request->moderation_status) $query->where('moderation_status', $request->moderation_status);
+
+        $counts = $query->selectRaw('category, count(*) as total')
+            ->groupBy('category')
+            ->pluck('total', 'category');
+
+        return response()->json($counts);
+    }
+
     public function complaints(Request $request)
     {
         $query = Complaint::with(['consumer:id,name,email', 'company:id,name,slug'])

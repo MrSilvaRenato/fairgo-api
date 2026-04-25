@@ -60,10 +60,24 @@ export default function AdminPage() {
   const [cPage,     setCPage]     = useState(1)
   const [cMeta,     setCMeta]     = useState(null)
   const [cSearchTimer, setCSearchTimer] = useState(null)
+  const [adminCatCounts, setAdminCatCounts] = useState({})
 
   useEffect(() => {
     api.get('/admin/stats').then((r) => setStats(r.data))
   }, [])
+
+  // Refresh category counts when complaints tab filters change
+  useEffect(() => {
+    if (tab !== 'complaints') return
+    api.get('/admin/complaints/category-counts', {
+      params: {
+        ...(cStatus    ? { status: cStatus }                       : {}),
+        ...(cModStatus ? { moderation_status: cModStatus }         : {}),
+      },
+    })
+      .then(r => setAdminCatCounts(r.data ?? {}))
+      .catch(() => {})
+  }, [tab, cStatus, cModStatus])
 
   const load = useCallback(() => {
     setLoading(true)
@@ -311,18 +325,31 @@ export default function AdminPage() {
                   { value: 'service',   label: 'Service',  emoji: '🎧' },
                   { value: 'refund',    label: 'Refund',   emoji: '↩️' },
                   { value: 'fraud',     label: 'Fraud',    emoji: '⚠️' },
-                ].map(opt => (
-                  <button key={opt.value}
-                    onClick={() => { setCCategory(opt.value); setCPage(1) }}
-                    className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-full border transition ${
-                      cCategory === opt.value
-                        ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
-                        : 'border-[color:var(--color-line)] bg-transparent text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)]'
-                    }`}>
-                    {opt.emoji && <span className="text-[10px]">{opt.emoji}</span>}
-                    {opt.label}
-                  </button>
-                ))}
+                ].map(opt => {
+                  const count = opt.value
+                    ? (adminCatCounts[opt.value] ?? 0)
+                    : Object.values(adminCatCounts).reduce((a, b) => a + b, 0)
+                  const active = cCategory === opt.value
+                  return (
+                    <button key={opt.value}
+                      onClick={() => { setCCategory(opt.value); setCPage(1) }}
+                      className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-full border transition ${
+                        active
+                          ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                          : 'border-[color:var(--color-line)] bg-transparent text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)]'
+                      }`}>
+                      {opt.emoji && <span className="text-[10px]">{opt.emoji}</span>}
+                      {opt.label}
+                      {count > 0 && (
+                        <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full leading-none ${
+                          active
+                            ? 'bg-white/20 text-white'
+                            : 'bg-[color:var(--color-paper-2)] text-[color:var(--color-muted)]'
+                        }`}>{count}</span>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 

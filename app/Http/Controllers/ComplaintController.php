@@ -190,6 +190,23 @@ class ComplaintController extends Controller
         return response()->json($data);
     }
 
+    public function categoryCounts(Request $request)
+    {
+        $query = Complaint::where('is_public', true)
+            ->where('status', '!=', 'removed')
+            ->whereNotIn('moderation_status', ['flagged', 'rejected']);
+
+        if ($request->status) {
+            $query->where('status', $request->status);
+        }
+
+        $counts = $query->selectRaw('category, count(*) as total')
+            ->groupBy('category')
+            ->pluck('total', 'category');
+
+        return response()->json($counts);
+    }
+
     public function index(Request $request)
     {
         $query = Complaint::with(['consumer:id,name', 'company:id,name,slug'])

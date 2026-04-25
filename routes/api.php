@@ -69,8 +69,9 @@ Route::prefix('companies')->group(function () {
 
 // Complaint routes
 Route::prefix('complaints')->group(function () {
-    Route::get('/',               [ComplaintController::class, 'index']);
-    Route::get('company-search',  [CompanyController::class, 'search']);
+    Route::get('/',                [ComplaintController::class, 'index']);
+    Route::get('category-counts',  [ComplaintController::class, 'categoryCounts']);
+    Route::get('company-search',   [CompanyController::class, 'search']);
     Route::get('{complaint}',               [ComplaintController::class, 'show']);
     Route::get('{complaint}/replies',       [ComplaintReplyController::class, 'index']);
 
@@ -109,6 +110,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::get('stats',                         [AdminController::class, 'stats']);
     Route::get('complaints',                    [AdminController::class, 'complaints']);
+    Route::get('complaints/category-counts',    [AdminController::class, 'complaintCategoryCounts']);
     Route::put('complaints/{complaint}',        [AdminController::class, 'updateComplaint']);
     Route::get('companies',                     [AdminController::class, 'companies']);
     Route::put('companies/{company}',           [AdminController::class, 'updateCompany']);
