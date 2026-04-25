@@ -46,23 +46,34 @@ export default function HomePage() {
   const [moreOpen, setMoreOpen]         = useState(false)
 
   // Companies browse
-  const [managedQuery,    setManagedQuery]    = useState('')
-  const [managedClaimed,  setManagedClaimed]  = useState(false)
-  const [managedList,     setManagedList]     = useState([])
-  const [managedLoading,  setManagedLoading]  = useState(true)
+  const [managedQuery,   setManagedQuery]   = useState('')
+  const [showAllCompanies, setShowAllCompanies] = useState(false)
+  const [claimedList,    setClaimedList]    = useState([])
+  const [allList,        setAllList]        = useState([])
+  const [managedLoading, setManagedLoading] = useState(true)
 
+  // Always load claimed companies on mount
   useEffect(() => {
+    api.get('/complaints/company-search', { params: { claimed: true } })
+      .then((r) => setClaimedList(r.data ?? []))
+      .catch(() => {})
+      .finally(() => setManagedLoading(false))
+  }, [])
+
+  // Load all companies only when expanded or searching
+  useEffect(() => {
+    if (!showAllCompanies && !managedQuery) return
     const t = setTimeout(() => {
-      setManagedLoading(true)
-      const params = { q: managedQuery }
-      if (managedClaimed) params.claimed = true
-      api.get('/complaints/company-search', { params })
-        .then((r) => setManagedList(r.data ?? []))
+      api.get('/complaints/company-search', { params: { q: managedQuery } })
+        .then((r) => setAllList(r.data ?? []))
         .catch(() => {})
-        .finally(() => setManagedLoading(false))
     }, managedQuery ? 300 : 0)
     return () => clearTimeout(t)
-  }, [managedQuery, managedClaimed])
+  }, [managedQuery, showAllCompanies])
+
+  const displayedCompanies = managedQuery
+    ? allList
+    : showAllCompanies ? allList : claimedList
   const moreRef                         = useRef(null)
   const VISIBLE_PILLS                   = 4
 
@@ -281,43 +292,35 @@ export default function HomePage() {
 
       {/* ═══════════════ COMPANIES BROWSE ═══════════════ */}
       <section id="actively-managed" className="mb-16">
-        <div className="mb-6">
-          <div className="caps mb-1">Companies</div>
-          <h2 className="font-display text-[32px] font-semibold tracking-tight">
-            Businesses on the platform
-          </h2>
-          <p className="text-sm text-[color:var(--color-muted)] mt-1">
-            {managedClaimed
-              ? 'Showing businesses that are actively managing their profile.'
-              : 'All Australian businesses registered on Aus Fair Go.'}
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+          <div>
+            <div className="caps mb-1" style={{ color: 'var(--color-eucalyptus)' }}>✅ Actively managed</div>
+            <h2 className="font-display text-[32px] font-semibold tracking-tight">
+              Businesses on the platform
+            </h2>
+            <p className="text-sm text-[color:var(--color-muted)] mt-1">
+              Companies actively managing their profile on Aus Fair Go.
+            </p>
+          </div>
         </div>
 
-        {/* Search + filter row */}
-        <div className="flex gap-2 mb-5 flex-wrap">
-          <div className="relative flex-1 min-w-[180px] max-w-sm">
+        {/* Search — only visible when expanded */}
+        {(showAllCompanies || managedQuery) && (
+          <div className="relative mb-4 max-w-sm">
             <Icon name="search" size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)] pointer-events-none" />
             <input
               value={managedQuery}
               onChange={(e) => setManagedQuery(e.target.value)}
-              placeholder="Search businesses…"
+              placeholder="Search all businesses…"
               className="input pl-9 text-sm"
+              autoFocus={showAllCompanies}
             />
           </div>
-          <button
-            onClick={() => setManagedClaimed((v) => !v)}
-            className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition shrink-0 ${
-              managedClaimed
-                ? 'bg-[#f0fdf4] border-[#86efac] text-[#166534]'
-                : 'border-[color:var(--color-line)] text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] bg-[color:var(--color-card)]'
-            }`}>
-            ✅ Actively managed
-          </button>
-        </div>
+        )}
 
         {managedLoading ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[...Array(6)].map((_, i) => (
+            {[...Array(3)].map((_, i) => (
               <div key={i} className="card p-4 flex items-center gap-3 animate-pulse">
                 <div className="w-10 h-10 rounded-xl bg-[color:var(--color-paper-2)] shrink-0" />
                 <div className="flex-1 space-y-2">
@@ -327,37 +330,50 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-        ) : managedList.length === 0 ? (
+        ) : displayedCompanies.length === 0 ? (
           <div className="card p-10 text-center">
             <p className="font-display italic-display text-[20px] mb-1">No businesses found.</p>
             <p className="text-sm text-[color:var(--color-muted)]">Try a different search term.</p>
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {managedList.map((c) => {
-              const b = BAND[c.badge] ?? BAND.not_rated
-              return (
-                <Link key={c.id} to={`/companies/${c.slug}`}
-                  className="card p-4 flex items-center gap-3 hover:bg-[color:var(--color-paper-2)]/60 transition group">
-                  <CompanyLogo company={c} size="md" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-[color:var(--color-ink)] truncate group-hover:underline underline-offset-4 decoration-[color:var(--color-ink)]/30">
-                      {c.name}
-                    </p>
-                    <p className="text-xs text-[color:var(--color-muted)] capitalize mt-0.5">
-                      {c.industry ?? 'Unknown'}
-                      {c.total > 0 && <> · {c.total} complaint{c.total !== 1 ? 's' : ''}</>}
-                    </p>
-                  </div>
-                  {c.badge !== 'not_rated' && (
-                    <span className="text-[10px] font-semibold caps shrink-0" style={{ color: b.text }}>
-                      {b.label}
-                    </span>
-                  )}
-                </Link>
-              )
-            })}
-          </div>
+          <>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {displayedCompanies.map((c) => {
+                const b = BAND[c.badge] ?? BAND.not_rated
+                return (
+                  <Link key={c.id} to={`/companies/${c.slug}`}
+                    className="card p-4 flex items-center gap-3 hover:bg-[color:var(--color-paper-2)]/60 transition group">
+                    <CompanyLogo company={c} size="md" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-[color:var(--color-ink)] truncate group-hover:underline underline-offset-4 decoration-[color:var(--color-ink)]/30">
+                        {c.name}
+                      </p>
+                      <p className="text-xs text-[color:var(--color-muted)] capitalize mt-0.5">
+                        {c.industry ?? 'Unknown'}
+                        {c.total > 0 && <> · {c.total} complaint{c.total !== 1 ? 's' : ''}</>}
+                      </p>
+                    </div>
+                    {c.badge !== 'not_rated' && (
+                      <span className="text-[10px] font-semibold caps shrink-0" style={{ color: b.text }}>
+                        {b.label}
+                      </span>
+                    )}
+                  </Link>
+                )
+              })}
+            </div>
+
+            {/* Show all toggle */}
+            {!managedQuery && (
+              <div className="mt-4 text-center">
+                <button
+                  onClick={() => { setShowAllCompanies((v) => !v); setManagedQuery('') }}
+                  className="text-sm text-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)] underline underline-offset-4 transition">
+                  {showAllCompanies ? 'Show actively managed only ↑' : `Browse all registered businesses →`}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
 
