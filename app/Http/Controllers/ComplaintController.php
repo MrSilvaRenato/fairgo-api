@@ -172,7 +172,7 @@ class ComplaintController extends Controller
         }
 
         // Base relations for everyone
-        $relations = ['consumer:id,name', 'company:id,name,slug', 'response', 'feedback', 'replies.user:id,name,role', 'attachments'];
+        $relations = ['consumer:id,name', 'company:id,name,slug,website', 'response', 'feedback', 'replies.user:id,name,role', 'attachments'];
         $complaint->load($relations);
 
         $data = $complaint->toArray();

@@ -335,21 +335,6 @@ export default function ComplaintPage() {
         )}
       </div>
 
-      {/* ── Public image attachments ── */}
-      {!showPrivate && attachments.filter(a => a.mime_type?.startsWith('image/')).length > 0 && (
-        <div className="card p-6">
-          <h3 className="caps mb-3">Attachments</h3>
-          <div className="flex flex-wrap gap-3">
-            {attachments.filter(a => a.mime_type?.startsWith('image/')).map(att => (
-              <a key={att.id} href={att.url} target="_blank" rel="noopener noreferrer"
-                className="block w-24 h-24 rounded-xl overflow-hidden border hover:shadow-md transition"
-                style={{ borderColor: 'var(--color-line)' }}>
-                <img src={att.url} alt="" className="w-full h-full object-cover" />
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ── Company response ── */}
       {hasResponse && (
