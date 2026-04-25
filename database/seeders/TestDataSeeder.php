@@ -71,26 +71,9 @@ class TestDataSeeder extends Seeder
         $this->command->info('Seeding test accounts...');
 
         // ── 1. Named test accounts ──────────────────────────────────────────
-        $testAdmin = User::updateOrCreate(['email' => 'testadmin@fairgo.test'], [
-            'name'              => 'Test Admin',
-            'password'          => Hash::make('Admin1234!'),
-            'role'              => 'admin',
-            'email_verified_at' => now(),
-        ]);
-
-        $testConsumer = User::updateOrCreate(['email' => 'testconsumer@fairgo.test'], [
-            'name'              => 'Test Consumer',
-            'password'          => Hash::make('Consumer1234!'),
-            'role'              => 'consumer',
-            'email_verified_at' => now(),
-        ]);
-
-        $testCompanyUser = User::updateOrCreate(['email' => 'testcompany@fairgo.test'], [
-            'name'              => 'Test Company Admin',
-            'password'          => Hash::make('Company1234!'),
-            'role'              => 'company_admin',
-            'email_verified_at' => now(),
-        ]);
+        $testAdmin = $this->makeUser('testadmin@fairgo.test', 'Test Admin', 'Admin1234!', 'admin');
+        $testConsumer = $this->makeUser('testconsumer@fairgo.test', 'Test Consumer', 'Consumer1234!', 'consumer');
+        $testCompanyUser = $this->makeUser('testcompany@fairgo.test', 'Test Company Admin', 'Company1234!', 'company_admin');
 
         // Link test company admin to Telstra
         $telstra = Company::where('name', 'Telstra')->first();
@@ -107,13 +90,12 @@ class TestDataSeeder extends Seeder
         ];
 
         foreach (range(1, 10) as $i) {
-            $consumers[] = User::updateOrCreate(['email' => "consumer{$i}@fairgo.test"], [
-                'name'              => $consumerNames[$i - 1],
-                'password'          => Hash::make('Test1234!'),
-                'role'              => 'consumer',
-                'phone'             => '04' . str_pad($i * 11111111, 8, '0', STR_PAD_LEFT),
-                'email_verified_at' => now(),
-            ]);
+            $consumer = $this->makeUser("consumer{$i}@fairgo.test", $consumerNames[$i - 1], 'Test1234!', 'consumer');
+            if (!$consumer->phone) {
+                $consumer->phone = '04' . str_pad($i * 11111111, 8, '0', STR_PAD_LEFT);
+                $consumer->save();
+            }
+            $consumers[] = $consumer;
         }
 
         // ── 3. Bulk company admins — claim 10 companies ─────────────────────
@@ -125,12 +107,7 @@ class TestDataSeeder extends Seeder
 
         $claimedCompanies = [];
         foreach (range(1, 10) as $i) {
-            $companyUser = User::updateOrCreate(['email' => "company{$i}@fairgo.test"], [
-                'name'              => $companyAdminNames[$i - 1],
-                'password'          => Hash::make('Test1234!'),
-                'role'              => 'company_admin',
-                'email_verified_at' => now(),
-            ]);
+            $companyUser = $this->makeUser("company{$i}@fairgo.test", $companyAdminNames[$i - 1], 'Test1234!', 'company_admin');
 
             $companyName = self::COMPANY_NAMES[$i - 1];
             $company = Company::where('name', $companyName)->first();
@@ -208,6 +185,26 @@ class TestDataSeeder extends Seeder
                 ['Companies 1–10', 'company{N}@fairgo.test',   'Test1234!',     '10 accounts, see list above'],
             ]
         );
+    }
+
+    /**
+     * Create or find a user and ensure email_verified_at is set.
+     * Uses direct attribute assignment to bypass $fillable restriction.
+     */
+    private function makeUser(string $email, string $name, string $password, string $role): User
+    {
+        $user = User::firstOrCreate(
+            ['email' => $email],
+            ['name' => $name, 'password' => Hash::make($password), 'role' => $role]
+        );
+
+        // email_verified_at is not in $fillable — set directly
+        if (!$user->email_verified_at) {
+            $user->email_verified_at = now();
+            $user->save();
+        }
+
+        return $user;
     }
 
     private function complaintTemplates(): array
