@@ -34,8 +34,9 @@ Route::prefix('auth')->group(function () {
         ->name('verification.verify');
 
     Route::middleware('auth:sanctum')->group(function () {
-        Route::post('logout',        [AuthController::class, 'logout']);
-        Route::get('me',             [AuthController::class, 'me']);
+        Route::post('logout',          [AuthController::class, 'logout']);
+        Route::get('me',               [AuthController::class, 'me']);
+        Route::delete('account',       \App\Http\Controllers\DeleteAccountController::class);
         Route::post('phone/send',    [PhoneVerificationController::class, 'send']);
         Route::post('phone/verify',  [PhoneVerificationController::class, 'verify']);
         Route::post('email/resend',  [\App\Http\Controllers\EmailVerificationController::class, 'resend'])->middleware('throttle:3,60');

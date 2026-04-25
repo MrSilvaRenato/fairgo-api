@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import api from '../../lib/axios'
 import CompanyLogo from '../../components/CompanyLogo'
 import Icon from '../../components/Icon'
+import DeleteAccountModal from '../../components/DeleteAccountModal'
 
 const INDUSTRIES = [
   'Automotive', 'Banking & Finance', 'Education', 'Energy & Utilities',
@@ -18,6 +19,7 @@ export default function CompanySettingsPage() {
   })
   const [loading, setLoading]       = useState(true)
   const [saving, setSaving]         = useState(false)
+  const [showDelete, setShowDelete] = useState(false)
   const [abnVerifying, setAbnVerifying] = useState(false)
   const [abnResult, setAbnResult]   = useState(null)
   const [saved, setSaved]     = useState(false)
@@ -261,6 +263,25 @@ export default function CompanySettingsPage() {
           />
         </div>
       </div>
+
+      {/* Danger zone */}
+      <div className="card p-5 border border-[color:var(--color-clay)]">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-sm font-semibold" style={{ color: 'var(--color-ink)' }}>Delete account</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>
+              Permanently remove your account. Your company profile will return to unclaimed status.
+            </p>
+          </div>
+          <button onClick={() => setShowDelete(true)}
+            className="btn text-xs font-semibold shrink-0 px-4 py-2 rounded-xl"
+            style={{ background: 'var(--color-clay-soft)', color: 'var(--color-clay)', border: '1px solid var(--color-clay)' }}>
+            Delete account
+          </button>
+        </div>
+      </div>
+
+      {showDelete && <DeleteAccountModal onClose={() => setShowDelete(false)} isCompany />}
 
     </div>
   )
