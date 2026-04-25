@@ -26,14 +26,36 @@ export default function CompanyDashboardPage() {
   const [search, setSearch]       = useState('')
   const [respondingTo, setRespondingTo] = useState(null)
 
+  const load = () => {
+    api.get('/dashboard/company')
+      .then((res) => setData(res.data))
+      .catch(() => setApiError(true))
+      .finally(() => setLoading(false))
+  }
+
   useEffect(() => {
-    fetchUser().finally(() => {
-      api.get('/dashboard/company')
-        .then((res) => setData(res.data))
-        .catch(() => setApiError(true))
-        .finally(() => setLoading(false))
-    })
+    fetchUser().finally(load)
+    const onVisible = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
   }, [])
+
+  const markRead = (complaintId) => {
+    setData(prev => {
+      if (!prev) return prev
+      const unreadDelta = prev.complaints.find(c => c.id === complaintId)?.unread_count ?? 0
+      return {
+        ...prev,
+        complaints: prev.complaints.map(c =>
+          c.id === complaintId ? { ...c, unread_count: 0 } : c
+        ),
+        stats: {
+          ...prev.stats,
+          unread: Math.max(0, (prev.stats.unread ?? 0) - unreadDelta),
+        },
+      }
+    })
+  }
 
   const handleResponseSubmitted = (complaintId, response) => {
     setData((prev) => ({
@@ -86,7 +108,7 @@ export default function CompanyDashboardPage() {
   const b     = BAND[band]
 
   const needsResponse = complaints.filter((c) => c.status === 'open' && !c.response).length
-  const totalUnread   = stats.unread ?? 0
+  const totalUnread   = complaints.reduce((sum, c) => sum + (c.unread_count ?? 0), 0)
 
   const statItems = [
     { label: 'Total',       value: stats.total,            key: 'all' },
@@ -230,6 +252,7 @@ export default function CompanyDashboardPage() {
               respondingTo={respondingTo}
               setRespondingTo={setRespondingTo}
               onResponseSubmitted={handleResponseSubmitted}
+              onRead={markRead}
             />
           ))}
         </ul>
@@ -242,7 +265,7 @@ export default function CompanyDashboardPage() {
 }
 
 /* ─── Complaint card ─────────────────────────────────────── */
-function ComplaintCard({ complaint: c, company, respondingTo, setRespondingTo, onResponseSubmitted }) {
+function ComplaintCard({ complaint: c, company, respondingTo, setRespondingTo, onResponseSubmitted, onRead }) {
   const st          = STATUS[c.status] ?? STATUS.open
   const unreadCount = c.unread_count ?? 0
   const daysLeft    = c.expires_at
@@ -287,6 +310,7 @@ function ComplaintCard({ complaint: c, company, respondingTo, setRespondingTo, o
 
           {/* Title */}
           <Link to={`/complaints/${c.id}`}
+            onClick={() => unreadCount > 0 && onRead?.(c.id)}
             className="font-semibold text-[color:var(--color-ink)] hover:text-[color:var(--color-eucalyptus)] transition block leading-snug mb-1.5">
             {c.title}
           </Link>
@@ -314,7 +338,9 @@ function ComplaintCard({ complaint: c, company, respondingTo, setRespondingTo, o
               {respondingTo === c.id ? 'Cancel' : 'Respond'}
             </button>
           ) : (
-            <Link to={`/complaints/${c.id}`} className="btn btn-secondary text-xs">
+            <Link to={`/complaints/${c.id}`}
+              onClick={() => unreadCount > 0 && onRead?.(c.id)}
+              className="btn btn-secondary text-xs">
               View <Icon name="arrow-r" size={12} />
             </Link>
           )}

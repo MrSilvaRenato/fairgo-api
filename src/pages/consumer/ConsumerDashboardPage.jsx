@@ -26,7 +26,29 @@ export default function ConsumerDashboardPage() {
     api.get('/dashboard/consumer').then((res) => setData(res.data)).finally(() => setLoading(false))
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    const onVisible = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
+
+  const markRead = (complaintId) => {
+    setData(prev => {
+      if (!prev) return prev
+      const unreadDelta = prev.complaints.find(c => c.id === complaintId)?.unread_count ?? 0
+      return {
+        ...prev,
+        complaints: prev.complaints.map(c =>
+          c.id === complaintId ? { ...c, unread_count: 0 } : c
+        ),
+        stats: {
+          ...prev.stats,
+          unread: Math.max(0, (prev.stats.unread ?? 0) - unreadDelta),
+        },
+      }
+    })
+  }
 
   if (loading) return <Skeleton />
   if (!data)   return null
@@ -35,7 +57,7 @@ export default function ConsumerDashboardPage() {
   const filtered = filter === 'all' ? complaints : complaints.filter((c) => c.status === filter)
 
   const needsAction  = complaints.filter((c) => c.status === 'responded').length
-  const totalUnread  = stats.unread ?? 0
+  const totalUnread  = complaints.reduce((sum, c) => sum + (c.unread_count ?? 0), 0)
 
   const statItems = [
     { label: 'Total',        value: stats.total,      key: 'all' },
@@ -135,7 +157,7 @@ export default function ConsumerDashboardPage() {
       ) : (
         <ul className="space-y-3">
           {filtered.map((c) => (
-            <ComplaintRow key={c.id} complaint={c} onReopen={load} />
+            <ComplaintRow key={c.id} complaint={c} onReopen={load} onRead={markRead} />
           ))}
         </ul>
       )}
@@ -164,7 +186,7 @@ export default function ConsumerDashboardPage() {
 }
 
 /* ─── Complaint row ──────────────────────────────────────── */
-function ComplaintRow({ complaint: c, onReopen }) {
+function ComplaintRow({ complaint: c, onReopen, onRead }) {
   const st = STATUS[c.status] ?? STATUS.open
   const needsClose  = c.status === 'responded'
   const canReopen   = (c.status === 'resolved' || c.status === 'unresolved') && !c.reopened_at
@@ -216,6 +238,7 @@ function ComplaintRow({ complaint: c, onReopen }) {
           {/* Title + unread badge */}
           <div className="flex items-center gap-2 mb-1.5">
             <Link to={`/complaints/${c.id}`}
+              onClick={() => unreadCount > 0 && onRead?.(c.id)}
               className="font-semibold text-[color:var(--color-ink)] hover:text-[color:var(--color-eucalyptus)] transition leading-snug">
               {c.title}
             </Link>

@@ -111,7 +111,7 @@ export default function ComplaintPage() {
   const status      = STATUS_CONFIG[complaint.status] ?? STATUS_CONFIG.open
   const attachments = complaint.attachments ?? []
   const contact     = complaint.consumer_contact ?? null
-  const showPrivate = isCompany || (isAdmin && contact)
+  const showPrivate = isOwner || isCompany || (isAdmin && contact)
 
   const expiresAt  = complaint.expires_at ? new Date(complaint.expires_at) : null
   const daysLeft   = expiresAt ? Math.ceil((expiresAt - Date.now()) / 86400000) : null
@@ -140,7 +140,7 @@ export default function ComplaintPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
             </svg>
             <span className="text-sm font-semibold">
-              {isAdmin ? 'Admin view — consumer details' : 'Private — visible to your company only'}
+              {isAdmin ? 'Admin view — consumer details' : isOwner ? 'Your private complaint details' : 'Private — visible to your company only'}
             </span>
           </div>
           <div className="p-5 space-y-5" style={{ background: 'var(--color-eucalyptus-3)' }}>
@@ -207,7 +207,9 @@ export default function ComplaintPage() {
             )}
 
             <p className="text-[11px] opacity-60 pt-1" style={{ color: 'var(--color-eucalyptus)' }}>
-              🔒 This information is confidential and never shown to the public.
+              🔒 {isOwner && !isCompany && !isAdmin
+                ? 'Only you and the company receiving this complaint can see these details.'
+                : 'This information is confidential and never shown to the public.'}
             </p>
           </div>
         </div>
