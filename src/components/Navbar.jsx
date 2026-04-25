@@ -137,7 +137,7 @@ export default function Navbar() {
                 Sign in
               </Link>
               <Link
-                to="/companies/register"
+                to="/register?role=business"
                 className="text-sm text-[color:var(--color-ink-2)] hover:text-[color:var(--color-eucalyptus)] transition-colors font-medium"
               >
                 For Business
@@ -204,6 +204,7 @@ export default function Navbar() {
             <>
               <MobileLink to="/login" onClick={() => setMenuOpen(false)}>Sign in</MobileLink>
               <MobileLink to="/register" onClick={() => setMenuOpen(false)}>Submit a complaint</MobileLink>
+              <MobileLink to="/register?role=business" onClick={() => setMenuOpen(false)}>For Business</MobileLink>
             </>
           )}
           <div className="border-t hairline-2 mt-2 pt-2 space-y-1">

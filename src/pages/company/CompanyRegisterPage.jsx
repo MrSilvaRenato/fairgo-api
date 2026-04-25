@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../lib/axios'
 import useAuthStore from '../../store/authStore'
@@ -11,9 +11,25 @@ const INDUSTRIES = [
 ]
 
 export default function CompanyRegisterPage() {
-  const { fetchUser } = useAuthStore()
+  const { user, token, fetchUser } = useAuthStore()
   const navigate = useNavigate()
   const [form, setForm] = useState({ name: '', abn: '', industry: '', description: '', website: '' })
+
+  // Auth guard: must be logged in to register a company.
+  // token===null means definitely not logged in.
+  // token exists but user===null means fetchUser still in flight — wait.
+  useEffect(() => {
+    if (token === null) {
+      // Not logged in — send to step 1 (personal account creation)
+      navigate('/register?role=business', { replace: true })
+      return
+    }
+    if (user === null) return // token present, still loading user
+    // Already has a company — skip straight to dashboard
+    if (user.company) {
+      navigate('/company/dashboard', { replace: true })
+    }
+  }, [user, token, navigate])
   const [abnData, setAbnData] = useState(null)
   const [abnError, setAbnError] = useState('')
   const [abnLoading, setAbnLoading] = useState(false)

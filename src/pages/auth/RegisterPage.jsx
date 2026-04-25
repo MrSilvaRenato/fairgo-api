@@ -9,12 +9,13 @@ export default function RegisterPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const next = searchParams.get('next') ?? '/'
-  const hasDraft  = !!sessionStorage.getItem(DRAFT_KEY)
-  const isClaim   = next.includes('/claim')
+  const hasDraft    = !!sessionStorage.getItem(DRAFT_KEY)
+  const isClaim     = next.includes('/claim')
+  const isBusiness  = searchParams.get('role') === 'business'
 
   const [form, setForm] = useState({
     name: '', email: '', password: '', password_confirmation: '',
-    role: 'consumer',
+    role: isBusiness ? 'company_admin' : 'consumer',
   })
   const [errors, setErrors] = useState({})
 
@@ -42,6 +43,17 @@ export default function RegisterPage() {
   return (
     <div className="min-h-[80vh] flex items-center justify-center -mt-8 py-8">
       <div className="w-full max-w-md">
+
+        {/* Business registration context banner */}
+        {isBusiness && !isClaim && (
+          <div className="mb-6 flex items-start gap-3 bg-[color:var(--color-eucalyptus-3)] border border-[color:var(--color-eucalyptus)] rounded-2xl px-4 py-4">
+            <span className="text-2xl shrink-0">🏢</span>
+            <div>
+              <p className="text-sm font-semibold text-[color:var(--color-ink)]">Register your business on Aus Fair Go</p>
+              <p className="text-xs text-[color:var(--color-ink-2)] mt-0.5">Step 1 of 2 — Create your personal account, then you'll add your business details (ABN, company name, etc.).</p>
+            </div>
+          </div>
+        )}
 
         {/* Claim context banner */}
         {isClaim && (
@@ -74,14 +86,17 @@ export default function RegisterPage() {
             <span className="text-white font-bold text-lg">FG</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {hasDraft ? 'Create your free account' : isClaim ? 'Create your free account' : 'Create your account'}
+            {hasDraft ? 'Create your free account'
+              : isClaim ? 'Create your free account'
+              : isBusiness ? 'Create your business account'
+              : 'Create your account'}
           </h1>
           <p className="text-sm text-gray-500 mt-1">Free forever. No credit card required.</p>
         </div>
 
         <div className="card p-8">
-          {/* Account type toggle — hide for complaint drafts and claim flows (consumer only) */}
-          {!hasDraft && !isClaim && (
+          {/* Account type toggle — hide for complaint drafts, claim flows, and direct business signup */}
+          {!hasDraft && !isClaim && !isBusiness && (
             <div className="grid grid-cols-2 gap-2 mb-6 p-1 bg-gray-100 rounded-xl">
               {[
                 { value: 'consumer',      label: 'Consumer', icon: '👤' },
@@ -133,7 +148,10 @@ export default function RegisterPage() {
                   </svg>
                   Creating account…
                 </span>
-              ) : hasDraft ? 'Create account & submit complaint' : isClaim ? 'Create account & continue to claim' : 'Create account'}
+              ) : hasDraft ? 'Create account & submit complaint'
+              : isClaim ? 'Create account & continue to claim'
+              : isBusiness ? 'Create account & continue →'
+              : 'Create account'}
             </button>
           </form>
         </div>
