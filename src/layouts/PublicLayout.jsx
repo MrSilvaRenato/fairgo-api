@@ -1,62 +1,136 @@
 import { Outlet, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 
+function LogoMark({ size = 28 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
+      <circle cx="20" cy="20" r="19" fill="var(--color-eucalyptus)" />
+      <path d="M12 26c6-2 10-6 14-14-1 9-5 14-14 14Z" fill="var(--color-ochre-2)" opacity="0.95" />
+      <path d="M12 26c6-2 10-6 14-14-1 9-5 14-14 14Z" fill="var(--color-paper)" opacity="0.9" transform="translate(-2,-2)" />
+      <path d="M8 30h24" stroke="var(--color-paper)" strokeWidth="1.2" strokeLinecap="round" opacity="0.7" />
+    </svg>
+  )
+}
+
 export default function PublicLayout() {
   return (
-    <div className="min-h-screen" style={{ background: 'var(--color-paper)' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-paper)' }}>
       <Navbar />
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8">
         <Outlet />
       </main>
-      <footer className="mt-16 border-t" style={{ borderColor: 'var(--color-line)' }}>
-        <div className="max-w-6xl mx-auto px-4 py-10">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
 
-            {/* Brand */}
-            <div>
-              <p className="font-display font-semibold text-[color:var(--color-ink)] text-sm">Aus Fair Go</p>
-              <p className="text-xs text-[color:var(--color-muted)] mt-0.5">
-                Australia's public consumer complaint platform
+      <footer className="mt-20" style={{ borderTop: '1px solid var(--color-line)' }}>
+
+        {/* Main footer */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12">
+
+            {/* Brand col */}
+            <div className="col-span-2 md:col-span-1">
+              <Link to="/" className="flex items-center gap-2.5 mb-3">
+                <LogoMark size={32} />
+                <span className="font-display text-[18px] font-semibold" style={{ color: 'var(--color-ink)' }}>
+                  Aus Fair Go
+                </span>
+              </Link>
+              <p className="text-xs leading-relaxed" style={{ color: 'var(--color-muted)' }}>
+                Australia's independent consumer complaint platform. Holding businesses accountable, one complaint at a time.
               </p>
+              <a href="mailto:hello@ausfairgo.com.au"
+                className="inline-flex items-center gap-1.5 mt-4 text-xs font-medium transition-colors"
+                style={{ color: 'var(--color-eucalyptus)' }}>
+                hello@ausfairgo.com.au
+              </a>
             </div>
 
-            {/* Links */}
-            <nav className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-[color:var(--color-muted)]">
-              <Link to="/community-guidelines" className="hover:text-[color:var(--color-ink)] transition">
-                Community Guidelines
-              </Link>
-              <Link to="/terms" className="hover:text-[color:var(--color-ink)] transition">
-                Terms &amp; Conditions
-              </Link>
-              <Link to="/privacy" className="hover:text-[color:var(--color-ink)] transition">
-                Privacy Policy
-              </Link>
-              <a href="mailto:hello@ausfairgo.com.au" className="hover:text-[color:var(--color-ink)] transition">
-                Contact
-              </a>
-            </nav>
-          </div>
+            {/* Platform */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--color-muted)' }}>
+                Platform
+              </p>
+              <ul className="space-y-2.5">
+                <FooterLink to="/search">Browse businesses</FooterLink>
+                <FooterLink to="/most-complained">Most complained</FooterLink>
+                <FooterLink to="/register">Submit a complaint</FooterLink>
+                <FooterLink to="/#leaderboard">Leaderboard</FooterLink>
+              </ul>
+            </div>
 
-          <div className="mt-6 pt-5 border-t flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[11px] text-[color:var(--color-muted)]"
-            style={{ borderColor: 'var(--color-line)' }}>
-            <p>© {new Date().getFullYear()} Aus Fair Go. All rights reserved.</p>
-            <p>
-              Operated in accordance with the{' '}
+            {/* For Business */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--color-muted)' }}>
+                For Business
+              </p>
+              <ul className="space-y-2.5">
+                <FooterLink to="/register?role=business">Register your business</FooterLink>
+                <FooterLink to="/search">Find your company</FooterLink>
+                <FooterLink to="/company/dashboard">Business dashboard</FooterLink>
+                <FooterLink to="/company/billing">Plans &amp; pricing</FooterLink>
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--color-muted)' }}>
+                Legal
+              </p>
+              <ul className="space-y-2.5">
+                <FooterLink to="/community-guidelines">Community Guidelines</FooterLink>
+                <FooterLink to="/terms">Terms &amp; Conditions</FooterLink>
+                <FooterLink to="/privacy">Privacy Policy</FooterLink>
+                <FooterLink href="https://www.accc.gov.au/consumers/consumer-rights-guarantees" external>
+                  Australian Consumer Law
+                </FooterLink>
+              </ul>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Bottom bar */}
+        <div style={{ borderTop: '1px solid var(--color-line)' }}>
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-[11px]" style={{ color: 'var(--color-muted)' }}>
+              © {new Date().getFullYear()} Aus Fair Go. All rights reserved.
+            </p>
+            <p className="text-[11px] text-center" style={{ color: 'var(--color-muted)' }}>
+              Operated under the{' '}
               <a href="https://www.legislation.gov.au/Details/C2004A03722"
                 target="_blank" rel="noopener noreferrer"
                 className="underline underline-offset-2 hover:text-[color:var(--color-ink)] transition">
                 Privacy Act 1988
               </a>
-              {' '}and{' '}
-              <a href="https://www.accc.gov.au/consumers/consumer-rights-guarantees"
-                target="_blank" rel="noopener noreferrer"
-                className="underline underline-offset-2 hover:text-[color:var(--color-ink)] transition">
-                Australian Consumer Law
-              </a>.
+              {' '}·{' '}
+              <span className="inline-flex items-center gap-1">
+                🇦🇺 Made in Australia
+              </span>
             </p>
           </div>
         </div>
+
       </footer>
     </div>
+  )
+}
+
+function FooterLink({ to, href, external = false, children }) {
+  const cls = "text-sm transition-colors hover:text-[color:var(--color-eucalyptus)]"
+  const style = { color: 'var(--color-ink-2)' }
+
+  if (href || external) {
+    return (
+      <li>
+        <a href={href} target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined}
+          className={cls} style={style}>
+          {children}
+        </a>
+      </li>
+    )
+  }
+  return (
+    <li>
+      <Link to={to} className={cls} style={style}>{children}</Link>
+    </li>
   )
 }
