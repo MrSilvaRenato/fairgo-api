@@ -40,7 +40,7 @@ class AiDraftController extends Controller
                         'content-type'      => 'application/json',
                     ],
                     'json' => [
-                        'model'      => 'claude-haiku-4-5',
+                        'model'      => 'claude-3-5-haiku-20241022',
                         'max_tokens' => 800,
                         'stream'     => true,
                         'system'     => $systemPrompt,
@@ -80,7 +80,7 @@ class AiDraftController extends Controller
                 }
 
             } catch (\Throwable $e) {
-                echo 'data: ' . json_encode(['error' => 'AI generation failed. Please try again.']) . "\n\n";
+                echo 'data: ' . json_encode(['error' => $e->getMessage()]) . "\n\n";
                 flush();
             }
 
