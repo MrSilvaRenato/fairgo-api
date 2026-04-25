@@ -37,7 +37,7 @@ export default function ComplaintPage() {
         // Scroll to bottom after paint so latest message is visible
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'instant' }), 80)
         // Refresh user so navbar unread badge updates (replies marked read server-side above)
-        useAuthStore.getState().fetchUser()
+        if (localStorage.getItem('token')) useAuthStore.getState().fetchUser()
       })
       .catch(() => setError('Complaint not found.'))
       .finally(() => setLoading(false))

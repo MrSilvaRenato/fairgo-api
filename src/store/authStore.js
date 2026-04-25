@@ -39,6 +39,7 @@ const useAuthStore = create((set) => ({
   },
 
   fetchUser: async () => {
+    if (!localStorage.getItem('token')) return
     try {
       const res = await api.get('/auth/me')
       set({ user: res.data })
