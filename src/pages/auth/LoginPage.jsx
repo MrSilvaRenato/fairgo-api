@@ -39,7 +39,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center -mt-8">
+    <div className="min-h-[80vh] flex items-center justify-center -mt-8 px-4">
       <div className="w-full max-w-md">
 
         {/* Password reset success banner */}
@@ -99,7 +99,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="card p-8">
+        <div className="card p-5 sm:p-8">
           <form onSubmit={submit} className="space-y-5">
             <Field label="Email address" error={errors.email?.[0]}>
               <input name="email" type="email" value={form.email} onChange={handle}
