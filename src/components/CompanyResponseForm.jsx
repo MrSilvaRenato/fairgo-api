@@ -438,7 +438,7 @@ export default function CompanyResponseForm({ complaintId, complaint, onSubmitte
   const [activeTab,     setActiveTab]     = useState('category') // 'category' | 'universal'
   const textareaRef = useRef(null)
 
-  const consumerName = complaint?.consumer?.name ?? complaint?.consumer_contact?.name ?? ''
+  const consumerName = complaint?.consumer_contact?.name || complaint?.consumer?.name || ''
   const refNumber    = complaint?.reference_number ?? ''
   const companyName  = complaint?.company?.name ?? ''
   const category     = complaint?.category ?? 'other'
