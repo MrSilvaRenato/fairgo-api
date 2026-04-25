@@ -42,6 +42,7 @@ export default function HomePage() {
   const [activeIndustry, setActiveIndustry] = useState('all')
   const [loadingBoard, setLoadingBoard] = useState(true)
   const [boardMode, setBoardMode]       = useState('best')
+  const [claimedOnly, setClaimedOnly]   = useState(false)
   const [moreOpen, setMoreOpen]         = useState(false)
   const moreRef                         = useRef(null)
   const VISIBLE_PILLS                   = 4
@@ -91,9 +92,10 @@ export default function HomePage() {
 
   const displayList = useMemo(() => {
     // Never surface not_rated companies in the leaderboard — they don't have enough data
-    const rated = (leaderboard ?? []).filter((c) => c.badge !== 'not_rated')
+    let rated = (leaderboard ?? []).filter((c) => c.badge !== 'not_rated')
+    if (claimedOnly) rated = rated.filter((c) => c.claimed)
     return boardMode === 'best' ? rated : [...rated].reverse()
-  }, [boardMode, leaderboard])
+  }, [boardMode, leaderboard, claimedOnly])
 
   return (
     <div className="-mt-8">
@@ -268,7 +270,18 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div className="flex rounded-full border hairline bg-[color:var(--color-card)] p-1 gap-1 w-fit">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setClaimedOnly((v) => !v)}
+              className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition ${
+                claimedOnly
+                  ? 'bg-[#f0fdf4] border-[#86efac] text-[#166534]'
+                  : 'border-[color:var(--color-line)] text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] bg-[color:var(--color-card)]'
+              }`}>
+              ✅ Actively managed
+            </button>
+
+            <div className="flex rounded-full border hairline bg-[color:var(--color-card)] p-1 gap-1 w-fit">
             {[['best', 'Best'], ['worst', 'Worst']].map(([v, l]) => (
               <button key={v} onClick={() => setBoardMode(v)}
                 className={`text-xs font-medium px-4 py-1.5 rounded-full transition ${
@@ -279,6 +292,7 @@ export default function HomePage() {
                 {l}
               </button>
             ))}
+            </div>
           </div>
         </div>
 
