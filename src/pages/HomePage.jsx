@@ -62,7 +62,7 @@ export default function HomePage() {
   const [feedCategory, setFeedCategory] = useState('')
   const feedSearchTimer = useRef(null)
   const [feedExpanded, setFeedExpanded] = useState(false)
-  const [feedCatCounts, setFeedCatCounts] = useState({})
+  const [feedCounts, setFeedCounts] = useState({ category: {}, status: {} })
 
   const [leaderboard, setLeaderboard] = useState([])
   const [industries, setIndustries] = useState([])
@@ -125,14 +125,17 @@ export default function HomePage() {
     return () => clearTimeout(t)
   }, [query])
 
-  // Fetch category counts — refresh when status filter changes
+  // Fetch category + status counts — refresh when either filter changes
   useEffect(() => {
     api.get('/complaints/category-counts', {
-      params: feedStatus ? { status: feedStatus } : {},
+      params: {
+        ...(feedStatus   ? { status: feedStatus }     : {}),
+        ...(feedCategory ? { category: feedCategory } : {}),
+      },
     })
-      .then(r => setFeedCatCounts(r.data ?? {}))
+      .then(r => setFeedCounts({ category: r.data?.category ?? {}, status: r.data?.status ?? {} }))
       .catch(() => {})
-  }, [feedStatus])
+  }, [feedStatus, feedCategory])
 
   useEffect(() => {
     clearTimeout(feedSearchTimer.current)
@@ -766,28 +769,41 @@ export default function HomePage() {
 
           {/* Status pills */}
           <div className="flex gap-1.5 flex-wrap">
-            {FEED_STATUS_OPTS.map(opt => (
-              <button key={opt.value}
-                onClick={() => setFeedStatus(opt.value)}
-                className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full border transition ${
-                  feedStatus === opt.value
-                    ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
-                    : 'border-[color:var(--color-line)] bg-transparent text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)]'
-                }`}>
-                {opt.dot && (
-                  <span className="w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ background: feedStatus === opt.value ? 'var(--color-paper)' : opt.dot }} />
-                )}
-                {opt.label}
-              </button>
-            ))}
+            {FEED_STATUS_OPTS.map(opt => {
+              const count = opt.value
+                ? (feedCounts.status[opt.value] ?? 0)
+                : Object.values(feedCounts.status).reduce((a, b) => a + b, 0)
+              const active = feedStatus === opt.value
+              return (
+                <button key={opt.value}
+                  onClick={() => setFeedStatus(opt.value)}
+                  className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full border transition ${
+                    active
+                      ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                      : 'border-[color:var(--color-line)] bg-[color:var(--color-card)] text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)]'
+                  }`}>
+                  {opt.dot && (
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{ background: active ? 'var(--color-paper)' : opt.dot }} />
+                  )}
+                  {opt.label}
+                  {count > 0 && (
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full leading-none ${
+                      active
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[color:var(--color-ink)]/10 text-[color:var(--color-ink)]'
+                    }`}>{count}</span>
+                  )}
+                </button>
+              )
+            })}
           </div>
 
           {/* Category pills — expanded */}
           {feedExpanded && (
             <div className="flex gap-1.5 flex-wrap pt-1 border-t hairline">
               {FEED_CATEGORY_OPTS.map(opt => {
-                const count = opt.value ? (feedCatCounts[opt.value] ?? 0) : Object.values(feedCatCounts).reduce((a, b) => a + b, 0)
+                const count = opt.value ? (feedCounts.category[opt.value] ?? 0) : Object.values(feedCounts.category).reduce((a, b) => a + b, 0)
                 const active = feedCategory === opt.value
                 return (
                   <button key={opt.value}
@@ -803,7 +819,7 @@ export default function HomePage() {
                       <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full leading-none ${
                         active
                           ? 'bg-white/20 text-white'
-                          : 'bg-[color:var(--color-paper-2)] text-[color:var(--color-muted)]'
+                          : 'bg-[color:var(--color-ink)]/10 text-[color:var(--color-ink)]'
                       }`}>{count}</span>
                     )}
                   </button>

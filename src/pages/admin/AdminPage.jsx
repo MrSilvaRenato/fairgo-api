@@ -60,24 +60,25 @@ export default function AdminPage() {
   const [cPage,     setCPage]     = useState(1)
   const [cMeta,     setCMeta]     = useState(null)
   const [cSearchTimer, setCSearchTimer] = useState(null)
-  const [adminCatCounts, setAdminCatCounts] = useState({})
+  const [adminCounts, setAdminCounts] = useState({ category: {}, status: {} })
 
   useEffect(() => {
     api.get('/admin/stats').then((r) => setStats(r.data))
   }, [])
 
-  // Refresh category counts when complaints tab filters change
+  // Refresh counts when complaints tab filters change
   useEffect(() => {
     if (tab !== 'complaints') return
     api.get('/admin/complaints/category-counts', {
       params: {
-        ...(cStatus    ? { status: cStatus }                       : {}),
-        ...(cModStatus ? { moderation_status: cModStatus }         : {}),
+        ...(cStatus    ? { status: cStatus }               : {}),
+        ...(cModStatus ? { moderation_status: cModStatus } : {}),
+        ...(cCategory  ? { category: cCategory }           : {}),
       },
     })
-      .then(r => setAdminCatCounts(r.data ?? {}))
+      .then(r => setAdminCounts({ category: r.data?.category ?? {}, status: r.data?.status ?? {} }))
       .catch(() => {})
-  }, [tab, cStatus, cModStatus])
+  }, [tab, cStatus, cModStatus, cCategory])
 
   const load = useCallback(() => {
     setLoading(true)
@@ -289,27 +290,40 @@ export default function AdminPage() {
             <p className="caps text-[10px] text-[color:var(--color-muted)] mb-2">Status</p>
             <div className="flex gap-1.5 flex-wrap">
               {[
-                { value: '',                  label: 'All' },
-                { value: 'open',              label: 'Open',        dot: 'var(--color-eucalyptus)' },
-                { value: 'responded',         label: 'Responded',   dot: '#5A6FA8' },
-                { value: 'resolved',          label: 'Resolved',    dot: '#3E7560' },
-                { value: 'unresolved',        label: 'Unresolved',  dot: 'var(--color-clay)' },
-                { value: 'awaiting_response', label: 'Awaiting',    dot: '#D8A24A' },
-                { value: 'expired',           label: 'Expired',     dot: 'var(--color-muted)' },
-                { value: 'removed',           label: 'Removed',     dot: '#aaa' },
-              ].map(opt => (
-                <button key={opt.value}
-                  onClick={() => { setCStatus(opt.value); setCPage(1) }}
-                  className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full border transition ${
-                    cStatus === opt.value
-                      ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
-                      : 'border-[color:var(--color-line)] bg-transparent text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)]'
-                  }`}>
-                  {opt.dot && <span className="w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ background: cStatus === opt.value ? 'var(--color-paper)' : opt.dot }} />}
-                  {opt.label}
-                </button>
-              ))}
+                { value: '',                  label: 'All',        dot: null },
+                { value: 'open',              label: 'Open',       dot: 'var(--color-eucalyptus)' },
+                { value: 'responded',         label: 'Responded',  dot: '#5A6FA8' },
+                { value: 'resolved',          label: 'Resolved',   dot: '#3E7560' },
+                { value: 'unresolved',        label: 'Unresolved', dot: 'var(--color-clay)' },
+                { value: 'awaiting_response', label: 'Awaiting',   dot: '#D8A24A' },
+                { value: 'expired',           label: 'Expired',    dot: 'var(--color-muted)' },
+                { value: 'removed',           label: 'Removed',    dot: '#aaa' },
+              ].map(opt => {
+                const count = opt.value
+                  ? (adminCounts.status[opt.value] ?? 0)
+                  : Object.values(adminCounts.status).reduce((a, b) => a + b, 0)
+                const active = cStatus === opt.value
+                return (
+                  <button key={opt.value}
+                    onClick={() => { setCStatus(opt.value); setCPage(1) }}
+                    className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full border transition ${
+                      active
+                        ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                        : 'border-[color:var(--color-line)] bg-[color:var(--color-card)] text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)]'
+                    }`}>
+                    {opt.dot && <span className="w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{ background: active ? 'var(--color-paper)' : opt.dot }} />}
+                    {opt.label}
+                    {count > 0 && (
+                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full leading-none ${
+                        active
+                          ? 'bg-white/20 text-white'
+                          : 'bg-[color:var(--color-ink)]/10 text-[color:var(--color-ink)]'
+                      }`}>{count}</span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -327,8 +341,8 @@ export default function AdminPage() {
                   { value: 'fraud',     label: 'Fraud',    emoji: '⚠️' },
                 ].map(opt => {
                   const count = opt.value
-                    ? (adminCatCounts[opt.value] ?? 0)
-                    : Object.values(adminCatCounts).reduce((a, b) => a + b, 0)
+                    ? (adminCounts.category[opt.value] ?? 0)
+                    : Object.values(adminCounts.category).reduce((a, b) => a + b, 0)
                   const active = cCategory === opt.value
                   return (
                     <button key={opt.value}
@@ -344,7 +358,7 @@ export default function AdminPage() {
                         <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full leading-none ${
                           active
                             ? 'bg-white/20 text-white'
-                            : 'bg-[color:var(--color-paper-2)] text-[color:var(--color-muted)]'
+                            : 'bg-[color:var(--color-ink)]/10 text-[color:var(--color-ink)]'
                         }`}>{count}</span>
                       )}
                     </button>
