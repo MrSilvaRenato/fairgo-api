@@ -784,18 +784,31 @@ function ClaimCard({ claim, onApprove, onReject }) {
 
       {showReject && (
         <div className="mt-3 border-t pt-3" style={{ borderColor: 'var(--color-line)' }}>
+          <div className="mb-1.5 flex items-center justify-between">
+            <label className="text-xs font-medium" style={{ color: 'var(--color-ink-2)' }}>
+              Rejection reason <span style={{ color: 'var(--color-clay)' }}>*</span>
+            </label>
+            <span className={`text-[11px] font-medium ${reason.trim().length >= 10 ? 'text-[color:var(--color-eucalyptus)]' : 'text-[color:var(--color-clay)]'}`}>
+              {reason.trim().length}/10 min
+            </span>
+          </div>
           <textarea
             value={reason}
             onChange={e => setReason(e.target.value)}
-            placeholder="Reason for rejection (will be kept internal)…"
-            rows={2}
-            className="input w-full text-sm resize-none mb-2"
+            placeholder="Explain why this claim is being rejected. This will be sent to the claimant by email."
+            rows={3}
+            className="input w-full text-sm resize-none mb-1.5"
           />
-          <div className="flex gap-2">
+          {reason.trim().length < 10 && reason.length > 0 && (
+            <p className="text-[11px] mb-2" style={{ color: 'var(--color-clay)' }}>
+              Please provide at least 10 characters so the claimant understands the reason.
+            </p>
+          )}
+          <div className="flex gap-2 mt-2">
             <button
               onClick={() => { if (reason.trim().length >= 10) { onReject(claim.id, reason); setShowReject(false) } }}
               disabled={reason.trim().length < 10}
-              className="text-xs font-semibold px-3 py-1.5 rounded-xl disabled:opacity-50 transition"
+              className="text-xs font-semibold px-3 py-1.5 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition"
               style={{ background: 'var(--color-clay)', color: 'white' }}>
               Confirm rejection
             </button>
