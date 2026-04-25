@@ -89,18 +89,6 @@ export default function Navbar() {
           <NavBtn onClick={() => scrollTo('how-it-works')}>How it works</NavBtn>
         </div>
 
-        {/* Search shortcut */}
-        <Link to="/search"
-          className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors"
-          style={{
-            background: 'var(--color-paper-2)',
-            border: '1px solid var(--color-line)',
-            color: 'var(--color-muted)',
-          }}>
-          <Icon name="search" size={14} />
-          <span className="text-xs hidden lg:block">Search businesses…</span>
-        </Link>
-
         <div className="flex-1" />
 
         {/* Auth / CTAs — desktop */}
@@ -195,14 +183,6 @@ export default function Navbar() {
       {menuOpen && (
         <div className="md:hidden border-t px-4 py-4 space-y-1"
           style={{ borderColor: 'var(--color-line)', background: 'var(--color-card)' }}>
-
-          {/* Search on mobile */}
-          <Link to="/search" onClick={() => setMenuOpen(false)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl mb-3 text-sm"
-            style={{ background: 'var(--color-paper-2)', color: 'var(--color-muted)', border: '1px solid var(--color-line)' }}>
-            <Icon name="search" size={14} />
-            Search businesses…
-          </Link>
 
           {user ? (
             <>
