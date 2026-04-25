@@ -75,16 +75,15 @@ class CompanyClaimController extends Controller
         // we store the real ABN so future claims are also verified correctly
         $storedAbn = preg_replace('/\D/', '', $company->abn ?? '');
         if ($storedAbn !== $submittedAbn) {
-            // Only block if the company has a *real* (ABR-verified) ABN that doesn't match
-            // Stub companies have fake ABNs — we replace them with the submitted real one
-            if ($company->abn_verified) {
+            // If already claimed by someone else with a verified ABN — must match exactly
+            if ($company->claimed && $company->abn_verified) {
                 return response()->json([
                     'message' => 'The ABN you entered does not match our records for this company.',
                     'errors'  => ['abn_confirmation' => ['ABN does not match.']],
                 ], 422);
             }
-            // Update stub company with the real ABN from the claimant
-            $company->update(['abn' => $submittedAbn]);
+            // Unclaimed/stub company — replace fake ABN with the real verified one
+            $company->update(['abn' => $submittedAbn, 'abn_verified' => true]);
         }
 
         $claim = CompanyClaim::create(array_merge($validated, [
