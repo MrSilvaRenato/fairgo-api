@@ -79,6 +79,11 @@ class AiDraftController extends Controller
                     }
                 }
 
+            } catch (\GuzzleHttp\Exception\ClientException $e) {
+                $body = (string) $e->getResponse()->getBody();
+                $msg  = json_decode($body, true)['error']['message'] ?? $body;
+                echo 'data: ' . json_encode(['error' => $msg]) . "\n\n";
+                flush();
             } catch (\Throwable $e) {
                 echo 'data: ' . json_encode(['error' => $e->getMessage()]) . "\n\n";
                 flush();

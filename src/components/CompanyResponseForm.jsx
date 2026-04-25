@@ -477,10 +477,6 @@ export default function CompanyResponseForm({ complaintId, consumerName = '', re
     if (!aiPrompt.trim() || aiLoading) return
     setAiError('')
     setAiLoading(true)
-    setContent('')
-    setUsedTemplate('ai')
-    setPanelOpen(false)
-    setTimeout(() => textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80)
 
     try {
       const token = localStorage.getItem('token')
@@ -503,6 +499,13 @@ export default function CompanyResponseForm({ complaintId, consumerName = '', re
 
       if (!res.ok) { setAiError('AI generation failed. Please try again.'); setAiLoading(false); return }
 
+      // First chunk received — now close panel and clear textarea
+      setContent('')
+      setUsedTemplate('ai')
+      setPanelOpen(false)
+      setAiExpanded(false)
+      setTimeout(() => textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80)
+
       const reader  = res.body.getReader()
       const decoder = new TextDecoder()
       let   buffer  = ''
@@ -512,7 +515,6 @@ export default function CompanyResponseForm({ complaintId, consumerName = '', re
         if (done) break
         buffer += decoder.decode(value, { stream: true })
 
-        // Flush complete SSE lines
         let nl
         while ((nl = buffer.indexOf('\n')) !== -1) {
           const line = buffer.slice(0, nl).trim()
