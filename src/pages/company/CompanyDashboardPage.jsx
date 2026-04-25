@@ -6,6 +6,7 @@ import CompanyResponseForm from '../../components/CompanyResponseForm'
 import CompanyLogo from '../../components/CompanyLogo'
 import Icon from '../../components/Icon'
 import { BAND } from '../../components/ScoreMeter'
+import DeleteAccountModal from '../../components/DeleteAccountModal'
 
 const STATUS = {
   open:              { label: 'Open',              fg: 'var(--color-eucalyptus)',  bg: 'var(--color-eucalyptus-3)' },
@@ -408,7 +409,8 @@ function TrustBadge({ slug }) {
 
 /* ─── No company prompt ──────────────────────────────────── */
 function NoCompanyPrompt() {
-  const [claims, setClaims] = useState([])
+  const [claims, setClaims]         = useState([])
+  const [showDelete, setShowDelete] = useState(false)
 
   useEffect(() => {
     api.get('/dashboard/consumer')
@@ -488,6 +490,25 @@ function NoCompanyPrompt() {
           Already registered? <button onClick={() => window.location.reload()} className="underline hover:text-[color:var(--color-ink)]">Refresh the page</button>
         </p>
       </div>
+
+      {/* Danger zone */}
+      <div className="mt-10 card p-5 border border-[color:var(--color-clay)]">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-sm font-semibold" style={{ color: 'var(--color-ink)' }}>Deactivate account</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>
+              Remove your login access and personal contact info.
+            </p>
+          </div>
+          <button onClick={() => setShowDelete(true)}
+            className="btn text-xs font-semibold shrink-0 px-4 py-2 rounded-xl"
+            style={{ background: 'var(--color-clay-soft)', color: 'var(--color-clay)', border: '1px solid var(--color-clay)' }}>
+            Deactivate account
+          </button>
+        </div>
+      </div>
+
+      {showDelete && <DeleteAccountModal onClose={() => setShowDelete(false)} isCompany />}
     </div>
   )
 }
