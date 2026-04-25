@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
-import { useSearchParams, Link } from 'react-router-dom'
+import { useEffect, useState, useRef, useCallback } from 'react'
+import { useSearchParams, Link, useNavigate } from 'react-router-dom'
 import api from '../lib/axios'
 import CompanyLogo from '../components/CompanyLogo'
 import Icon from '../components/Icon'
 import useSeoMeta from '../hooks/useSeoMeta'
+import { BAND } from '../components/ScoreMeter'
 
 const STATUS = {
   open:              { label: 'Open',       fg: 'var(--color-eucalyptus)', bg: 'var(--color-eucalyptus-3)' },
@@ -16,11 +17,39 @@ const STATUS = {
 
 export default function SearchPage() {
   const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
   const q = params.get('q') ?? ''
-  const [input, setInput]         = useState(q)
-  const [results, setResults]     = useState(null)
-  const [loading, setLoading]     = useState(false)
-  const [tab, setTab]             = useState('all')
+  const [input, setInput]             = useState(q)
+  const [results, setResults]         = useState(null)
+  const [loading, setLoading]         = useState(false)
+  const [tab, setTab]                 = useState('all')
+
+  // Live dropdown
+  const [dropResults, setDropResults] = useState({ companies: [], complaints: [] })
+  const [dropOpen, setDropOpen]       = useState(false)
+  const [dropLoading, setDropLoading] = useState(false)
+  const inputRef                      = useRef(null)
+  const dropRef                       = useRef(null)
+
+  useEffect(() => {
+    const h = (e) => {
+      if (dropRef.current && !dropRef.current.contains(e.target)) setDropOpen(false)
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  useEffect(() => {
+    if (input.length < 2) { setDropResults({ companies: [], complaints: [] }); setDropOpen(false); return }
+    const t = setTimeout(() => {
+      setDropLoading(true)
+      api.get('/search', { params: { q: input } })
+        .then((r) => { setDropResults(r.data); setDropOpen(true) })
+        .catch(() => {})
+        .finally(() => setDropLoading(false))
+    }, 250)
+    return () => clearTimeout(t)
+  }, [input])
 
   useSeoMeta({
     title: q ? `Search: "${q}"` : 'Search',
@@ -57,19 +86,87 @@ export default function SearchPage() {
     <div className="max-w-3xl mx-auto space-y-5">
 
       {/* Search bar */}
-      <form onSubmit={submit} className="flex gap-2">
-        <div className="relative flex-1">
-          <Icon name="search" size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)]" />
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Search companies, complaints, categories…"
-            className="input pl-10 w-full"
-            autoFocus
-          />
-        </div>
-        <button type="submit" className="btn btn-primary px-5">Search</button>
-      </form>
+      <div className="relative" ref={dropRef}>
+        <form onSubmit={submit} className="flex gap-2">
+          <div className="relative flex-1">
+            {dropLoading
+              ? <Icon name="sparkle" size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-eucalyptus)] animate-spin" />
+              : <Icon name="search" size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)]" />
+            }
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onFocus={() => input.length >= 2 && dropResults.companies.length > 0 && setDropOpen(true)}
+              placeholder="Search companies, complaints, categories…"
+              className="input pl-10 w-full"
+              autoFocus
+            />
+          </div>
+          <button type="submit" className="btn btn-primary px-5">Search</button>
+        </form>
+
+        {/* Live dropdown */}
+        {dropOpen && (dropResults.companies.length > 0 || dropResults.complaints.length > 0) && (
+          <div className="absolute z-20 left-0 right-0 mt-1.5 bg-[color:var(--color-card)] rounded-2xl shadow-2xl border hairline overflow-hidden">
+            {dropResults.companies.length > 0 && (
+              <>
+                <p className="caps text-[color:var(--color-muted)] px-4 pt-3 pb-1">Companies</p>
+                <ul>
+                  {dropResults.companies.slice(0, 5).map((c) => {
+                    const b = BAND[c.badge] ?? BAND.not_rated
+                    return (
+                      <li key={c.id}>
+                        <Link to={`/companies/${c.slug}`}
+                          onClick={() => setDropOpen(false)}
+                          className="flex items-center justify-between px-4 py-3 hover:bg-[color:var(--color-paper-2)] transition gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <CompanyLogo company={c} size="sm" />
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm text-[color:var(--color-ink)] truncate">{c.name}</p>
+                              <p className="text-xs text-[color:var(--color-muted)] capitalize">{c.industry}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {c.claimed && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ color: '#166534', background: '#f0fdf4' }}>✅ Managed</span>
+                            )}
+                            <span className="text-xs font-medium" style={{ color: b.text }}>{b.label !== 'Not rated' ? b.label : ''}</span>
+                          </div>
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </>
+            )}
+            {dropResults.complaints.length > 0 && (
+              <div className="border-t hairline">
+                <p className="caps text-[color:var(--color-muted)] px-4 pt-2 pb-1">Complaints</p>
+                <ul>
+                  {dropResults.complaints.slice(0, 3).map((c) => (
+                    <li key={c.id}>
+                      <Link to={`/complaints/${c.id}`}
+                        onClick={() => setDropOpen(false)}
+                        className="flex items-start gap-3 px-4 py-2.5 hover:bg-[color:var(--color-paper-2)] transition">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-[color:var(--color-ink)] truncate">{c.title}</p>
+                          <p className="text-xs text-[color:var(--color-muted)]">{c.company?.name} · <span className="capitalize">{c.category}</span></p>
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="border-t hairline px-4 py-2">
+              <button onClick={submit} className="text-xs text-[color:var(--color-eucalyptus)] hover:underline font-medium">
+                See all results for "{input}" →
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* No query yet */}
       {!q && (
