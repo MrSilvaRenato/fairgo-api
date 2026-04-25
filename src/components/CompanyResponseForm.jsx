@@ -662,29 +662,26 @@ export default function CompanyResponseForm({ complaintId, consumerName = '', re
             })}
           </div>
 
-          {/* ── AI card ── */}
-          <div className="rounded-xl overflow-hidden" style={{ border: '2px solid #7C3AED' }}>
-            {!aiExpanded ? (
-              <button
-                type="button"
-                onClick={() => { setAiExpanded(true); setTimeout(() => aiInputRef.current?.focus(), 80) }}
-                className="w-full text-left px-4 py-3 flex items-center gap-3 transition hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg, #F5F3FF 0%, #EEF2FF 100%)' }}
-              >
-                <span className="text-lg shrink-0">✨</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full"
-                      style={{ background: '#7C3AED', color: '#fff' }}>AI</span>
-                    <span className="text-xs font-semibold" style={{ color: '#4C1D95' }}>Use AI to respond</span>
-                  </div>
-                  <p className="text-[11px]" style={{ color: '#6D28D9' }}>Describe your intent — AI writes the full response</p>
+          {/* ── AI card — Coming Soon ── */}
+          <div className="rounded-xl overflow-hidden opacity-60 cursor-not-allowed" style={{ border: '2px dashed #C4B5FD' }}>
+            <div
+              className="w-full px-4 py-3 flex items-center gap-3"
+              style={{ background: 'linear-gradient(135deg, #F5F3FF 0%, #EEF2FF 100%)' }}
+            >
+              <span className="text-lg shrink-0 grayscale">✨</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full"
+                    style={{ background: '#A78BFA', color: '#fff' }}>AI</span>
+                  <span className="text-xs font-semibold" style={{ color: '#6D28D9' }}>Use AI to respond</span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full"
+                    style={{ background: '#E5E7EB', color: '#6B7280' }}>Coming soon</span>
                 </div>
-                <svg className="w-4 h-4 shrink-0" style={{ color: '#7C3AED' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                </svg>
-              </button>
-            ) : (
+                <p className="text-[11px]" style={{ color: '#8B5CF6' }}>AI-powered responses are on their way — stay tuned</p>
+              </div>
+            </div>
+            {/* dead expanded section — never shown, kept for when feature goes live */}
+            {false && (
               <div className="p-4 space-y-3" style={{ background: 'linear-gradient(135deg, #F5F3FF 0%, #EEF2FF 100%)' }}>
                 <div className="flex items-center gap-2">
                   <span className="text-base">✨</span>
