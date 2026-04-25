@@ -268,7 +268,7 @@ export default function CompanySettingsPage() {
       <div className="card p-5 border border-[color:var(--color-clay)]">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <p className="text-sm font-semibold" style={{ color: 'var(--color-ink)' }}>Delete account</p>
+            <p className="text-sm font-semibold" style={{ color: 'var(--color-ink)' }}>Deactivate account</p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>
               Remove your account access. The company profile stays permanently on the platform as a public record — another representative can re-claim it.
             </p>
@@ -276,7 +276,7 @@ export default function CompanySettingsPage() {
           <button onClick={() => setShowDelete(true)}
             className="btn text-xs font-semibold shrink-0 px-4 py-2 rounded-xl"
             style={{ background: 'var(--color-clay-soft)', color: 'var(--color-clay)', border: '1px solid var(--color-clay)' }}>
-            Delete account
+            Deactivate account
           </button>
         </div>
       </div>

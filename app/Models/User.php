@@ -36,6 +36,7 @@ class User extends Authenticatable implements MustVerifyEmail, CanResetPassword
         'banned',
         'reputation_score',
         'reputation_flag',
+        'deactivated_at',
     ];
 
     protected $hidden = [
@@ -50,6 +51,7 @@ class User extends Authenticatable implements MustVerifyEmail, CanResetPassword
             'phone_verified_at'  => 'datetime',
             'password'           => 'hashed',
             'banned'             => 'boolean',
+            'deactivated_at'     => 'datetime',
         ];
     }
 

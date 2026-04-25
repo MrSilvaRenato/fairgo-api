@@ -144,15 +144,15 @@ export default function ConsumerDashboardPage() {
       <div className="card p-5 border border-[color:var(--color-clay)] mt-8">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <p className="text-sm font-semibold" style={{ color: 'var(--color-ink)' }}>Delete account</p>
+            <p className="text-sm font-semibold" style={{ color: 'var(--color-ink)' }}>Deactivate account</p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>
-              Permanently remove your account and personal data. Your complaints remain as anonymous public records.
+              Remove your login access and personal contact info. Your complaints stay on the public record under your name.
             </p>
           </div>
           <button onClick={() => setShowDelete(true)}
             className="btn text-xs font-semibold shrink-0 px-4 py-2 rounded-xl"
             style={{ background: 'var(--color-clay-soft)', color: 'var(--color-clay)', border: '1px solid var(--color-clay)' }}>
-            Delete account
+            Deactivate account
           </button>
         </div>
       </div>

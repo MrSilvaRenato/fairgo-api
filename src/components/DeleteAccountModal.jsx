@@ -43,8 +43,8 @@ export default function DeleteAccountModal({ onClose, isCompany = false }) {
             </svg>
           </div>
           <div className="flex-1">
-            <h2 className="font-semibold text-base" style={{ color: 'var(--color-ink)' }}>Delete account</h2>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>This action is permanent and cannot be undone.</p>
+            <h2 className="font-semibold text-base" style={{ color: 'var(--color-ink)' }}>Deactivate account</h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>Your account will be deactivated and personal contact info removed.</p>
           </div>
           <button onClick={onClose} className="text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] transition">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -62,7 +62,7 @@ export default function DeleteAccountModal({ onClose, isCompany = false }) {
           <ul className="space-y-1.5 text-xs" style={{ color: 'var(--color-ink-2)' }}>
             <li className="flex items-start gap-2">
               <span style={{ color: 'var(--color-clay)' }}>✕</span>
-              Your account and personal information will be permanently deleted
+              Your email, phone and password will be removed — you will not be able to log in again
             </li>
             <li className="flex items-start gap-2">
               <span style={{ color: 'var(--color-clay)' }}>✕</span>
@@ -86,7 +86,7 @@ export default function DeleteAccountModal({ onClose, isCompany = false }) {
             ) : (
               <li className="flex items-start gap-2">
                 <span className="text-amber-500">~</span>
-                Your complaints will remain on the platform as anonymous records (required for public accountability)
+                Your complaints remain on the platform under your name — they are part of the public record and cannot be removed
               </li>
             )}
           </ul>
@@ -101,7 +101,7 @@ export default function DeleteAccountModal({ onClose, isCompany = false }) {
             className="mt-0.5 w-4 h-4 rounded accent-red-600 shrink-0"
           />
           <span className="text-xs" style={{ color: 'var(--color-ink-2)' }}>
-            I understand this is permanent and I want to delete my account.
+            I understand my account will be deactivated and I will not be able to log in again.
           </span>
         </label>
 
@@ -148,7 +148,7 @@ export default function DeleteAccountModal({ onClose, isCompany = false }) {
                   </svg>
                   Deleting…
                 </>
-              ) : 'Delete my account'}
+              ) : 'Deactivate my account'}
             </button>
           </div>
         </form>

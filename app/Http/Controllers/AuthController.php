@@ -63,6 +63,13 @@ class AuthController extends Controller
             ]);
         }
 
+        if ($user->deactivated_at) {
+            Auth::logout();
+            throw ValidationException::withMessages([
+                'email' => ['This account has been deactivated.'],
+            ]);
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         $user->load('company:id');
