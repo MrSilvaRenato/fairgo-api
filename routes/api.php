@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ComplaintReopenController;
 use App\Http\Controllers\PhoneVerificationController;
 use App\Http\Controllers\BillingController;
@@ -21,8 +22,12 @@ use Illuminate\Support\Facades\Route;
 
 // Auth routes
 Route::prefix('auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register']);
-    Route::post('login',    [AuthController::class, 'login']);
+    Route::post('register', [AuthController::class, 'register'])->middleware('throttle:10,1');
+    Route::post('login',    [AuthController::class, 'login'])->middleware('throttle:5,1');
+
+    // Password reset (public)
+    Route::post('forgot-password', [PasswordResetController::class, 'forgotPassword'])->middleware('throttle:5,1');
+    Route::post('reset-password',  [PasswordResetController::class, 'resetPassword'])->middleware('throttle:5,1');
 
     // Email verification — verify uses signed URL (public), resend requires auth
     Route::get('email/verify', [\App\Http\Controllers\EmailVerificationController::class, 'verify'])
@@ -33,7 +38,7 @@ Route::prefix('auth')->group(function () {
         Route::get('me',             [AuthController::class, 'me']);
         Route::post('phone/send',    [PhoneVerificationController::class, 'send']);
         Route::post('phone/verify',  [PhoneVerificationController::class, 'verify']);
-        Route::post('email/resend',  [\App\Http\Controllers\EmailVerificationController::class, 'resend']);
+        Route::post('email/resend',  [\App\Http\Controllers\EmailVerificationController::class, 'resend'])->middleware('throttle:3,60');
     });
 });
 

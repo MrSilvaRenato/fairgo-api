@@ -35,6 +35,18 @@ class ComplaintController extends Controller
             ], 403);
         }
 
+        // Rate limit: 3 complaints per day per user
+        $todayCount = \App\Models\Complaint::where('consumer_id', $user->id)
+            ->whereDate('created_at', today())
+            ->count();
+
+        if ($todayCount >= 3) {
+            return response()->json([
+                'message' => 'You have reached the limit of 3 complaints per day. Please try again tomorrow.',
+                'error_code' => 'daily_limit_reached',
+            ], 429);
+        }
+
         $data = $request->validate([
             'company_id'          => 'required_without:company_name|nullable|exists:companies,id',
             'company_name'        => 'required_without:company_id|nullable|string|max:255',

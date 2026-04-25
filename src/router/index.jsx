@@ -22,6 +22,8 @@ import CommunityGuidelinesPage from '../pages/legal/CommunityGuidelinesPage'
 import TermsPage from '../pages/legal/TermsPage'
 import PrivacyPage from '../pages/legal/PrivacyPage'
 import EmailVerifyPage from '../pages/auth/EmailVerifyPage'
+import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage'
+import ResetPasswordPage from '../pages/auth/ResetPasswordPage'
 
 const router = createBrowserRouter([
   {
@@ -47,7 +49,9 @@ const router = createBrowserRouter([
       { path: '/community-guidelines',    element: <CommunityGuidelinesPage /> },
       { path: '/terms',                   element: <TermsPage /> },
       { path: '/privacy',                 element: <PrivacyPage /> },
-      { path: '/email/verify',            element: <EmailVerifyPage /> },
+      { path: '/email/verify',             element: <EmailVerifyPage /> },
+      { path: '/forgot-password',          element: <ForgotPasswordPage /> },
+      { path: '/reset-password',           element: <ResetPasswordPage /> },
       // Step 15 – /dashboard
       // Step 16 – /company/dashboard
       // Step 21 – /admin

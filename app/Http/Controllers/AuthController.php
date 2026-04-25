@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Rules\NotDisposableEmail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -13,7 +14,7 @@ class AuthController extends Controller
     {
         $data = $request->validate([
             'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email',
+            'email'    => ['required', 'email', 'unique:users,email', new NotDisposableEmail],
             'password' => 'required|string|min:8|confirmed',
             'role'     => 'sometimes|in:consumer,company_admin',
         ]);

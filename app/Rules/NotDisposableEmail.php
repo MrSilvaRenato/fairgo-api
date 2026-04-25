@@ -1,0 +1,122 @@
+<?php
+
+namespace App\Rules;
+
+use Closure;
+use Illuminate\Contracts\Validation\ValidationRule;
+
+class NotDisposableEmail implements ValidationRule
+{
+    // Most common disposable / throwaway email domains
+    private const BLOCKED = [
+        'mailinator.com', 'guerrillamail.com', 'guerrillamail.info', 'guerrillamail.net',
+        'guerrillamail.org', 'guerrillamail.de', 'guerrillamail.biz', 'guerrillamailblock.com',
+        'grr.la', 'sharklasers.com', 'spam4.me', 'trashmail.com', 'trashmail.me',
+        'trashmail.net', 'trashmail.org', 'trashmail.at', 'trashmail.io',
+        'tempmail.com', 'temp-mail.org', 'temp-mail.io', 'tempinbox.com',
+        'throwam.com', 'throwam.net', 'throwam.org',
+        'dispostable.com', 'discard.email', 'fakeinbox.com',
+        'maildrop.cc', 'mailnull.com', 'mailnull.net',
+        'yopmail.com', 'yopmail.fr', 'cool.fr.nf', 'jetable.fr.nf',
+        'nospam.ze.tc', 'nomail.xl.cx', 'mega.zik.dj', 'speed.1s.fr',
+        'courriel.fr.nf', 'moncourrier.fr.nf', 'monemail.fr.nf',
+        'monmail.fr.nf', 'jetable.net', 'jetable.com',
+        'spamgourmet.com', 'spamgourmet.net', 'spamgourmet.org',
+        'spamfree24.org', 'spamfree24.de', 'spamfree24.eu', 'spamfree24.info',
+        'spamfree24.net', 'spamfree24.com', 'spamfree.eu',
+        'spam.la', 'spambox.us', 'spambox.info', 'spambox.igg.biz',
+        'spambog.com', 'spambog.de', 'spambog.ru',
+        'sharklasers.com', 'guerrillamail.info', 'grr.la',
+        'mailnesia.com', 'mailnull.com', 'mintemail.com',
+        'wegwerfmail.de', 'wegwerfmail.net', 'wegwerfmail.org',
+        'sofimail.com', 'sogetthis.com', 'sendspamhere.com',
+        'dontreg.com', 'dontsendmespam.de',
+        'binkmail.com', 'bobmail.info', 'chammy.info', 'devnullmail.com',
+        'e4ward.com', 'emailsensei.com', 'fastacura.com', 'fastchevy.com',
+        'filzmail.com', 'fizmail.com', 'frapmail.com', 'gishpuppy.com',
+        'greensloth.com', 'h8s.org', 'hailmail.net', 'ipoo.org',
+        'irish2me.com', 'jsrsolutions.com', 'kasmail.com', 'klassmaster.com',
+        'klassmaster.net', 'klzlk.com', 'koszmail.pl', 'kurzepost.de',
+        'lavabit.com', 'letthemeatspam.com', 'lol.ovpn.to', 'lortemail.dk',
+        'mailbidon.com', 'mailbiz.biz', 'mailblocks.com', 'mailbucket.org',
+        'mailcat.biz', 'mailcatch.com', 'mailde.de', 'mailde.info',
+        'mailexpire.com', 'mailf5.com', 'mailfall.com', 'mailguard.me',
+        'mailin8r.com', 'mailinater.com', 'mailismagic.com', 'mailme.lv',
+        'mailme24.com', 'mailmetrash.com', 'mailmoat.com', 'mailms.com',
+        'mailnew.com', 'mailnew.com', 'mailscrap.com', 'mailseal.de',
+        'mailshell.com', 'mailslite.com', 'mailsiphon.com', 'mailtemp.info',
+        'mailtome.de', 'mailtothis.com', 'mailzilla.com', 'mailzilla.org',
+        'makemetheking.com', 'mbx.cc', 'mega.zik.dj', 'meltmail.com',
+        'messagebeamer.de', 'mierdamail.com', 'mindless.com', 'moncourrier.fr.nf',
+        'monemail.fr.nf', 'monmail.fr.nf', 'mox.pp.ua',
+        'mt2009.com', 'mt2014.com', 'mymail-in.net', 'myphantomemail.com',
+        'neverbox.com', 'nobulk.com', 'noclickemail.com', 'nogmailspam.info',
+        'nomorespamemails.com', 'no-spam.ws', 'no-spam.ru',
+        'obobbo.com', 'odaymail.com', 'oneoffmail.com', 'onewaymail.com',
+        'poofy.org', 'pookmail.com', 'powered.name', 'privacy.net',
+        'proxymail.eu', 'putthisinyourspamdatabase.com', 'quickinbox.com',
+        'rcpt.at', 'recode.me', 'recursor.net', 'regbypass.comsafe-mail.net',
+        'rejectmail.com', 'rklips.com', 'rmqkr.net', 'rppkn.com',
+        'rtrtr.com', 's0ny.net', 'safe-mail.net', 'safetymail.info',
+        'safetypost.de', 'sandelf.de', 'saynotospams.com', 'selfdestructingmail.com',
+        'sendspamhere.com', 'sharklasers.com', 'shieldemail.com', 'shiftmail.com',
+        'shortmail.net', 'sibmail.com', 'skeefmail.com', 'slopsbox.com',
+        'smellfear.com', 'snakemail.com', 'sneakemail.com', 'sneakmail.de',
+        'snkmail.com', 'sofimail.com', 'sofort-mail.de', 'sogetthis.com',
+        'solvemail.info', 'spam.su', 'spamavert.com', 'spamcon.org',
+        'spamevader.com', 'spamfighter.cf', 'spamfighter.ga', 'spamfighter.gq',
+        'spamfighter.ml', 'spamfighter.tk', 'spamgoes.in', 'spamhereplease.com',
+        'spamhole.com', 'spamify.com', 'spaminator.de', 'spamkill.info',
+        'spaml.com', 'spaml.de', 'spammotel.com', 'spamobox.com',
+        'spamoff.de', 'spamslicer.com', 'spamspot.com', 'spamstack.net',
+        'spamthis.co.uk', 'spamthisplease.com', 'spamtrail.com',
+        'suremail.info', 'sweetxxx.de', 'tafmail.com', 'tagyourself.com',
+        'teewars.org', 'teleworm.com', 'teleworm.us', 'tempalias.com',
+        'tempe-mail.com', 'tempemail.biz', 'tempemail.co.za', 'tempemail.com',
+        'tempemail.net', 'tempinbox.co.uk', 'tempinbox.com', 'tempmail2.com',
+        'tempmaild.com', 'tempomail.fr', 'temporarioemail.com.br',
+        'temporaryemail.net', 'temporaryemail.us', 'temporaryforwarding.com',
+        'temporaryinbox.com', 'temporarymailaddress.com', 'tempthe.net',
+        'thankyou2010.com', 'thisisnotmyrealemail.com', 'throwam.com',
+        'throwaway.email', 'throwaways.email', 'tradermail.info',
+        'trash2009.com', 'trash2010.com', 'trash2011.com',
+        'trashdevil.com', 'trashdevil.de', 'trashemail.de',
+        'trashimail.de', 'trashmail.at', 'trashmail.com', 'trashmail.io',
+        'trashmail.me', 'trashmail.net', 'trashmail.org', 'trashmailer.com',
+        'trashmailt.com', 'trashserver.net', 'trasz.com', 'trbvm.com',
+        'turual.com', 'twinmail.de', 'twoweeksmail.com', 'tyldd.com',
+        'uggsrock.com', 'uroid.com', 'veryrealemail.com',
+        'vidchart.com', 'viditag.com', 'viewcastmedia.com', 'viewcastmedia.net',
+        'viewcastmedia.org', 'vomoto.com', 'vpn.st', 'vsimcard.com',
+        'walkmail.net', 'walkmail.ru', 'webemail.me', 'webm4il.info',
+        'weg-werf-email.de', 'wegwerf-emails.de', 'wegwerfadresse.de',
+        'wmail.cf', 'wolfsmail.tk', 'xagloo.com', 'xemaps.com',
+        'xents.com', 'xmaily.com', 'xoxox.cc', 'xyzfree.net',
+        'yapped.net', 'yeah.net', 'yogamaven.com', 'yopmail.fr',
+        'yopmail.gq', 'zehnminuten.de', 'zehnminutenmail.de',
+        'zippymail.info', 'zoemail.net', 'zoemail.org',
+        // Newer/popular ones
+        'guerrillamail.biz', 'guerrillamail.de', 'guerrillamail.net',
+        'guerrillamail.org', 'guerrillamailblock.com',
+        '10minutemail.com', '10minutemail.net', '10minutemail.org',
+        '10minutemail.de', '10minutemail.ru',
+        'mohmal.com', 'mohmal.im', 'mohmal.tech',
+        'emailondeck.com', 'getairmail.com', 'getairmail.com',
+        'incognitomail.com', 'incognitomail.net', 'incognitomail.org',
+        'inoutmail.de', 'inoutmail.eu', 'inoutmail.info', 'inoutmail.net',
+        'nowmymail.com', 'nowmymail.net',
+        'mailnull.com', 'mail-temporaire.fr', 'mail-temporaire.com',
+        'spambog.ru', 'spambog.de', 'spambog.com',
+        'dingbone.com', 'mailforspam.com', 'nomail.pw',
+        'icloud.com.de', 'applemail.us',
+    ];
+
+    public function validate(string $attribute, mixed $value, Closure $fail): void
+    {
+        $domain = strtolower(trim(substr(strrchr((string) $value, '@'), 1)));
+
+        if (in_array($domain, self::BLOCKED, true)) {
+            $fail('Please use a real email address. Disposable or temporary email addresses are not allowed.');
+        }
+    }
+}
