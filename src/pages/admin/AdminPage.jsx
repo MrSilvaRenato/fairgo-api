@@ -48,9 +48,18 @@ export default function AdminPage() {
   const [companyFilter, setCompanyFilter] = useState('all')
   const [companySort,   setCompanySort]   = useState('latest')
   const [companiesPage, setCompaniesPage] = useState(1)
-  const [companiesMeta, setCompaniesMeta] = useState(null)   // { total, last_page }
+  const [companiesMeta, setCompaniesMeta] = useState(null)
   const [modFilter, setModFilter]         = useState('flagged')
   const [expandedMod, setExpandedMod]     = useState(null)
+
+  // Complaints-tab filters
+  const [cStatus,   setCStatus]   = useState('')
+  const [cCategory, setCCategory] = useState('')
+  const [cModStatus,setCModStatus]= useState('')
+  const [cSort,     setCSort]     = useState('latest')
+  const [cPage,     setCPage]     = useState(1)
+  const [cMeta,     setCMeta]     = useState(null)
+  const [cSearchTimer, setCSearchTimer] = useState(null)
 
   useEffect(() => {
     api.get('/admin/stats').then((r) => setStats(r.data))
@@ -92,15 +101,31 @@ export default function AdminPage() {
       return
     }
 
-    const map = { complaints: '/admin/complaints', users: '/admin/users' }
-    const params = { ...(q ? { q } : {}) }
-    api.get(map[tab], { params })
+    if (tab === 'users') {
+      api.get('/admin/users', { params: q ? { q } : {} })
+        .then((r) => setUsers(r.data.data))
+        .finally(() => setLoading(false))
+      return
+    }
+
+    // complaints
+    api.get('/admin/complaints', {
+      params: {
+        ...(q          ? { q }                         : {}),
+        ...(cStatus    ? { status: cStatus }           : {}),
+        ...(cCategory  ? { category: cCategory }       : {}),
+        ...(cModStatus ? { moderation_status: cModStatus } : {}),
+        sort: cSort,
+        page: cPage,
+        per_page: 25,
+      },
+    })
       .then((r) => {
-        if (tab === 'complaints') setComplaints(r.data.data)
-        if (tab === 'users')      setUsers(r.data.data)
+        setComplaints(r.data.data)
+        setCMeta({ total: r.data.total, last_page: r.data.last_page, current_page: r.data.current_page })
       })
       .finally(() => setLoading(false))
-  }, [tab, q, companyFilter, companySort, companiesPage, modFilter, claimFilter])
+  }, [tab, q, companyFilter, companySort, companiesPage, modFilter, claimFilter, cStatus, cCategory, cModStatus, cSort, cPage])
 
   useEffect(() => { load() }, [load])
 
@@ -208,7 +233,7 @@ export default function AdminPage() {
       {/* Tabs */}
       <div className="card p-1 grid grid-cols-3 sm:flex gap-1">
         {TABS.map((t) => (
-          <button key={t} onClick={() => { setTab(t); setQ('') }}
+          <button key={t} onClick={() => { setTab(t); setQ(''); setCStatus(''); setCCategory(''); setCModStatus(''); setCSort('latest'); setCPage(1) }}
             className={`sm:flex-1 py-2 px-1 rounded-xl text-xs sm:text-sm font-medium capitalize transition text-center leading-tight ${
               tab === t
                 ? 'bg-[color:var(--color-eucalyptus)] text-[color:var(--color-paper)] shadow-sm'
@@ -225,8 +250,139 @@ export default function AdminPage() {
         ))}
       </div>
 
-      {/* Search + sub-filters */}
-      <div className="flex flex-col gap-2">
+      {/* ── Complaints filter panel ────────────────────────── */}
+      {tab === 'complaints' && (
+        <div className="card p-4 space-y-3">
+          {/* Search */}
+          <div className="relative">
+            <Icon name="search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)] pointer-events-none" />
+            <input
+              value={q}
+              onChange={e => { setQ(e.target.value); setCPage(1) }}
+              placeholder="Search title, description, company, consumer…"
+              className="input pl-9 text-sm w-full"
+            />
+            {q && (
+              <button onClick={() => { setQ(''); setCPage(1) }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] transition">
+                <Icon name="x" size={13} />
+              </button>
+            )}
+          </div>
+
+          {/* Status */}
+          <div>
+            <p className="caps text-[10px] text-[color:var(--color-muted)] mb-2">Status</p>
+            <div className="flex gap-1.5 flex-wrap">
+              {[
+                { value: '',                  label: 'All' },
+                { value: 'open',              label: 'Open',        dot: 'var(--color-eucalyptus)' },
+                { value: 'responded',         label: 'Responded',   dot: '#5A6FA8' },
+                { value: 'resolved',          label: 'Resolved',    dot: '#3E7560' },
+                { value: 'unresolved',        label: 'Unresolved',  dot: 'var(--color-clay)' },
+                { value: 'awaiting_response', label: 'Awaiting',    dot: '#D8A24A' },
+                { value: 'expired',           label: 'Expired',     dot: 'var(--color-muted)' },
+                { value: 'removed',           label: 'Removed',     dot: '#aaa' },
+              ].map(opt => (
+                <button key={opt.value}
+                  onClick={() => { setCStatus(opt.value); setCPage(1) }}
+                  className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full border transition ${
+                    cStatus === opt.value
+                      ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                      : 'border-[color:var(--color-line)] bg-transparent text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)]'
+                  }`}>
+                  {opt.dot && <span className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ background: cStatus === opt.value ? 'var(--color-paper)' : opt.dot }} />}
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Category + Moderation status — side by side on md+ */}
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div>
+              <p className="caps text-[10px] text-[color:var(--color-muted)] mb-2">Category</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {[
+                  { value: '',          label: 'All',      emoji: null  },
+                  { value: 'billing',   label: 'Billing',  emoji: '💳' },
+                  { value: 'delivery',  label: 'Delivery', emoji: '📦' },
+                  { value: 'service',   label: 'Service',  emoji: '🎧' },
+                  { value: 'refund',    label: 'Refund',   emoji: '↩️' },
+                  { value: 'fraud',     label: 'Fraud',    emoji: '⚠️' },
+                ].map(opt => (
+                  <button key={opt.value}
+                    onClick={() => { setCCategory(opt.value); setCPage(1) }}
+                    className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-full border transition ${
+                      cCategory === opt.value
+                        ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                        : 'border-[color:var(--color-line)] bg-transparent text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)]'
+                    }`}>
+                    {opt.emoji && <span className="text-[10px]">{opt.emoji}</span>}
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="caps text-[10px] text-[color:var(--color-muted)] mb-2">Moderation</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {[
+                  { value: '',          label: 'All' },
+                  { value: 'pending',   label: '🕐 Pending',  fg: '#8A5A1F',                 bg: '#F3E2C3' },
+                  { value: 'approved',  label: '✅ Approved', fg: 'var(--color-eucalyptus)', bg: 'var(--color-eucalyptus-3)' },
+                  { value: 'flagged',   label: '🚩 Flagged',  fg: 'var(--color-clay)',       bg: 'var(--color-clay-soft)' },
+                  { value: 'rejected',  label: '❌ Rejected', fg: 'var(--color-clay)',       bg: 'var(--color-clay-soft)' },
+                ].map(opt => (
+                  <button key={opt.value}
+                    onClick={() => { setCModStatus(opt.value); setCPage(1) }}
+                    className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-full border transition ${
+                      cModStatus === opt.value
+                        ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                        : 'border-[color:var(--color-line)] bg-transparent text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)]'
+                    }`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Sort + active summary row */}
+          <div className="flex items-center justify-between gap-3 pt-1 border-t hairline flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <span className="caps text-[10px] text-[color:var(--color-muted)]">Sort:</span>
+              {[['latest', 'Newest'], ['oldest', 'Oldest']].map(([v, l]) => (
+                <button key={v} onClick={() => { setCSort(v); setCPage(1) }}
+                  className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition ${
+                    cSort === v
+                      ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                      : 'border-[color:var(--color-line)] text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]'
+                  }`}>{l}</button>
+              ))}
+            </div>
+            <div className="flex items-center gap-3">
+              {cMeta?.total > 0 && (
+                <span className="text-[11px] text-[color:var(--color-muted)] font-mono">
+                  {cMeta.total.toLocaleString()} result{cMeta.total !== 1 ? 's' : ''}
+                </span>
+              )}
+              {(q || cStatus || cCategory || cModStatus) && (
+                <button
+                  onClick={() => { setQ(''); setCStatus(''); setCCategory(''); setCModStatus(''); setCSort('latest'); setCPage(1) }}
+                  className="text-[11px] text-[color:var(--color-clay)] hover:underline font-medium transition">
+                  Clear all
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search + sub-filters for other tabs */}
+      <div className={`flex flex-col gap-2 ${tab === 'complaints' ? 'hidden' : ''}`}>
         <div className="relative w-full">
           <Icon name="search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)]" />
           <input
@@ -293,9 +449,10 @@ export default function AdminPage() {
 
       {/* ── Complaints tab ── */}
       {tab === 'complaints' && !loading && (
+        <>
         <div className="card overflow-hidden">
           {complaints.length === 0 && (
-            <p className="p-10 text-sm text-[color:var(--color-muted)] text-center">No complaints found.</p>
+            <p className="p-10 text-sm text-[color:var(--color-muted)] text-center">No complaints match your filters.</p>
           )}
           <ul className="divide-y divide-[color:var(--color-border)]">
             {complaints.map((c) => {
@@ -361,6 +518,16 @@ export default function AdminPage() {
             })}
           </ul>
         </div>
+        {cMeta && cMeta.last_page > 1 && (
+          <Pagination
+            current={cMeta.current_page}
+            total={cMeta.last_page}
+            totalItems={cMeta.total}
+            itemLabel="complaints"
+            onChange={setCPage}
+          />
+        )}
+        </>
       )}
 
       {/* ── Moderation tab ── */}
@@ -823,7 +990,7 @@ function ClaimCard({ claim, onApprove, onReject }) {
 }
 
 /* ─── Pagination ─────────────────────────────────────────── */
-function Pagination({ current, total, totalItems, onChange }) {
+function Pagination({ current, total, totalItems, onChange, itemLabel = 'companies' }) {
   // Build page window: always show first, last, current ±2
   const pages = []
   for (let i = 1; i <= total; i++) {
@@ -845,7 +1012,7 @@ function Pagination({ current, total, totalItems, onChange }) {
       <p className="text-xs text-[color:var(--color-muted)]">
         Page <span className="font-medium text-[color:var(--color-ink)]">{current}</span> of{' '}
         <span className="font-medium text-[color:var(--color-ink)]">{total}</span>
-        {' '}· {totalItems.toLocaleString()} companies total
+        {' '}· {totalItems.toLocaleString()} {itemLabel} total
       </p>
       <div className="flex items-center gap-1">
         <button

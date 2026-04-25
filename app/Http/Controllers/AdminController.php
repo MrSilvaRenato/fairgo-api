@@ -45,14 +45,26 @@ class AdminController extends Controller
             $query->where('moderation_status', $request->moderation_status);
         }
 
+        if ($request->category) {
+            $query->where('category', $request->category);
+        }
+
         if ($request->q) {
-            $query->where(function ($q) use ($request) {
-                $q->where('title', 'like', "%{$request->q}%")
-                  ->orWhere('description', 'like', "%{$request->q}%");
+            $search = $request->q;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhereHas('company',  fn ($c) => $c->where('name',  'like', "%{$search}%"))
+                  ->orWhereHas('consumer', fn ($u) => $u->where('name',  'like', "%{$search}%")
+                                                         ->orWhere('email', 'like', "%{$search}%"));
             });
         }
 
-        return response()->json($query->paginate(25));
+        $request->sort === 'oldest' ? $query->oldest() : $query->latest();
+
+        $perPage = min((int) ($request->per_page ?? 25), 100);
+
+        return response()->json($query->paginate($perPage));
     }
 
     // PUT /admin/complaints/{complaint}
