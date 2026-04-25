@@ -9,13 +9,31 @@ import useSeoMeta from '../hooks/useSeoMeta'
 
 /* ── display config ─────────────────────────────────────── */
 const STATUS_STYLE = {
-  open:              { label: 'Open',              fg: 'var(--color-eucalyptus)', bg: 'var(--color-eucalyptus-3)', dot: 'var(--color-eucalyptus)' },
-  awaiting_response: { label: 'Awaiting response', fg: '#8A5A1F',                 bg: '#F3E2C3',                   dot: '#D8A24A' },
-  responded:         { label: 'Responded',         fg: '#3B4B7A',                 bg: '#DAE0EE',                   dot: '#5A6FA8' },
-  resolved:          { label: 'Resolved',          fg: 'var(--color-eucalyptus)', bg: '#E7EEDF',                   dot: '#3E7560' },
-  unresolved:        { label: 'Unresolved',        fg: 'var(--color-clay)',       bg: 'var(--color-clay-soft)',    dot: 'var(--color-clay)' },
-  expired:           { label: 'Expired',           fg: 'var(--color-muted)',      bg: 'var(--color-paper-2)',      dot: 'var(--color-muted)' },
+  open:              { label: 'Open',        fg: 'var(--color-eucalyptus)', bg: 'var(--color-eucalyptus-3)', dot: 'var(--color-eucalyptus)' },
+  awaiting_response: { label: 'Awaiting',    fg: '#8A5A1F',                 bg: '#F3E2C3',                   dot: '#D8A24A' },
+  responded:         { label: 'Responded',   fg: '#3B4B7A',                 bg: '#DAE0EE',                   dot: '#5A6FA8' },
+  resolved:          { label: 'Resolved',    fg: 'var(--color-eucalyptus)', bg: '#E7EEDF',                   dot: '#3E7560' },
+  unresolved:        { label: 'Unresolved',  fg: 'var(--color-clay)',       bg: 'var(--color-clay-soft)',    dot: 'var(--color-clay)' },
+  expired:           { label: 'Expired',     fg: 'var(--color-muted)',      bg: 'var(--color-paper-2)',      dot: 'var(--color-muted)' },
 }
+
+const FEED_STATUS_OPTS = [
+  { value: '',                  label: 'All' },
+  { value: 'open',              label: 'Open',        dot: 'var(--color-eucalyptus)' },
+  { value: 'responded',         label: 'Responded',   dot: '#5A6FA8' },
+  { value: 'resolved',          label: 'Resolved',    dot: '#3E7560' },
+  { value: 'unresolved',        label: 'Unresolved',  dot: 'var(--color-clay)' },
+  { value: 'awaiting_response', label: 'Awaiting',    dot: '#D8A24A' },
+]
+
+const FEED_CATEGORY_OPTS = [
+  { value: '',          label: 'All',      emoji: null  },
+  { value: 'billing',   label: 'Billing',  emoji: '💳' },
+  { value: 'delivery',  label: 'Delivery', emoji: '📦' },
+  { value: 'service',   label: 'Service',  emoji: '🎧' },
+  { value: 'refund',    label: 'Refund',   emoji: '↩️' },
+  { value: 'fraud',     label: 'Fraud',    emoji: '⚠️' },
+]
 
 /* ─────────────────────────────────────────────────────────── */
 export default function HomePage() {
@@ -34,9 +52,16 @@ export default function HomePage() {
   const [open, setOpen] = useState(false)
   const searchRef = useRef(null)
 
-  const [complaints, setComplaints]       = useState([])
+  const [complaints, setComplaints]           = useState([])
   const [complaintsTotal, setComplaintsTotal] = useState(0)
-  const [loadingFeed, setLoadingFeed]     = useState(true)
+  const [loadingFeed, setLoadingFeed]         = useState(true)
+
+  // Feed filters
+  const [feedSearch,   setFeedSearch]   = useState('')
+  const [feedStatus,   setFeedStatus]   = useState('')
+  const [feedCategory, setFeedCategory] = useState('')
+  const feedSearchTimer = useRef(null)
+  const [feedExpanded, setFeedExpanded] = useState(false)
 
   const [leaderboard, setLeaderboard] = useState([])
   const [industries, setIndustries] = useState([])
@@ -100,11 +125,29 @@ export default function HomePage() {
   }, [query])
 
   useEffect(() => {
-    api.get('/complaints', { params: { per_page: 8 } })
-      .then((r) => { setComplaints(r.data.data ?? []); setComplaintsTotal(r.data.total ?? 0) })
-      .catch(() => {})
-      .finally(() => setLoadingFeed(false))
-  }, [])
+    clearTimeout(feedSearchTimer.current)
+    feedSearchTimer.current = setTimeout(() => {
+      setLoadingFeed(true)
+      api.get('/complaints', {
+        params: {
+          per_page: 10,
+          q:        feedSearch   || undefined,
+          status:   feedStatus   || undefined,
+          category: feedCategory || undefined,
+        },
+      })
+        .then((r) => {
+          setComplaints(r.data.data ?? [])
+          // Only update total when no filters active (used for trust bar)
+          if (!feedSearch && !feedStatus && !feedCategory) {
+            setComplaintsTotal(r.data.total ?? 0)
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoadingFeed(false))
+    }, feedSearch ? 350 : 0)
+    return () => clearTimeout(feedSearchTimer.current)
+  }, [feedSearch, feedStatus, feedCategory])
 
   useEffect(() => {
     setLoadingBoard(true)
@@ -141,120 +184,195 @@ export default function HomePage() {
           style={{ background: 'radial-gradient(circle, var(--color-eucalyptus) 0%, transparent 70%)' }}
         />
 
-        <div className="relative px-2 sm:px-6 py-12 sm:py-16 text-center max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 mb-6 caps" style={{ color: 'var(--color-eucalyptus)' }}>
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--color-eucalyptus)' }} />
-            Australia's public complaint record
-          </div>
+        <div className="relative px-2 sm:px-6 py-12 sm:py-16 lg:grid lg:grid-cols-2 lg:gap-14 lg:items-center">
+          {/* ── Left column ── */}
+          <div className="text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 mb-6 caps" style={{ color: 'var(--color-eucalyptus)' }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--color-eucalyptus)' }} />
+              Australia's public complaint record
+            </div>
 
-          <h1 className="font-display text-[48px] sm:text-[68px] leading-[1.02] font-semibold tracking-tight mb-5">
-            File it once.<br />
-            <span className="italic-display" style={{ color: 'var(--color-ochre)' }}>
-              Public forever.
-            </span>
-          </h1>
-          <p className="text-[17px] sm:text-[18px] text-[color:var(--color-ink-2)] max-w-xl mx-auto leading-relaxed mb-10">
-            A public, searchable record of how Australian businesses treat their customers.
-            Free for consumers. The company has 7 days to respond.
-          </p>
+            <h1 className="font-display text-[46px] sm:text-[64px] lg:text-[62px] xl:text-[72px] leading-[1.02] font-semibold tracking-tight mb-5">
+              File it once.<br />
+              <span className="italic-display" style={{ color: 'var(--color-ochre)' }}>
+                Public forever.
+              </span>
+            </h1>
+            <p className="text-[17px] sm:text-[18px] text-[color:var(--color-ink-2)] max-w-xl mx-auto lg:mx-0 leading-relaxed mb-10">
+              A public, searchable record of how Australian businesses treat their customers.
+              Free for consumers. The company has 7 days to respond.
+            </p>
 
-          {/* Search */}
-          <div className="max-w-xl mx-auto relative text-left" ref={searchRef}>
-            <form onSubmit={handleSubmit}
-              className="flex items-center gap-2 bg-[color:var(--color-card)] border hairline rounded-2xl p-1.5 shadow-sm focus-within:border-[color:var(--color-eucalyptus)] focus-within:shadow-[0_0_0_3px_rgba(47,93,76,.12)] transition">
-              <div className="flex flex-1 items-center gap-2 px-3">
-                {searching
-                  ? <Icon name="sparkle" size={16} className="text-[color:var(--color-eucalyptus)] animate-spin shrink-0" />
-                  : <Icon name="search" size={16} className="text-[color:var(--color-muted)] shrink-0" />
-                }
-                <input value={query} onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search any Australian business…"
-                  className="flex-1 text-sm py-2.5 outline-none bg-transparent placeholder-[color:var(--color-muted)] text-[color:var(--color-ink)]"
-                  autoComplete="off" />
-              </div>
-              <button type="submit" className="btn btn-primary shrink-0">
-                Search <Icon name="arrow-r" size={14} />
-              </button>
-            </form>
-
-            {open && (results.companies.length > 0 || results.complaints.length > 0) && (
-              <div className="absolute z-20 left-0 right-0 mt-2 bg-[color:var(--color-card)] rounded-2xl shadow-2xl border hairline overflow-hidden">
-                {results.companies.length > 0 && (
-                  <ul>
-                    {results.companies.slice(0, 5).map((c) => {
-                      const b = BAND[c.badge] ?? BAND.not_rated
-                      return (
-                        <li key={c.id}>
-                          <Link to={`/companies/${c.slug}`} onClick={() => setOpen(false)}
-                            className="flex items-center justify-between px-4 py-3 hover:bg-[color:var(--color-paper-2)] transition gap-3">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <CompanyLogo company={c} size="sm" />
-                              <div className="truncate">
-                                <p className="font-medium text-sm text-[color:var(--color-ink)] truncate">{c.name}</p>
-                                {c.industry && <p className="text-xs text-[color:var(--color-muted)] capitalize">{c.industry}</p>}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-xs font-medium px-2 py-0.5 rounded-full"
-                                    style={{ color: b.text, background: 'var(--color-paper-2)' }}>
-                                {b.label}
-                              </span>
-                              <span className="text-xs text-[color:var(--color-muted)] font-mono">{c.total}</span>
-                            </div>
-                          </Link>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )}
-                {results.complaints.length > 0 && (
-                  <div className="border-t hairline">
-                    <p className="caps text-[color:var(--color-muted)] px-4 pt-2 pb-1">Complaints</p>
-                    <ul>
-                      {results.complaints.slice(0, 3).map((c) => (
-                        <li key={c.id}>
-                          <Link to={`/complaints/${c.id}`} onClick={() => setOpen(false)}
-                            className="flex items-start gap-3 px-4 py-2.5 hover:bg-[color:var(--color-paper-2)] transition">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-[color:var(--color-ink)] truncate">{c.title}</p>
-                              <p className="text-xs text-[color:var(--color-muted)]">{c.company?.name} · <span className="capitalize">{c.category}</span></p>
-                            </div>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <div className="border-t hairline px-4 py-2">
-                  <button onClick={handleSubmit} className="text-xs text-[color:var(--color-eucalyptus)] hover:underline font-medium">
-                    See all results for "{query}" →
-                  </button>
+            {/* Search */}
+            <div className="max-w-xl mx-auto lg:mx-0 relative text-left" ref={searchRef}>
+              <form onSubmit={handleSubmit}
+                className="flex items-center gap-2 bg-[color:var(--color-card)] border hairline rounded-2xl p-1.5 shadow-sm focus-within:border-[color:var(--color-eucalyptus)] focus-within:shadow-[0_0_0_3px_rgba(47,93,76,.12)] transition">
+                <div className="flex flex-1 items-center gap-2 px-3">
+                  {searching
+                    ? <Icon name="sparkle" size={16} className="text-[color:var(--color-eucalyptus)] animate-spin shrink-0" />
+                    : <Icon name="search" size={16} className="text-[color:var(--color-muted)] shrink-0" />
+                  }
+                  <input value={query} onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search any Australian business…"
+                    className="flex-1 text-sm py-2.5 outline-none bg-transparent placeholder-[color:var(--color-muted)] text-[color:var(--color-ink)]"
+                    autoComplete="off" />
                 </div>
-              </div>
-            )}
-            {open && query.length >= 2 && results.companies.length === 0 && results.complaints.length === 0 && !searching && (
-              <div className="absolute z-20 left-0 right-0 mt-2 bg-[color:var(--color-card)] rounded-2xl shadow-xl border hairline px-4 py-5 text-sm text-[color:var(--color-muted)] text-center">
-                No match —{' '}
-                <Link to="/companies/register" className="text-[color:var(--color-eucalyptus)] hover:underline font-medium">
-                  register a business
+                <button type="submit" className="btn btn-primary shrink-0">
+                  Search <Icon name="arrow-r" size={14} />
+                </button>
+              </form>
+
+              {open && (results.companies.length > 0 || results.complaints.length > 0) && (
+                <div className="absolute z-20 left-0 right-0 mt-2 bg-[color:var(--color-card)] rounded-2xl shadow-2xl border hairline overflow-hidden">
+                  {results.companies.length > 0 && (
+                    <ul>
+                      {results.companies.slice(0, 5).map((c) => {
+                        const b = BAND[c.badge] ?? BAND.not_rated
+                        return (
+                          <li key={c.id}>
+                            <Link to={`/companies/${c.slug}`} onClick={() => setOpen(false)}
+                              className="flex items-center justify-between px-4 py-3 hover:bg-[color:var(--color-paper-2)] transition gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <CompanyLogo company={c} size="sm" />
+                                <div className="truncate">
+                                  <p className="font-medium text-sm text-[color:var(--color-ink)] truncate">{c.name}</p>
+                                  {c.industry && <p className="text-xs text-[color:var(--color-muted)] capitalize">{c.industry}</p>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+                                      style={{ color: b.text, background: 'var(--color-paper-2)' }}>
+                                  {b.label}
+                                </span>
+                                <span className="text-xs text-[color:var(--color-muted)] font-mono">{c.total}</span>
+                              </div>
+                            </Link>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                  {results.complaints.length > 0 && (
+                    <div className="border-t hairline">
+                      <p className="caps text-[color:var(--color-muted)] px-4 pt-2 pb-1">Complaints</p>
+                      <ul>
+                        {results.complaints.slice(0, 3).map((c) => (
+                          <li key={c.id}>
+                            <Link to={`/complaints/${c.id}`} onClick={() => setOpen(false)}
+                              className="flex items-start gap-3 px-4 py-2.5 hover:bg-[color:var(--color-paper-2)] transition">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-[color:var(--color-ink)] truncate">{c.title}</p>
+                                <p className="text-xs text-[color:var(--color-muted)]">{c.company?.name} · <span className="capitalize">{c.category}</span></p>
+                              </div>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <div className="border-t hairline px-4 py-2">
+                    <button onClick={handleSubmit} className="text-xs text-[color:var(--color-eucalyptus)] hover:underline font-medium">
+                      See all results for "{query}" →
+                    </button>
+                  </div>
+                </div>
+              )}
+              {open && query.length >= 2 && results.companies.length === 0 && results.complaints.length === 0 && !searching && (
+                <div className="absolute z-20 left-0 right-0 mt-2 bg-[color:var(--color-card)] rounded-2xl shadow-xl border hairline px-4 py-5 text-sm text-[color:var(--color-muted)] text-center">
+                  No match —{' '}
+                  <Link to="/companies/register" className="text-[color:var(--color-eucalyptus)] hover:underline font-medium">
+                    register a business
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap justify-center lg:justify-start gap-2 mt-7 text-sm">
+              {user ? (
+                <Link to="/complaints/new" className="btn btn-primary">
+                  <Icon name="plus" size={14} /> Submit a complaint
                 </Link>
-              </div>
-            )}
+              ) : (
+                <>
+                  <Link to="/register" className="btn btn-primary">
+                    Get started — it's free
+                  </Link>
+                  <Link to="/login" className="btn btn-secondary">Sign in</Link>
+                </>
+              )}
+            </div>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-2 mt-7 text-sm">
-            {user ? (
-              <Link to="/complaints/new" className="btn btn-primary">
-                <Icon name="plus" size={14} /> Submit a complaint
-              </Link>
-            ) : (
-              <>
-                <Link to="/register" className="btn btn-primary">
-                  Get started — it's free
+          {/* ── Right column — live feed widget (desktop only) ── */}
+          <div className="hidden lg:flex flex-col gap-0 self-center">
+            <div className="rounded-[20px] overflow-hidden border hairline shadow-xl"
+              style={{ background: 'var(--color-card)' }}>
+              {/* Widget header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b hairline"
+                style={{ background: 'var(--color-paper-2)' }}>
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                      style={{ background: 'var(--color-eucalyptus)' }} />
+                    <span className="relative inline-flex rounded-full h-2 w-2"
+                      style={{ background: 'var(--color-eucalyptus)' }} />
+                  </span>
+                  <span className="caps text-[11px]" style={{ color: 'var(--color-eucalyptus)' }}>
+                    Live on Aus Fair Go
+                  </span>
+                </div>
+                {complaintsTotal > 0 && (
+                  <span className="text-[11px] font-mono text-[color:var(--color-muted)]">
+                    {complaintsTotal.toLocaleString('en-AU')} total
+                  </span>
+                )}
+              </div>
+
+              {/* Feed rows */}
+              {loadingFeed ? (
+                <div className="divide-y" style={{ borderColor: 'var(--color-line)' }}>
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 px-5 py-3.5 animate-pulse">
+                      <div className="w-2 h-2 rounded-full bg-[color:var(--color-paper-2)] shrink-0" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="h-3 bg-[color:var(--color-paper-2)] rounded w-3/4" />
+                        <div className="h-2.5 bg-[color:var(--color-paper-2)] rounded w-1/2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="divide-y" style={{ borderColor: 'var(--color-line)' }}>
+                  {complaints.slice(0, 5).map((c) => <ComplaintFeedRow key={c.id} complaint={c} />)}
+                </div>
+              )}
+
+              {/* Widget footer */}
+              <div className="px-5 py-3 border-t hairline flex items-center justify-between"
+                style={{ background: 'var(--color-paper-2)' }}>
+                <p className="text-[11px] text-[color:var(--color-muted)]">Updated in real time</p>
+                <Link to="/complaints"
+                  className="text-[11px] font-medium flex items-center gap-1 hover:underline underline-offset-4"
+                  style={{ color: 'var(--color-eucalyptus)' }}>
+                  View all <Icon name="arrow-r" size={11} />
                 </Link>
-                <Link to="/login" className="btn btn-secondary">Sign in</Link>
-              </>
-            )}
+              </div>
+            </div>
+
+            {/* Mini trust signals under the widget */}
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              {[
+                { value: '7 days', sub: 'response window' },
+                { value: '100%', sub: 'public record' },
+                { value: 'Free', sub: 'for consumers' },
+              ].map((s) => (
+                <div key={s.sub} className="rounded-2xl border hairline px-3 py-3 text-center"
+                  style={{ background: 'var(--color-card)' }}>
+                  <p className="font-display text-[16px] font-semibold leading-none text-[color:var(--color-ink)]">{s.value}</p>
+                  <p className="text-[10px] text-[color:var(--color-muted)] mt-1 leading-snug">{s.sub}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -577,7 +695,9 @@ export default function HomePage() {
 
       {/* ═══════════════ LIVE ACTIVITY FEED ═══════════════ */}
       <section id="recent-complaints" className="mb-16">
-        <div className="flex items-center justify-between mb-6">
+
+        {/* Section header */}
+        <div className="flex items-start sm:items-center justify-between gap-4 mb-5">
           <div>
             <div className="flex items-center gap-2 caps mb-1">
               <span className="relative flex h-2 w-2">
@@ -593,12 +713,116 @@ export default function HomePage() {
             </h2>
           </div>
           <Link to="/complaints"
-            className="text-sm font-medium flex items-center gap-1 hover:underline underline-offset-4 shrink-0"
+            className="text-sm font-medium flex items-center gap-1.5 shrink-0 hover:underline underline-offset-4 mt-1"
             style={{ color: 'var(--color-eucalyptus)' }}>
             View all <Icon name="arrow-r" size={13} />
           </Link>
         </div>
 
+        {/* ── Filter bar ─────────────────────────────────── */}
+        <div className="card p-4 mb-3 space-y-3">
+          {/* Search row */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Icon name="search" size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)] pointer-events-none" />
+              <input
+                value={feedSearch}
+                onChange={e => setFeedSearch(e.target.value)}
+                placeholder="Search by title or company..."
+                className="input pl-8 text-sm h-9 w-full"
+              />
+              {feedSearch && (
+                <button onClick={() => setFeedSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] transition">
+                  <Icon name="x" size={13} />
+                </button>
+              )}
+            </div>
+
+            {/* Expand toggle for category on mobile */}
+            <button
+              onClick={() => setFeedExpanded(v => !v)}
+              className={`flex items-center gap-1.5 text-xs font-medium px-3 h-9 rounded-xl border transition shrink-0 ${
+                feedCategory
+                  ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                  : 'border-[color:var(--color-line)] text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] bg-[color:var(--color-card)]'
+              }`}>
+              <Icon name="sparkle" size={13} />
+              <span className="hidden sm:inline">Category</span>
+              {feedCategory && <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-ochre)] ml-0.5" />}
+            </button>
+          </div>
+
+          {/* Status pills */}
+          <div className="flex gap-1.5 flex-wrap">
+            {FEED_STATUS_OPTS.map(opt => (
+              <button key={opt.value}
+                onClick={() => setFeedStatus(opt.value)}
+                className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full border transition ${
+                  feedStatus === opt.value
+                    ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                    : 'border-[color:var(--color-line)] bg-transparent text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)]'
+                }`}>
+                {opt.dot && (
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ background: feedStatus === opt.value ? 'var(--color-paper)' : opt.dot }} />
+                )}
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Category pills — expanded */}
+          {feedExpanded && (
+            <div className="flex gap-1.5 flex-wrap pt-1 border-t hairline">
+              {FEED_CATEGORY_OPTS.map(opt => (
+                <button key={opt.value}
+                  onClick={() => { setFeedCategory(opt.value); setFeedExpanded(false) }}
+                  className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full border transition ${
+                    feedCategory === opt.value
+                      ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                      : 'border-[color:var(--color-line)] bg-transparent text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)]'
+                  }`}>
+                  {opt.emoji && <span>{opt.emoji}</span>}
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Active filter pills + clear */}
+          {(feedSearch || feedStatus || feedCategory) && (
+            <div className="flex items-center gap-2 pt-1 border-t hairline flex-wrap">
+              {feedStatus && (
+                <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full font-medium"
+                  style={{ background: 'var(--color-paper-2)', color: 'var(--color-ink)' }}>
+                  {FEED_STATUS_OPTS.find(o => o.value === feedStatus)?.label}
+                  <button onClick={() => setFeedStatus('')} className="ml-0.5 opacity-50 hover:opacity-100">
+                    <Icon name="x" size={10} />
+                  </button>
+                </span>
+              )}
+              {feedCategory && (
+                <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full font-medium"
+                  style={{ background: 'var(--color-paper-2)', color: 'var(--color-ink)' }}>
+                  {FEED_CATEGORY_OPTS.find(o => o.value === feedCategory)?.emoji}{' '}
+                  {FEED_CATEGORY_OPTS.find(o => o.value === feedCategory)?.label}
+                  <button onClick={() => setFeedCategory('')} className="ml-0.5 opacity-50 hover:opacity-100">
+                    <Icon name="x" size={10} />
+                  </button>
+                </span>
+              )}
+              <button
+                onClick={() => { setFeedSearch(''); setFeedStatus(''); setFeedCategory('') }}
+                className="text-[11px] text-[color:var(--color-muted)] hover:text-[color:var(--color-clay)] transition ml-auto">
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Feed card ───────────────────────────────────── */}
         <div className="card overflow-hidden">
           {loadingFeed ? (
             <div className="divide-y" style={{ borderColor: 'var(--color-line)' }}>
@@ -615,11 +839,18 @@ export default function HomePage() {
             </div>
           ) : complaints.length === 0 ? (
             <div className="p-12 text-center">
-              <div className="font-display italic-display text-[20px] mb-2 text-[color:var(--color-muted)]">No complaints yet.</div>
-              <p className="text-sm text-[color:var(--color-muted)] mb-5">Be the first to start the public record.</p>
-              <Link to={user ? '/complaints/new' : '/register'} className="btn btn-primary inline-flex">
-                Submit a complaint <Icon name="arrow-r" size={14} />
-              </Link>
+              <div className="font-display italic-display text-[20px] mb-2 text-[color:var(--color-muted)]">
+                {(feedSearch || feedStatus || feedCategory) ? 'No matching complaints.' : 'No complaints yet.'}
+              </div>
+              <p className="text-sm text-[color:var(--color-muted)] mb-5">
+                {(feedSearch || feedStatus || feedCategory)
+                  ? 'Try adjusting your filters or '
+                  : 'Be the first — '}
+                <Link to="/complaints" className="underline underline-offset-4"
+                  style={{ color: 'var(--color-eucalyptus)' }}>
+                  browse all complaints
+                </Link>.
+              </p>
             </div>
           ) : (
             <>
@@ -629,9 +860,12 @@ export default function HomePage() {
               <div className="px-5 py-3 flex items-center justify-between"
                 style={{ background: 'var(--color-paper-2)', borderTop: '1px solid var(--color-line)' }}>
                 <p className="text-xs text-[color:var(--color-muted)]">
-                  {complaintsTotal > 0 && <>{complaintsTotal.toLocaleString('en-AU')} complaints on the public record</>}
+                  {complaintsTotal > 0 && !feedSearch && !feedStatus && !feedCategory
+                    ? <>{complaintsTotal.toLocaleString('en-AU')} complaints on the public record</>
+                    : <>Showing {complaints.length} matching</>}
                 </p>
-                <Link to="/complaints"
+                <Link
+                  to={`/complaints${feedStatus || feedCategory ? `?${new URLSearchParams({ ...(feedStatus && { status: feedStatus }), ...(feedCategory && { category: feedCategory }) }).toString()}` : ''}`}
                   className="text-xs font-medium flex items-center gap-1 hover:underline underline-offset-4"
                   style={{ color: 'var(--color-eucalyptus)' }}>
                   Browse all <Icon name="arrow-r" size={12} />

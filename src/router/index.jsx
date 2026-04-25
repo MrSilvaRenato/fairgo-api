@@ -6,6 +6,7 @@ import RegisterPage from '../pages/auth/RegisterPage'
 import LoginPage from '../pages/auth/LoginPage'
 import CompanyRegisterPage from '../pages/company/CompanyRegisterPage'
 import CompanyProfilePage from '../pages/company/CompanyProfilePage'
+import ComplaintsPage from '../pages/complaint/ComplaintsPage'
 import ComplaintFormPage from '../pages/complaint/ComplaintFormPage'
 import ComplaintPage from '../pages/complaint/ComplaintPage'
 import ResolvePage from '../pages/complaint/ResolvePage'
@@ -35,7 +36,8 @@ const router = createBrowserRouter([
       { path: '/companies/register',   element: <CompanyRegisterPage /> },
       { path: '/companies/:slug',       element: <CompanyProfilePage /> },
       { path: '/companies/:slug/claim', element: <ClaimPage /> },
-      { path: '/complaints/new',      element: <ComplaintFormPage /> },
+      { path: '/complaints',             element: <ComplaintsPage /> },
+      { path: '/complaints/new',        element: <ComplaintFormPage /> },
       { path: '/complaints/:id',         element: <ComplaintPage /> },
       { path: '/complaints/:id/resolve', element: <ResolvePage /> },
       { path: '/dashboard',              element: <ConsumerDashboardPage /> },

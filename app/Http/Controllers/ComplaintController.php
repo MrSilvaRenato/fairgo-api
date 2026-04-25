@@ -210,6 +210,16 @@ class ComplaintController extends Controller
             $query->where('category', $request->category);
         }
 
-        return response()->json($query->paginate(15));
+        if ($request->q) {
+            $q = $request->q;
+            $query->where(function ($sub) use ($q) {
+                $sub->where('title', 'like', "%{$q}%")
+                    ->orWhereHas('company', fn ($c) => $c->where('name', 'like', "%{$q}%"));
+            });
+        }
+
+        $perPage = min((int) ($request->per_page ?? 15), 50);
+
+        return response()->json($query->paginate($perPage));
     }
 }
