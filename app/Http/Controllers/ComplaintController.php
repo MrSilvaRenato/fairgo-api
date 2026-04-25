@@ -6,10 +6,12 @@ use App\Jobs\CalculateCompanyScore;
 use App\Jobs\ModerateComplaint;
 use App\Models\Company;
 use App\Models\Complaint;
+use App\Models\ComplaintAttachment;
 use App\Notifications\ComplaintFiledConsumer;
 use App\Notifications\ComplaintFiledCompany;
 use App\Services\AbnLookupService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ComplaintController extends Controller
@@ -36,7 +38,7 @@ class ComplaintController extends Controller
         }
 
         // Rate limit: 3 complaints per day per user
-        $todayCount = \App\Models\Complaint::where('consumer_id', $user->id)
+        $todayCount = Complaint::where('consumer_id', $user->id)
             ->whereDate('created_at', today())
             ->count();
 
@@ -56,11 +58,13 @@ class ComplaintController extends Controller
             'expected_resolution' => 'nullable|string|max:1000',
             'category'            => 'required|in:billing,delivery,service,refund,fraud,other',
             'is_public'           => 'boolean',
-            // Evidence fields
             'incident_date'       => 'required|date|before_or_equal:today',
             'reference_number'    => 'nullable|string|max:120',
             'amount_involved'     => 'nullable|numeric|min:0|max:9999999',
             'contact_attempted'   => 'boolean',
+            'phone'               => 'nullable|string|max:30',
+            'attachments'         => 'nullable|array|max:5',
+            'attachments.*'       => 'file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240',
         ]);
 
         // ── Unregistered company path ────────────────────────────────────────
@@ -75,7 +79,6 @@ class ComplaintController extends Controller
                 ], 422);
             }
 
-            // Find existing stub or create one
             $company = Company::firstOrCreate(
                 ['abn' => $abn, 'is_stub' => true],
                 [
@@ -92,35 +95,55 @@ class ComplaintController extends Controller
         }
 
         $complaint = Complaint::create([
-            ...$data,
-            'consumer_id'       => $request->user()->id,
-            'status'            => 'open',
+            'consumer_id'       => $user->id,
+            'company_id'        => $data['company_id'],
+            'title'             => $data['title'],
+            'description'       => $data['description'],
+            'expected_resolution' => $data['expected_resolution'] ?? null,
+            'category'          => $data['category'],
             'is_public'         => $data['is_public'] ?? true,
+            'status'            => 'open',
             'expires_at'        => now()->addDays(7),
             'moderation_status' => 'pending',
+            'incident_date'     => $data['incident_date'],
+            'reference_number'  => $data['reference_number'] ?? null,
+            'amount_involved'   => $data['amount_involved'] ?? null,
             'contact_attempted' => $data['contact_attempted'] ?? false,
+            'phone'             => $data['phone'] ?? null,
         ]);
+
+        // ── Store attachments ────────────────────────────────────────────────
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $dir  = "complaint-attachments/{$complaint->id}";
+                $stored = $file->store($dir, 'public');
+
+                ComplaintAttachment::create([
+                    'complaint_id'  => $complaint->id,
+                    'original_name' => $file->getClientOriginalName(),
+                    'stored_name'   => basename($stored),
+                    'mime_type'     => $file->getMimeType(),
+                    'size'          => $file->getSize(),
+                    'path'          => $stored,
+                ]);
+            }
+        }
 
         $complaint->load(['consumer:id,name,email', 'company:id,name,slug,user_id', 'company.user:id,name,email']);
 
         CalculateCompanyScore::dispatch($complaint->company_id);
 
-        // Run moderation synchronously so we can return the result to the frontend
-        // and decide whether to show the moderation hold screen
         ModerateComplaint::dispatchSync($complaint->id);
         $complaint->refresh();
 
-        // Only notify company if complaint passed moderation (approved/edited)
-        // Flagged complaints are hidden from company until admin reviews
         $companyUser = $complaint->company->user;
         if (in_array($complaint->moderation_status, ['approved', 'edited', null])) {
-            $request->user()->notify(new ComplaintFiledConsumer($complaint));
+            $user->notify(new ComplaintFiledConsumer($complaint));
             if ($companyUser) {
                 $companyUser->notify(new ComplaintFiledCompany($complaint));
             }
         } else {
-            // Still notify consumer their complaint was received (but under review)
-            $request->user()->notify(new ComplaintFiledConsumer($complaint));
+            $user->notify(new ComplaintFiledConsumer($complaint));
         }
 
         return response()->json(
@@ -134,28 +157,37 @@ class ComplaintController extends Controller
 
     public function show(Complaint $complaint)
     {
-        // Use optional Sanctum auth — authenticate from Bearer token if present,
-        // but don't require it so public complaints remain accessible to guests.
         $user      = auth('sanctum')->user();
         $isOwner   = $user && $user->id === $complaint->consumer_id;
         $isAdmin   = $user && $user->role === 'admin';
         $isCompany = $user && $user->role === 'company_admin' && $user->company?->id === $complaint->company_id;
 
-        // Flagged/rejected complaints are under admin review — only owner and admin can see them.
-        // The company is intentionally excluded until the admin clears or rejects the complaint.
         $underReview = in_array($complaint->moderation_status, ['flagged', 'rejected']);
         if ($underReview && !$isOwner && !$isAdmin) {
             abort(403);
         }
 
-        // Private complaints (not under review) are visible to owner, admin, and the relevant company.
         if (!$complaint->is_public && !$underReview && !$isOwner && !$isAdmin && !$isCompany) {
             abort(403);
         }
 
-        return response()->json(
-            $complaint->load(['consumer:id,name', 'company:id,name,slug', 'response', 'feedback', 'replies.user:id,name,role'])
-        );
+        // Base relations for everyone
+        $relations = ['consumer:id,name', 'company:id,name,slug', 'response', 'feedback', 'replies.user:id,name,role', 'attachments'];
+        $complaint->load($relations);
+
+        $data = $complaint->toArray();
+
+        // Private consumer contact details — only for the owning company
+        if ($isCompany) {
+            $consumer = $complaint->consumer()->first(['id', 'name', 'email', 'phone']);
+            $data['consumer_contact'] = [
+                'name'  => $consumer->name,
+                'email' => $consumer->email,
+                'phone' => $consumer->phone ?? $complaint->phone, // complaint-level phone overrides
+            ];
+        }
+
+        return response()->json($data);
     }
 
     public function index(Request $request)

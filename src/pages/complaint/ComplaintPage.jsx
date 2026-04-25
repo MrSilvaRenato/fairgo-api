@@ -120,6 +120,8 @@ export default function ComplaintPage() {
   const isClosed    = ['resolved', 'unresolved', 'expired'].includes(complaint.status)
   const canReply    = (isOwner || isCompany) && hasResponse && !isClosed
   const status      = STATUS_CONFIG[complaint.status] ?? STATUS_CONFIG.open
+  const attachments = complaint.attachments ?? []
+  const contact     = complaint.consumer_contact ?? null
 
   // Days until expiry
   const expiresAt    = complaint.expires_at ? new Date(complaint.expires_at) : null
@@ -138,6 +140,110 @@ export default function ComplaintPage() {
         <span>/</span>
         <span className="text-gray-600">Complaint #{complaint.id}</span>
       </div>
+
+      {/* ── Company private panel ── */}
+      {isCompany && (
+        <div className="rounded-2xl overflow-hidden border-2"
+          style={{ borderColor: 'var(--color-eucalyptus)' }}>
+
+          {/* Header */}
+          <div className="px-5 py-3 flex items-center gap-2.5"
+            style={{ background: 'var(--color-eucalyptus)', color: 'var(--color-paper)' }}>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+            <span className="text-sm font-semibold tracking-wide">Private — visible to your company only</span>
+          </div>
+
+          <div className="p-5 space-y-5" style={{ background: 'var(--color-eucalyptus-3)' }}>
+
+            {/* Consumer contact details */}
+            {contact && (
+              <div>
+                <p className="text-[11px] uppercase tracking-widest font-semibold text-[color:var(--color-eucalyptus)] mb-3">
+                  Consumer contact details
+                </p>
+                <div className="grid sm:grid-cols-3 gap-3">
+                  {/* Name */}
+                  <div className="rounded-xl p-3.5" style={{ background: 'var(--color-card)', border: '1px solid var(--color-line)' }}>
+                    <p className="text-[10px] uppercase tracking-widest text-[color:var(--color-muted)] mb-1">Full name</p>
+                    <p className="font-semibold text-sm text-[color:var(--color-ink)]">{contact.name}</p>
+                  </div>
+                  {/* Email */}
+                  <div className="rounded-xl p-3.5" style={{ background: 'var(--color-card)', border: '1px solid var(--color-line)' }}>
+                    <p className="text-[10px] uppercase tracking-widest text-[color:var(--color-muted)] mb-1">Email</p>
+                    <a href={`mailto:${contact.email}`}
+                      className="font-medium text-sm text-[color:var(--color-eucalyptus)] hover:underline break-all">
+                      {contact.email}
+                    </a>
+                  </div>
+                  {/* Phone */}
+                  <div className="rounded-xl p-3.5" style={{ background: 'var(--color-card)', border: '1px solid var(--color-line)' }}>
+                    <p className="text-[10px] uppercase tracking-widest text-[color:var(--color-muted)] mb-1">Phone</p>
+                    {contact.phone ? (
+                      <a href={`tel:${contact.phone}`}
+                        className="font-medium text-sm text-[color:var(--color-eucalyptus)] hover:underline">
+                        {contact.phone}
+                      </a>
+                    ) : (
+                      <p className="text-sm text-[color:var(--color-muted)] italic">Not provided</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Attachments */}
+            {attachments.length > 0 && (
+              <div>
+                <p className="text-[11px] uppercase tracking-widest font-semibold text-[color:var(--color-eucalyptus)] mb-3">
+                  Attachments ({attachments.length})
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  {attachments.map((att) => (
+                    <a key={att.id} href={att.url} target="_blank" rel="noopener noreferrer"
+                      className="group relative block rounded-xl overflow-hidden border transition hover:shadow-lg"
+                      style={{ borderColor: 'var(--color-line)' }}>
+                      {att.mime_type?.startsWith('image/') ? (
+                        <div className="w-28 h-28 bg-white">
+                          <img src={att.url} alt={att.original_name}
+                            className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition flex items-center justify-center">
+                            <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition drop-shadow"
+                              fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                            </svg>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-28 h-28 bg-white flex flex-col items-center justify-center gap-2 px-2 group-hover:bg-[color:var(--color-paper-2)] transition">
+                          <svg className="w-8 h-8 text-[color:var(--color-clay)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                              d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                          </svg>
+                          <span className="text-[10px] text-center text-[color:var(--color-muted)] leading-tight break-all line-clamp-2 px-1">
+                            {att.original_name}
+                          </span>
+                        </div>
+                      )}
+                    </a>
+                  ))}
+                </div>
+                <p className="text-xs text-[color:var(--color-muted)] mt-2">Click any file to open or download.</p>
+              </div>
+            )}
+
+            {attachments.length === 0 && !contact && (
+              <p className="text-sm text-[color:var(--color-muted)] italic">No attachments or contact info provided.</p>
+            )}
+
+            <p className="text-[11px] text-[color:var(--color-eucalyptus)] opacity-70 pt-1">
+              🔒 This information is confidential and never shown to the public.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Expiry warning */}
       {showExpiry && (
@@ -234,6 +340,24 @@ export default function ComplaintPage() {
           </div>
         )}
       </div>
+
+      {/* Public attachments — images only, visible to everyone */}
+      {!isCompany && attachments.filter(a => a.mime_type?.startsWith('image/')).length > 0 && (
+        <div className="card p-6">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+            Attachments
+          </h3>
+          <div className="flex flex-wrap gap-3">
+            {attachments.filter(a => a.mime_type?.startsWith('image/')).map((att) => (
+              <a key={att.id} href={att.url} target="_blank" rel="noopener noreferrer"
+                className="block w-24 h-24 rounded-xl overflow-hidden border hover:shadow-md transition"
+                style={{ borderColor: 'var(--color-line)' }}>
+                <img src={att.url} alt="" className="w-full h-full object-cover" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Company response */}
       {hasResponse && (
