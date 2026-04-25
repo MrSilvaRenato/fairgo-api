@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import api from '../../lib/axios'
 import useAuthStore from '../../store/authStore'
 import Icon from '../../components/Icon'
@@ -17,6 +17,7 @@ const STATUS = {
 
 export default function ConsumerDashboardPage() {
   const { user } = useAuthStore()
+  const location = useLocation()
   const [data, setData]             = useState(null)
   const [loading, setLoading]       = useState(true)
   const [filter, setFilter]         = useState('all')
@@ -26,12 +27,8 @@ export default function ConsumerDashboardPage() {
     api.get('/dashboard/consumer').then((res) => setData(res.data)).finally(() => setLoading(false))
   }
 
-  useEffect(() => {
-    load()
-    const onVisible = () => { if (document.visibilityState === 'visible') load() }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [])
+  // Re-fetch every time the user navigates to this page (location.key changes on every navigation)
+  useEffect(() => { load() }, [location.key])
 
   const markRead = (complaintId) => {
     setData(prev => {

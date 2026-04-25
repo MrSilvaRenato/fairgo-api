@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import api from '../../lib/axios'
 import useAuthStore from '../../store/authStore'
 import CompanyResponseForm from '../../components/CompanyResponseForm'
@@ -19,6 +19,7 @@ const STATUS = {
 
 export default function CompanyDashboardPage() {
   const { fetchUser, user } = useAuthStore()
+  const location = useLocation()
   const [data, setData]           = useState(null)
   const [loading, setLoading]     = useState(true)
   const [apiError, setApiError]   = useState(false)
@@ -33,12 +34,10 @@ export default function CompanyDashboardPage() {
       .finally(() => setLoading(false))
   }
 
+  // Re-fetch every time the user navigates to this page (location.key changes on every navigation)
   useEffect(() => {
     fetchUser().finally(load)
-    const onVisible = () => { if (document.visibilityState === 'visible') load() }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [])
+  }, [location.key])
 
   const markRead = (complaintId) => {
     setData(prev => {
