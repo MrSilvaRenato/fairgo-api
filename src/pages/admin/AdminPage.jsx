@@ -747,6 +747,22 @@ function ClaimCard({ claim, onApprove, onReject }) {
             Submitted {new Date(claim.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </p>
 
+          {/* Audit history — shown for reviewed claims */}
+          {claim.status !== 'pending' && claim.reviewed_at && (
+            <div className="mt-3 pt-3 border-t text-xs space-y-1" style={{ borderColor: 'var(--color-line)' }}>
+              <p className="font-semibold text-[10px] uppercase tracking-wide text-[color:var(--color-muted)]">Review history</p>
+              <p className="text-[color:var(--color-ink-2)]">
+                <span className="font-medium">{claim.status === 'approved' ? '✅ Approved' : '❌ Rejected'}</span>
+                {' '}by <span className="font-medium">{claim.reviewer?.name ?? 'Admin'}</span>
+                {' '}on {new Date(claim.reviewed_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </p>
+              {claim.rejection_reason && (
+                <p className="text-[color:var(--color-clay)]">Reason: {claim.rejection_reason}</p>
+              )}
+              <p className="text-[color:var(--color-muted)] italic text-[10px]">Email notification sent to claimant.</p>
+            </div>
+          )}
+
           {claim.status === 'pending' && (
             <div className="flex gap-2 mt-3">
               <button

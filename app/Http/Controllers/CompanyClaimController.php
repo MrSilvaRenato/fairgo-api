@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\CompanyClaim;
 use App\Models\Subscription;
+use App\Notifications\ClaimApproved;
+use App\Notifications\ClaimRejected;
 use App\Services\AbnLookupService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -167,6 +169,14 @@ class CompanyClaimController extends Controller
             ]);
         }
 
+        // Notify claimant by email
+        try {
+            $notifyUser = $targetUser ?? \App\Models\User::where('email', $claim->claimant_email)->first();
+            if ($notifyUser) {
+                $notifyUser->notify(new ClaimApproved($claim->load('company')));
+            }
+        } catch (\Throwable) {}
+
         return response()->json([
             'message' => 'Claim approved. The user now has access to the company dashboard.',
             'claim'   => $claim->fresh('company', 'claimant'),
@@ -192,6 +202,14 @@ class CompanyClaimController extends Controller
             'reviewed_at'      => now(),
             'rejection_reason' => $request->input('rejection_reason'),
         ]);
+
+        // Notify claimant by email
+        try {
+            $notifyUser = \App\Models\User::where('email', $claim->claimant_email)->first();
+            if ($notifyUser) {
+                $notifyUser->notify(new ClaimRejected($claim->load('company')));
+            }
+        } catch (\Throwable) {}
 
         return response()->json(['message' => 'Claim rejected.', 'claim' => $claim->fresh()]);
     }
