@@ -239,9 +239,10 @@ export default function ComplaintFormPage() {
         navigate('/dashboard')
       }
     } catch (err) {
-      if (err.response?.status === 422) {
+      if (err.response?.status === 429) {
+        setErrors({ _limit: true })
+      } else if (err.response?.status === 422) {
         setErrors(err.response.data.errors ?? {})
-        // Go back to the step that has errors
         const e = err.response.data.errors ?? {}
         if (e.company_id || e.company_abn) setStep(1)
         else if (e.category || e.description) setStep(2)
@@ -274,6 +275,60 @@ export default function ComplaintFormPage() {
           <h2 className="font-display text-xl font-semibold">Verify your email first</h2>
           <EmailVerifyBanner />
           <a href="/dashboard" className="btn-secondary w-full justify-center flex">Back to dashboard</a>
+        </div>
+      </div>
+    )
+  }
+
+  if (errors._limit) {
+    // Calculate time until midnight reset
+    const now = new Date()
+    const midnight = new Date(now)
+    midnight.setHours(24, 0, 0, 0)
+    const hoursLeft = Math.ceil((midnight - now) / 3600000)
+
+    return (
+      <div className="max-w-xl mx-auto">
+        <div className="card p-8 text-center space-y-5">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto text-3xl"
+            style={{ background: 'var(--color-eucalyptus-3)' }}>
+            🛡️
+          </div>
+          <div>
+            <h2 className="font-display text-xl font-semibold text-[color:var(--color-ink)]">
+              Daily complaint limit reached
+            </h2>
+            <p className="text-sm text-[color:var(--color-muted)] mt-1">
+              Resets in approximately <strong>{hoursLeft} hour{hoursLeft !== 1 ? 's' : ''}</strong>
+            </p>
+          </div>
+
+          <div className="text-left rounded-2xl p-5 space-y-3 text-sm"
+            style={{ background: 'var(--color-paper-2)', border: '1px solid var(--color-line)' }}>
+            <p className="font-semibold text-[color:var(--color-ink)]">Why is there a daily limit?</p>
+            <p className="text-[color:var(--color-ink-2)] leading-relaxed">
+              Aus Fair Go uses AI moderation to verify complaints are genuine before they're published.
+              To protect businesses from coordinated spam and ensure every complaint receives proper
+              attention, we limit submissions to <strong>3 complaints per day</strong> per account.
+            </p>
+            <p className="text-[color:var(--color-ink-2)] leading-relaxed">
+              Your limit resets automatically at midnight each day. If you have an urgent matter
+              that can't wait, please contact us at{' '}
+              <a href="mailto:support@ausfairgo.com.au" className="underline font-medium"
+                style={{ color: 'var(--color-eucalyptus)' }}>
+                support@ausfairgo.com.au
+              </a>.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2 pt-1">
+            <button onClick={() => navigate('/dashboard')} className="btn-primary w-full justify-center flex">
+              View my complaints
+            </button>
+            <button onClick={() => setErrors({})} className="btn-secondary w-full justify-center flex">
+              Back
+            </button>
+          </div>
         </div>
       </div>
     )
