@@ -34,8 +34,9 @@ export default function HomePage() {
   const [open, setOpen] = useState(false)
   const searchRef = useRef(null)
 
-  const [complaints, setComplaints] = useState([])
-  const [loadingFeed, setLoadingFeed] = useState(true)
+  const [complaints, setComplaints]       = useState([])
+  const [complaintsTotal, setComplaintsTotal] = useState(0)
+  const [loadingFeed, setLoadingFeed]     = useState(true)
 
   const [leaderboard, setLeaderboard] = useState([])
   const [industries, setIndustries] = useState([])
@@ -99,8 +100,8 @@ export default function HomePage() {
   }, [query])
 
   useEffect(() => {
-    api.get('/complaints', { params: { per_page: 6 } })
-      .then((r) => setComplaints(r.data.data ?? []))
+    api.get('/complaints', { params: { per_page: 8 } })
+      .then((r) => { setComplaints(r.data.data ?? []); setComplaintsTotal(r.data.total ?? 0) })
       .catch(() => {})
       .finally(() => setLoadingFeed(false))
   }, [])
@@ -257,6 +258,23 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ═══════════════ STATS TRUST BAR ═══════════════ */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-16">
+        {[
+          { value: complaintsTotal > 0 ? complaintsTotal.toLocaleString('en-AU') : '…', label: 'Complaints on record' },
+          { value: claimedList.length > 0 ? `${claimedList.length}+` : '…',             label: 'Businesses monitored' },
+          { value: '7 days',                                                              label: 'Company response window' },
+          { value: 'Always free',                                                         label: 'For consumers' },
+        ].map((s) => (
+          <div key={s.label} className="card p-5 text-center">
+            <p className="font-display text-[22px] sm:text-[26px] font-semibold leading-none text-[color:var(--color-ink)] mb-1.5">
+              {s.value}
+            </p>
+            <p className="text-xs text-[color:var(--color-muted)] leading-snug">{s.label}</p>
+          </div>
+        ))}
+      </div>
 
       {/* ═══════════════ HOW IT WORKS ═══════════════ */}
       <section id="how-it-works" className="mb-16">
@@ -557,52 +575,107 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* ═══════════════ RECENT COMPLAINTS ═══════════════ */}
+      {/* ═══════════════ LIVE ACTIVITY FEED ═══════════════ */}
       <section id="recent-complaints" className="mb-16">
-        <div className="flex items-end justify-between mb-6">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <div className="caps">Live feed</div>
-            <h2 className="font-display text-[32px] font-semibold tracking-tight mt-1">
+            <div className="flex items-center gap-2 caps mb-1">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                  style={{ background: 'var(--color-eucalyptus)' }} />
+                <span className="relative inline-flex rounded-full h-2 w-2"
+                  style={{ background: 'var(--color-eucalyptus)' }} />
+              </span>
+              Live activity
+            </div>
+            <h2 className="font-display text-[28px] sm:text-[32px] font-semibold tracking-tight">
               Recent complaints
             </h2>
           </div>
-          <Link to="/complaints" className="hidden sm:inline-flex items-center gap-1 text-sm text-[color:var(--color-ink)] hover:underline underline-offset-4">
-            View all <Icon name="arrow-r" size={14} />
+          <Link to="/complaints"
+            className="text-sm font-medium flex items-center gap-1 hover:underline underline-offset-4 shrink-0"
+            style={{ color: 'var(--color-eucalyptus)' }}>
+            View all <Icon name="arrow-r" size={13} />
           </Link>
         </div>
 
-        {loadingFeed ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="card p-5 animate-pulse space-y-3">
-                <div className="flex gap-2">
-                  <div className="h-5 bg-[color:var(--color-paper-2)] rounded-full w-20" />
-                  <div className="h-5 bg-[color:var(--color-paper-2)] rounded-full w-16" />
+        <div className="card overflow-hidden">
+          {loadingFeed ? (
+            <div className="divide-y" style={{ borderColor: 'var(--color-line)' }}>
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-5 py-4 animate-pulse">
+                  <div className="w-2 h-2 rounded-full bg-[color:var(--color-paper-2)] shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3.5 bg-[color:var(--color-paper-2)] rounded w-2/3" />
+                    <div className="h-3 bg-[color:var(--color-paper-2)] rounded w-1/3" />
+                  </div>
+                  <div className="h-5 w-16 bg-[color:var(--color-paper-2)] rounded-full shrink-0" />
                 </div>
-                <div className="h-5 bg-[color:var(--color-paper-2)] rounded w-3/4" />
-                <div className="h-4 bg-[color:var(--color-paper-2)] rounded" />
-                <div className="h-4 bg-[color:var(--color-paper-2)] rounded w-4/5" />
+              ))}
+            </div>
+          ) : complaints.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="font-display italic-display text-[20px] mb-2 text-[color:var(--color-muted)]">No complaints yet.</div>
+              <p className="text-sm text-[color:var(--color-muted)] mb-5">Be the first to start the public record.</p>
+              <Link to={user ? '/complaints/new' : '/register'} className="btn btn-primary inline-flex">
+                Submit a complaint <Icon name="arrow-r" size={14} />
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div className="divide-y" style={{ borderColor: 'var(--color-line)' }}>
+                {complaints.map((c) => <ComplaintFeedRow key={c.id} complaint={c} />)}
               </div>
-            ))}
+              <div className="px-5 py-3 flex items-center justify-between"
+                style={{ background: 'var(--color-paper-2)', borderTop: '1px solid var(--color-line)' }}>
+                <p className="text-xs text-[color:var(--color-muted)]">
+                  {complaintsTotal > 0 && <>{complaintsTotal.toLocaleString('en-AU')} complaints on the public record</>}
+                </p>
+                <Link to="/complaints"
+                  className="text-xs font-medium flex items-center gap-1 hover:underline underline-offset-4"
+                  style={{ color: 'var(--color-eucalyptus)' }}>
+                  Browse all <Icon name="arrow-r" size={12} />
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* ═══════════════ FOR BUSINESS STRIP ═══════════════ */}
+      <section className="mb-16">
+        <div className="rounded-[24px] overflow-hidden flex flex-col sm:flex-row items-stretch"
+          style={{ border: '1px solid var(--color-eucalyptus)' }}>
+          {/* Left — text */}
+          <div className="flex-1 p-8 sm:p-10"
+            style={{ background: 'var(--color-eucalyptus-3)' }}>
+            <div className="caps mb-2" style={{ color: 'var(--color-eucalyptus)' }}>For businesses</div>
+            <h2 className="font-display text-[24px] sm:text-[30px] font-semibold tracking-tight mb-3">
+              Your reputation is already<br className="hidden sm:block" /> on the public record.
+            </h2>
+            <p className="text-sm text-[color:var(--color-ink-2)] leading-relaxed max-w-sm">
+              Claim your free dashboard, respond to complaints publicly, track your score, and show customers you take feedback seriously.
+            </p>
           </div>
-        ) : complaints.length === 0 ? (
-          <div className="card p-12 text-center">
-            <div className="font-display italic-display text-[22px] mb-2">No complaints yet.</div>
-            <p className="text-sm text-[color:var(--color-muted)] mb-5">Be the first to start the public record.</p>
-            <Link to={user ? '/complaints/new' : '/register'} className="btn btn-primary inline-flex">
-              Submit a complaint <Icon name="arrow-r" size={14} />
-            </Link>
+          {/* Right — CTAs */}
+          <div className="flex flex-col justify-center gap-3 px-8 py-8 sm:px-10 sm:border-l shrink-0"
+            style={{ background: 'var(--color-card)', borderColor: 'var(--color-eucalyptus)' }}>
+            <div>
+              <p className="text-xs font-semibold caps mb-3" style={{ color: 'var(--color-muted)' }}>Get started</p>
+              <div className="flex flex-col gap-2.5">
+                <Link to="/search" className="btn btn-primary justify-center sm:justify-start whitespace-nowrap">
+                  Find &amp; claim your business <Icon name="arrow-r" size={14} />
+                </Link>
+                <Link to="/companies/register" className="btn btn-secondary justify-center sm:justify-start whitespace-nowrap text-sm">
+                  Register a new business
+                </Link>
+              </div>
+            </div>
+            <p className="text-[11px] text-[color:var(--color-muted)]">
+              Free forever · No credit card · Takes 2 minutes
+            </p>
           </div>
-        ) : (
-          <>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {complaints.map((c) => <ComplaintCard key={c.id} complaint={c} />)}
-            </div>
-            <div className="text-center mt-5 sm:hidden">
-              <Link to="/complaints" className="btn btn-secondary text-sm">View all</Link>
-            </div>
-          </>
-        )}
+        </div>
       </section>
 
       {/* ═══════════════ VALUE PROPS ═══════════════ */}
@@ -659,35 +732,38 @@ export default function HomePage() {
   )
 }
 
-/* ─── Complaint card ─────────────────────────────── */
-function ComplaintCard({ complaint }) {
+/* ─── Complaint feed row (compact) ──────────────── */
+function ComplaintFeedRow({ complaint }) {
   const st = STATUS_STYLE[complaint.status] ?? STATUS_STYLE.open
   const daysAgo = Math.floor((Date.now() - new Date(complaint.created_at)) / 86400000)
-  const dateLabel = daysAgo === 0 ? 'today' : daysAgo === 1 ? '1 day ago' : `${daysAgo}d ago`
+  const dateLabel = daysAgo === 0 ? 'today' : daysAgo === 1 ? '1d ago' : `${daysAgo}d ago`
 
   return (
     <Link to={`/complaints/${complaint.id}`}
-      className="card p-5 flex flex-col gap-3 hover:-translate-y-0.5 hover:border-[color:var(--color-ink-2)] transition-all duration-200 group cursor-pointer">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full"
-              style={{ color: st.fg, background: st.bg }}>
-          <i className="w-1.5 h-1.5 rounded-full" style={{ background: st.dot }} />
-          {st.label}
-        </span>
-        <span className="text-xs text-[color:var(--color-muted)] capitalize">{complaint.category}</span>
+      className=”flex items-center gap-3 px-5 py-3.5 hover:bg-[color:var(--color-paper-2)] transition group”>
+      {/* Status dot */}
+      <span className=”w-2 h-2 rounded-full shrink-0” style={{ background: st.dot }} />
+
+      {/* Title + meta */}
+      <div className=”flex-1 min-w-0”>
+        <p className=”text-sm font-medium text-[color:var(--color-ink)] truncate group-hover:underline underline-offset-4 decoration-[color:var(--color-ink)]/30 leading-snug”>
+          {complaint.title}
+        </p>
+        <p className=”text-xs text-[color:var(--color-muted)] mt-0.5 truncate”>
+          vs <span className=”font-medium text-[color:var(--color-ink-2)]”>{complaint.company?.name}</span>
+          <span className=”mx-1.5 opacity-30”>·</span>
+          <span className=”capitalize”>{complaint.category}</span>
+        </p>
       </div>
-      <h3 className="font-display text-[17px] font-semibold text-[color:var(--color-ink)] line-clamp-2 group-hover:underline decoration-[color:var(--color-ink)]/30 underline-offset-4 leading-snug">
-        {complaint.title}
-      </h3>
-      <p className="text-xs text-[color:var(--color-ink-2)] line-clamp-2 leading-relaxed">
-        <span className="italic-display">“</span>{complaint.description}<span className="italic-display">”</span>
-      </p>
-      <div className="flex items-center justify-between pt-3 mt-auto border-t hairline-2 text-xs text-[color:var(--color-muted)]">
-        <span>
-          vs <span className="font-medium text-[color:var(--color-ink)]">{complaint.company?.name}</span>
-        </span>
-        <span className="font-mono">{dateLabel}</span>
-      </div>
+
+      {/* Status label — hidden on smallest screens */}
+      <span className=”hidden sm:inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap”
+        style={{ color: st.fg, background: st.bg }}>
+        {st.label}
+      </span>
+
+      {/* Date */}
+      <span className=”text-[11px] text-[color:var(--color-muted)] font-mono shrink-0”>{dateLabel}</span>
     </Link>
   )
 }
