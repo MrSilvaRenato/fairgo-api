@@ -23,9 +23,15 @@ class DeleteAccountController extends Controller
             ]);
         }
 
-        // Anonymise complaints — keep them on the platform but strip identity
+        // Anonymise complaints — keep them on the platform but strip identity.
+        // Store a one-way SHA-256 hash of the user's email (salted) so admins
+        // can later verify distinct real users if a company disputes anonymous complaints.
+        // The hash cannot be reversed to identify the user.
+        $hash = hash('sha256', config('app.key') . '|' . strtolower($user->email));
+
         \App\Models\Complaint::where('consumer_id', $user->id)->update([
-            'consumer_id' => null,
+            'consumer_id'    => null,
+            'anonymous_hash' => $hash,
         ]);
 
         // If company admin — unlink and unmark the company as claimed

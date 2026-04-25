@@ -28,6 +28,7 @@ class Complaint extends Model
         'reference_number',
         'amount_involved',
         'contact_attempted',
+        'anonymous_hash',
     ];
 
     protected function casts(): array
