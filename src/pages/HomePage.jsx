@@ -77,7 +77,7 @@ export default function HomePage() {
   useEffect(() => {
     setLoadingBoard(true)
     api.get('/leaderboard', { params: { industry: activeIndustry } })
-      .then((r) => { setLeaderboard(r.data.companies); setIndustries(r.data.industries) })
+      .then((r) => { setLeaderboard(r.data.companies ?? []); setIndustries(r.data.industries ?? []) })
       .catch(() => {})
       .finally(() => setLoadingBoard(false))
   }, [activeIndustry])
@@ -91,7 +91,7 @@ export default function HomePage() {
 
   const displayList = useMemo(() => {
     // Never surface not_rated companies in the leaderboard — they don't have enough data
-    const rated = leaderboard.filter((c) => c.badge !== 'not_rated')
+    const rated = (leaderboard ?? []).filter((c) => c.badge !== 'not_rated')
     return boardMode === 'best' ? rated : [...rated].reverse()
   }, [boardMode, leaderboard])
 
