@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import api from '../../lib/axios'
 import useAuthStore from '../../store/authStore'
 import CompanyResponseForm from '../../components/CompanyResponseForm'
+import CompanyLogo from '../../components/CompanyLogo'
 import useSeoMeta from '../../hooks/useSeoMeta'
 
 const STATUS_CONFIG = {
@@ -235,10 +236,7 @@ export default function ComplaintPage() {
         {/* Company + status row */}
         <div className="flex items-start justify-between gap-3 mb-5">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xl font-bold"
-              style={{ background: 'var(--color-eucalyptus-3)', color: 'var(--color-eucalyptus)' }}>
-              {CATEGORY_ICONS[complaint.category] ?? '📝'}
-            </div>
+            <CompanyLogo company={complaint.company} size="md" />
             <div className="min-w-0">
               <Link to={`/companies/${complaint.company?.slug}`}
                 className="font-semibold text-sm hover:underline transition truncate block"
