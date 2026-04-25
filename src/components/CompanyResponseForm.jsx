@@ -429,14 +429,22 @@ function toneStyle(tone) {
 }
 
 /* ── Main component ───────────────────────────────────────────────────────── */
-export default function CompanyResponseForm({ complaintId, consumerName = '', refNumber = '', companyName = '', category = 'other', onSubmitted }) {
+export default function CompanyResponseForm({ complaintId, consumerName = '', refNumber = '', companyName = '', category = 'other', complaintDescription = '', onSubmitted }) {
   const [content,       setContent]       = useState('')
   const [loading,       setLoading]       = useState(false)
   const [error,         setError]         = useState('')
   const [panelOpen,     setPanelOpen]     = useState(false)
   const [usedTemplate,  setUsedTemplate]  = useState(null)
   const [activeTab,     setActiveTab]     = useState('category') // 'category' | 'universal'
+
+  // AI state
+  const [aiExpanded,    setAiExpanded]    = useState(false)
+  const [aiPrompt,      setAiPrompt]      = useState('')
+  const [aiLoading,     setAiLoading]     = useState(false)
+  const [aiError,       setAiError]       = useState('')
+
   const textareaRef = useRef(null)
+  const aiInputRef  = useRef(null)
 
 
   const categoryTemplates = CATEGORY_TEMPLATES[category] ?? CATEGORY_TEMPLATES.other
@@ -462,7 +470,68 @@ export default function CompanyResponseForm({ complaintId, consumerName = '', re
 
   const handleContentChange = (e) => {
     setContent(e.target.value)
-    if (usedTemplate) setUsedTemplate('modified') // mark as modified
+    if (usedTemplate) setUsedTemplate('modified')
+  }
+
+  const generateAiResponse = async () => {
+    if (!aiPrompt.trim() || aiLoading) return
+    setAiError('')
+    setAiLoading(true)
+    setContent('')
+    setUsedTemplate('ai')
+    setPanelOpen(false)
+    setTimeout(() => textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80)
+
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch('/api/ai/draft-response', {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Accept':        'text/event-stream',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          prompt:        aiPrompt,
+          category,
+          consumer_name: consumerName,
+          ref_number:    refNumber,
+          company_name:  companyName,
+          description:   complaintDescription,
+        }),
+      })
+
+      if (!res.ok) { setAiError('AI generation failed. Please try again.'); setAiLoading(false); return }
+
+      const reader  = res.body.getReader()
+      const decoder = new TextDecoder()
+      let   buffer  = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        // Flush complete SSE lines
+        let nl
+        while ((nl = buffer.indexOf('\n')) !== -1) {
+          const line = buffer.slice(0, nl).trim()
+          buffer = buffer.slice(nl + 1)
+          if (!line.startsWith('data: ')) continue
+          const payload = line.slice(6)
+          if (payload === '[DONE]') { setAiLoading(false); return }
+          try {
+            const { text, error: err } = JSON.parse(payload)
+            if (err) { setAiError(err); setAiLoading(false); return }
+            if (text) setContent(prev => prev + text)
+          } catch {}
+        }
+      }
+    } catch {
+      setAiError('Connection error. Please try again.')
+    } finally {
+      setAiLoading(false)
+    }
   }
 
   const submit = async (e) => {
@@ -591,6 +660,83 @@ export default function CompanyResponseForm({ complaintId, consumerName = '', re
             })}
           </div>
 
+          {/* ── AI card ── */}
+          <div className="rounded-xl overflow-hidden" style={{ border: '2px solid #7C3AED' }}>
+            {!aiExpanded ? (
+              <button
+                type="button"
+                onClick={() => { setAiExpanded(true); setTimeout(() => aiInputRef.current?.focus(), 80) }}
+                className="w-full text-left px-4 py-3 flex items-center gap-3 transition hover:opacity-90"
+                style={{ background: 'linear-gradient(135deg, #F5F3FF 0%, #EEF2FF 100%)' }}
+              >
+                <span className="text-lg shrink-0">✨</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full"
+                      style={{ background: '#7C3AED', color: '#fff' }}>AI</span>
+                    <span className="text-xs font-semibold" style={{ color: '#4C1D95' }}>Use AI to respond</span>
+                  </div>
+                  <p className="text-[11px]" style={{ color: '#6D28D9' }}>Describe your intent — AI writes the full response</p>
+                </div>
+                <svg className="w-4 h-4 shrink-0" style={{ color: '#7C3AED' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+              </button>
+            ) : (
+              <div className="p-4 space-y-3" style={{ background: 'linear-gradient(135deg, #F5F3FF 0%, #EEF2FF 100%)' }}>
+                <div className="flex items-center gap-2">
+                  <span className="text-base">✨</span>
+                  <span className="text-sm font-semibold" style={{ color: '#4C1D95' }}>Use AI to respond</span>
+                  <button type="button" onClick={() => setAiExpanded(false)}
+                    className="ml-auto text-xs font-medium transition hover:underline" style={{ color: '#7C3AED' }}>
+                    Cancel
+                  </button>
+                </div>
+                <textarea
+                  ref={aiInputRef}
+                  value={aiPrompt}
+                  onChange={e => setAiPrompt(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) generateAiResponse() }}
+                  rows={2}
+                  placeholder="e.g. Apologise and offer a full refund… or Explain the charge was valid and offer a plan review…"
+                  className="input text-sm w-full resize-none"
+                  style={{ borderColor: '#C4B5FD' }}
+                  disabled={aiLoading}
+                />
+                {aiError && <p className="text-xs" style={{ color: 'var(--color-clay)' }}>{aiError}</p>}
+                <button
+                  type="button"
+                  onClick={generateAiResponse}
+                  disabled={aiLoading || !aiPrompt.trim()}
+                  className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-2 rounded-xl transition"
+                  style={{
+                    background: aiLoading || !aiPrompt.trim() ? '#C4B5FD' : '#7C3AED',
+                    color: '#fff',
+                    cursor: aiLoading || !aiPrompt.trim() ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {aiLoading ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                      Generating…
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                      </svg>
+                      Generate response
+                      <span className="text-[10px] opacity-60 ml-1">⌘↵</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Pre-fill info notice */}
           <div className="flex items-center gap-2 text-[11px]" style={{ color: 'var(--color-eucalyptus)' }}>
             <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -606,8 +752,35 @@ export default function CompanyResponseForm({ complaintId, consumerName = '', re
       {/* ── Response textarea ── */}
       <div className="p-5 space-y-3" style={{ background: 'var(--color-card)' }}>
 
+        {/* AI generating indicator */}
+        {aiLoading && (
+          <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl"
+            style={{ background: '#F5F3FF', border: '1px solid #C4B5FD', color: '#6D28D9' }}>
+            <svg className="w-3.5 h-3.5 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            <strong>AI is writing your response…</strong> Review and edit before submitting.
+          </div>
+        )}
+
+        {/* AI generated indicator */}
+        {usedTemplate === 'ai' && !aiLoading && content && (
+          <div className="flex items-center justify-between gap-3 text-xs px-3 py-2 rounded-xl"
+            style={{ background: '#F5F3FF', border: '1px solid #C4B5FD', color: '#6D28D9' }}>
+            <span className="flex items-center gap-1.5">
+              <span>✨</span>
+              <strong>AI-generated</strong> — review carefully and personalise before submitting.
+            </span>
+            <button type="button" onClick={clearTemplate}
+              className="text-[10px] font-semibold shrink-0 transition hover:opacity-70" style={{ color: '#7C3AED' }}>
+              Clear
+            </button>
+          </div>
+        )}
+
         {/* Template applied indicator */}
-        {usedTemplate && usedTemplate !== 'modified' && (
+        {usedTemplate && usedTemplate !== 'modified' && usedTemplate !== 'ai' && !aiLoading && (
           <div className="flex items-center justify-between gap-3 text-xs px-3 py-2 rounded-xl"
             style={{ background: 'var(--color-eucalyptus-3)', border: '1px solid color-mix(in srgb, var(--color-eucalyptus) 20%, transparent)' }}>
             <span className="flex items-center gap-1.5" style={{ color: 'var(--color-eucalyptus)' }}>

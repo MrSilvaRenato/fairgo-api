@@ -496,6 +496,7 @@ export default function ComplaintPage() {
           refNumber={complaint.reference_number || ''}
           companyName={complaint.company?.name || ''}
           category={complaint.category || 'other'}
+          complaintDescription={complaint.description || ''}
           onSubmitted={response => setComplaint(c => ({ ...c, response, status: 'responded' }))}
         />
       )}

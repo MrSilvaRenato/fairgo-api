@@ -390,6 +390,7 @@ function ComplaintCard({ complaint: c, company, respondingTo, setRespondingTo, o
             refNumber={c.reference_number || ''}
             companyName={c.company?.name || company?.name || ''}
             category={c.category || 'other'}
+            complaintDescription={c.description || ''}
             onSubmitted={(response) => onResponseSubmitted(c.id, response)}
           />
         </div>

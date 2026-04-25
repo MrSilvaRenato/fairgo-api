@@ -98,6 +98,9 @@ Route::middleware(['auth:sanctum', 'requires.plan:standard,pro'])->group(functio
     Route::get('dashboard/analytics', CompanyAnalyticsController::class);
 });
 
+// AI draft response (company admins only)
+Route::middleware('auth:sanctum')->post('ai/draft-response', [App\Http\Controllers\AiDraftController::class, 'draft']);
+
 // Billing
 Route::post('billing/webhook', [BillingController::class, 'webhook']);
 Route::middleware('auth:sanctum')->group(function () {
