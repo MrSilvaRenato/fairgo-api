@@ -182,7 +182,15 @@ export default function ComplaintFormPage() {
   const step2Valid = form.category && form.description.trim().length >= 20
 
   /* ── Navigation ── */
-  const goNext = () => { setErrors({}); setStep(s => Math.min(s + 1, TOTAL_STEPS)) }
+  const goNext = () => {
+    setErrors({})
+    // Pre-fill title from first sentence of description when moving to step 3
+    if (step === 2 && !form.title.trim()) {
+      const suggested = form.description.trim().split(/[.!?\n]/)[0].slice(0, 100).trim()
+      if (suggested) setForm(f => ({ ...f, title: suggested }))
+    }
+    setStep(s => Math.min(s + 1, TOTAL_STEPS))
+  }
   const goBack = () => { setErrors({}); setStep(s => Math.max(s - 1, 1)) }
 
   /* ── Submit ── */
@@ -195,12 +203,9 @@ export default function ComplaintFormPage() {
       return
     }
 
-    // Auto-generate title if blank
-    const title = form.title.trim() || form.description.trim().split(/[.!?\n]/)[0].slice(0, 100)
-
     setLoading(true)
     try {
-      const fields = { ...form, title }
+      const fields = { ...form }
       if (!fields.company_id && unregName && unregAbn) {
         fields.company_name = unregName
         fields.company_abn  = unregAbn.replace(/\s+/g, '')
@@ -687,6 +692,25 @@ export default function ComplaintFormPage() {
                   Check everything looks right before we notify {selectedCompany?.name ?? 'the company'}.
                 </p>
               </div>
+            </div>
+
+            <hr style={{ borderColor: 'var(--color-line)' }} />
+
+            {/* Title */}
+            <div>
+              <label className="block text-sm font-semibold text-[color:var(--color-ink)] mb-1.5">
+                Complaint title <span className="text-[color:var(--color-clay)]">*</span>
+                <span className="text-xs font-normal text-[color:var(--color-muted)] ml-2">— a short summary shown publicly</span>
+              </label>
+              <input
+                value={form.title}
+                onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                placeholder="e.g. Charged twice and no refund after 3 weeks"
+                className="input"
+                maxLength={150}
+              />
+              <p className="text-xs text-[color:var(--color-muted)] mt-1 text-right tabular-nums">{form.title.length}/150</p>
+              {errors.title && <p className="text-[color:var(--color-clay)] text-xs mt-1">{errors.title[0]}</p>}
             </div>
 
             <hr style={{ borderColor: 'var(--color-line)' }} />
