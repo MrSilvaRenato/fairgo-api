@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import api from '../../lib/axios'
 import useAuthStore from '../../store/authStore'
 import Icon from '../../components/Icon'
+import AiReviewedBadge from '../../components/AiReviewedBadge'
 import useSeoMeta from '../../hooks/useSeoMeta'
 
 /* ── constants ─────────────────────────────────────────────── */
@@ -309,7 +310,8 @@ function ComplaintRow({ complaint }) {
         </div>
       </div>
 
-      <div className="hidden sm:flex items-center gap-3 shrink-0">
+      <div className="hidden sm:flex items-center gap-2 shrink-0">
+        <AiReviewedBadge moderation_status={complaint.moderation_status} size="xs" />
         <span className="inline-flex items-center text-[10px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap"
           style={{ color: st.fg, background: st.bg }}>
           {st.label}

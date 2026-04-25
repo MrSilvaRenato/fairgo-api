@@ -4,6 +4,7 @@ import api from '../lib/axios'
 import useAuthStore from '../store/authStore'
 import CompanyLogo from '../components/CompanyLogo'
 import Icon from '../components/Icon'
+import AiReviewedBadge from '../components/AiReviewedBadge'
 import { BAND } from '../components/ScoreMeter'
 import useSeoMeta from '../hooks/useSeoMeta'
 
@@ -1027,11 +1028,14 @@ function ComplaintFeedRow({ complaint }) {
         </p>
       </div>
 
-      {/* Status label — hidden on smallest screens */}
-      <span className="hidden sm:inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
-        style={{ color: st.fg, background: st.bg }}>
-        {st.label}
-      </span>
+      {/* AI Reviewed badge + Status label — hidden on smallest screens */}
+      <div className="hidden sm:flex items-center gap-2 shrink-0">
+        <AiReviewedBadge moderation_status={complaint.moderation_status} size="xs" />
+        <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
+          style={{ color: st.fg, background: st.bg }}>
+          {st.label}
+        </span>
+      </div>
 
       {/* Date */}
       <span className="text-[11px] text-[color:var(--color-muted)] font-mono shrink-0">{dateLabel}</span>
