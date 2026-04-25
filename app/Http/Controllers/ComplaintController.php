@@ -177,8 +177,8 @@ class ComplaintController extends Controller
 
         $data = $complaint->toArray();
 
-        // Private consumer contact details — only for the owning company
-        if ($isCompany) {
+        // Private consumer contact details — for the owning company and admins
+        if ($isCompany || $isAdmin) {
             $consumer = $complaint->consumer()->first(['id', 'name', 'email', 'phone']);
             $data['consumer_contact'] = [
                 'name'  => $consumer->name,

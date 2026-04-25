@@ -142,7 +142,7 @@ export default function ComplaintPage() {
       </div>
 
       {/* ── Company private panel ── */}
-      {isCompany && (
+      {(isCompany || (user?.role === 'admin' && (complaint.consumer_contact || attachments.length > 0))) && (
         <div className="rounded-2xl overflow-hidden border-2"
           style={{ borderColor: 'var(--color-eucalyptus)' }}>
 
