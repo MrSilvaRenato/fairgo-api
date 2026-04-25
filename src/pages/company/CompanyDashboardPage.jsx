@@ -388,7 +388,7 @@ function ComplaintCard({ complaint: c, company, respondingTo, setRespondingTo, o
             complaintId={c.id}
             consumerName={c.consumer?.name || ''}
             refNumber={c.reference_number || ''}
-            companyName={c.company?.name || user?.company?.name || ''}
+            companyName={c.company?.name || company?.name || ''}
             category={c.category || 'other'}
             onSubmitted={(response) => onResponseSubmitted(c.id, response)}
           />
