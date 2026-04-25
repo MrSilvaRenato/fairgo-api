@@ -2,6 +2,17 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import useAuthStore from '../../store/authStore'
 
+function LogoMark({ size = 48 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
+      <circle cx="20" cy="20" r="19" fill="var(--color-eucalyptus)" />
+      <path d="M12 26c6-2 10-6 14-14-1 9-5 14-14 14Z" fill="var(--color-ochre-2)" opacity="0.95" />
+      <path d="M12 26c6-2 10-6 14-14-1 9-5 14-14 14Z" fill="var(--color-paper)" opacity="0.9" transform="translate(-2,-2)" />
+      <path d="M8 30h24" stroke="var(--color-paper)" strokeWidth="1.2" strokeLinecap="round" opacity="0.7" />
+    </svg>
+  )
+}
+
 const DRAFT_KEY = 'fairgo_complaint_draft'
 const MAX_ATTEMPTS = 5
 const WARN_AFTER   = 3  // show reset prompt after this many failures
@@ -88,8 +99,8 @@ export default function LoginPage() {
         )}
 
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-lg">FG</span>
+          <div className="flex justify-center mb-4">
+            <LogoMark size={52} />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">
             {hasDraft ? 'Sign in to continue' : 'Welcome back'}

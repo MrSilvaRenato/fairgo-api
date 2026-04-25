@@ -86,32 +86,81 @@
 
   /* Buttons — pill, ink-first (warm Australian) */
   .btn {
-    @apply inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium;
+    @apply inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium cursor-pointer;
     border-radius: 999px;
     line-height: 1;
-    transition: transform .15s ease, background .2s, color .2s, border-color .2s;
+    transition: transform .15s ease, background .18s, color .18s, border-color .18s, box-shadow .18s;
+    border: 1px solid transparent;
   }
-  .btn:active { transform: translateY(1px); }
+  .btn:active { transform: translateY(1px) scale(.98); }
+  .btn:disabled, .btn[disabled] { opacity: .45; cursor: not-allowed; pointer-events: none; }
+
+  /* Primary — eucalyptus green, subtle glow on hover */
   .btn-primary {
-    background: var(--color-ink); color: var(--color-paper);
+    @apply inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium cursor-pointer;
+    border-radius: 999px;
+    line-height: 1;
+    border: 1px solid transparent;
+    transition: transform .15s ease, background .18s, box-shadow .18s;
+    background: var(--color-eucalyptus);
+    color: var(--color-paper);
+    box-shadow: 0 1px 3px rgba(0,0,0,.18), 0 1px 2px rgba(47,93,76,.25);
   }
-  .btn-primary:hover { background: var(--color-eucalyptus); }
-  .btn-primary:disabled { opacity:.4; cursor:not-allowed; }
+  .btn-primary:hover {
+    background: var(--color-eucalyptus-2);
+    box-shadow: 0 4px 12px rgba(47,93,76,.30), 0 1px 3px rgba(0,0,0,.12);
+    transform: translateY(-1px);
+  }
+  .btn-primary:active { transform: translateY(1px) scale(.98); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+  .btn-primary:disabled, .btn-primary[disabled] { opacity: .45; cursor: not-allowed; pointer-events: none; transform: none; box-shadow: none; }
 
+  /* Secondary — outlined */
   .btn-secondary {
-    background: transparent; color: var(--color-ink);
-    border: 1px solid var(--color-ink);
+    @apply inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium cursor-pointer;
+    border-radius: 999px;
+    line-height: 1;
+    transition: transform .15s ease, background .18s, color .18s, border-color .18s, box-shadow .18s;
+    background: transparent;
+    color: var(--color-ink);
+    border: 1.5px solid var(--color-ink);
   }
-  .btn-secondary:hover { background: var(--color-ink); color: var(--color-paper); }
+  .btn-secondary:hover {
+    background: var(--color-ink);
+    color: var(--color-paper);
+    box-shadow: 0 3px 10px rgba(31,42,34,.18);
+    transform: translateY(-1px);
+  }
+  .btn-secondary:active { transform: translateY(1px) scale(.98); }
+  .btn-secondary:disabled, .btn-secondary[disabled] { opacity: .45; cursor: not-allowed; pointer-events: none; }
 
+  /* Danger — outlined red */
   .btn-danger {
-    background: transparent; color: var(--color-clay);
-    border: 1px solid var(--color-clay);
+    @apply inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium cursor-pointer;
+    border-radius: 999px;
+    line-height: 1;
+    transition: transform .15s ease, background .18s, color .18s, box-shadow .18s;
+    background: transparent;
+    color: var(--color-clay);
+    border: 1.5px solid var(--color-clay);
   }
-  .btn-danger:hover { background: var(--color-clay); color: var(--color-paper); }
+  .btn-danger:hover {
+    background: var(--color-clay);
+    color: var(--color-paper);
+    box-shadow: 0 3px 10px rgba(165,74,44,.22);
+    transform: translateY(-1px);
+  }
+  .btn-danger:active { transform: translateY(1px) scale(.98); }
+  .btn-danger:disabled, .btn-danger[disabled] { opacity: .45; cursor: not-allowed; pointer-events: none; }
 
-  .btn-ghost { color: var(--color-ink-2); background: transparent; }
-  .btn-ghost:hover { color: var(--color-ink); }
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium cursor-pointer;
+    border-radius: 999px;
+    line-height: 1;
+    border: 1px solid transparent;
+    transition: color .18s, background .18s;
+    color: var(--color-ink-2); background: transparent;
+  }
+  .btn-ghost:hover { color: var(--color-ink); background: var(--color-paper-2); }
 
   /* Chips (filter pills) */
   .chip {
