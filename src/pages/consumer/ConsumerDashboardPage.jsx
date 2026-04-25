@@ -17,9 +17,10 @@ const STATUS = {
 
 export default function ConsumerDashboardPage() {
   const { user } = useAuthStore()
-  const [data, setData]       = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [filter, setFilter]   = useState('all')
+  const [data, setData]             = useState(null)
+  const [loading, setLoading]       = useState(true)
+  const [filter, setFilter]         = useState('all')
+  const [showDelete, setShowDelete] = useState(false)
 
   const load = () => {
     api.get('/dashboard/consumer').then((res) => setData(res.data)).finally(() => setLoading(false))
@@ -32,7 +33,6 @@ export default function ConsumerDashboardPage() {
 
   const { stats, complaints, claims = [] } = data
   const filtered = filter === 'all' ? complaints : complaints.filter((c) => c.status === filter)
-  const [showDelete, setShowDelete] = useState(false)
 
   const needsAction  = complaints.filter((c) => c.status === 'responded').length
   const totalUnread  = stats.unread ?? 0
