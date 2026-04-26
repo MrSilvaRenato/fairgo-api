@@ -251,10 +251,30 @@ export default function ComplaintPage() {
                 style={{ color: 'var(--color-eucalyptus)' }}>
                 {complaint.company?.name}
               </Link>
-              <span className="inline-flex items-center gap-1 text-xs font-medium mt-1 px-2 py-0.5 rounded-full capitalize"
-                style={{ background: 'var(--color-paper-2)', color: 'var(--color-ink-2)', border: '1px solid var(--color-line)' }}>
-                {CATEGORY_ICONS[complaint.category]} {complaint.category?.replace('_', ' ')}
-              </span>
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full capitalize"
+                  style={{ background: 'var(--color-paper-2)', color: 'var(--color-ink-2)', border: '1px solid var(--color-line)' }}>
+                  {CATEGORY_ICONS[complaint.category]} {complaint.category?.replace('_', ' ')}
+                </span>
+                {complaint.company?.abn_verified && complaint.company?.claimed && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ color: '#3B4B7A', background: '#DAE0EE' }}>
+                    <Icon name="verified" size={10} /> ABN Verified
+                  </span>
+                )}
+                {complaint.company?.claimed && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ color: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
+                    ✅ Actively Managed
+                  </span>
+                )}
+                {complaint.company?.verified_badge && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ color: '#6B3FA0', background: '#EDE7F6' }}>
+                    <Icon name="verified" size={10} /> Verified
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <span className={`badge ${status.badge} shrink-0`}>{status.label}</span>
