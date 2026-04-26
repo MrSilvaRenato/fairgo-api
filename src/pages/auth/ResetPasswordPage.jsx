@@ -2,6 +2,37 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../lib/axios'
 
+function passwordScore(pw) {
+  if (!pw) return 0
+  let score = 0
+  if (pw.length >= 8)  score++
+  if (pw.length >= 12) score++
+  if (/[A-Z]/.test(pw) || /[0-9]/.test(pw)) score++
+  if (/[^A-Za-z0-9]/.test(pw) || (pw.length >= 8 && /[A-Z]/.test(pw) && /[0-9]/.test(pw))) score++
+  return Math.min(score, 4)
+}
+const STRENGTH_LABEL = ['', 'Weak', 'Fair', 'Good', 'Strong']
+const STRENGTH_COLOR = ['', '#ef4444', '#f59e0b', '#3b82f6', '#10b981']
+
+function PasswordStrength({ password }) {
+  const score = passwordScore(password)
+  if (!password) return null
+  return (
+    <div className="mt-2 space-y-1">
+      <div className="flex gap-1">
+        {[1,2,3,4].map(n => (
+          <div key={n} className="h-1 flex-1 rounded-full transition-all duration-300"
+            style={{ background: n <= score ? STRENGTH_COLOR[score] : 'var(--color-line)' }} />
+        ))}
+      </div>
+      <p className="text-xs font-medium" style={{ color: STRENGTH_COLOR[score] }}>
+        {STRENGTH_LABEL[score]}
+        {score < 2 && ' — try adding numbers or uppercase letters'}
+      </p>
+    </div>
+  )
+}
+
 export default function ResetPasswordPage() {
   const [searchParams]  = useSearchParams()
   const navigate        = useNavigate()
@@ -99,6 +130,7 @@ export default function ResetPasswordPage() {
                   placeholder="Minimum 8 characters"
                   autoComplete="new-password"
                 />
+                <PasswordStrength password={form.password} />
               </Field>
 
               <Field label="Confirm new password" error={errors.password_confirmation?.[0]}>

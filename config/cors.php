@@ -6,7 +6,11 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:5173'],
+    'allowed_origins' => [
+        'http://localhost:5173',
+        'https://ausfairgo.com.au',
+        'https://www.ausfairgo.com.au',
+    ],
 
     'allowed_origins_patterns' => [],
 
