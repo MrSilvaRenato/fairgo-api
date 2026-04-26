@@ -759,7 +759,7 @@ export default function HomePage() {
                     {/* Gauge + stats */}
                     <div className="flex items-center gap-3">
                       <div className="shrink-0">
-                        <ScoreMeter score={c.score} band={c.badge} size={110} />
+                        <ScoreMeter score={c.score} band={c.badge} size={110} hideLabel />
                       </div>
                       <div className="flex-1 space-y-3">
                         <div>
