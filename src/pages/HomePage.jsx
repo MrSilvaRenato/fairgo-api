@@ -515,9 +515,19 @@ export default function HomePage() {
             ))}
           </div>
         ) : displayedCompanies.length === 0 ? (
-          <div className="card p-10 text-center">
+          <div className="card p-8 text-center">
             <p className="font-display italic-display text-[20px] mb-1">No businesses found.</p>
-            <p className="text-sm text-[color:var(--color-muted)]">Try a different search term.</p>
+            <p className="text-sm mb-5" style={{ color: 'var(--color-muted)' }}>
+              <span className="font-medium" style={{ color: 'var(--color-ink)' }}>"{managedQuery}"</span> isn't on Aus Fair Go yet.
+            </p>
+            <Link
+              to={`/complaints/new?company_name=${encodeURIComponent(managedQuery)}`}
+              className="btn btn-primary inline-flex items-center gap-2 text-sm px-5 py-2.5">
+              File a complaint against "{managedQuery}" <Icon name="arrow-r" size={14} />
+            </Link>
+            <p className="text-xs mt-4" style={{ color: 'var(--color-muted)' }}>
+              You'll be asked to provide their ABN to verify the business.
+            </p>
           </div>
         ) : (
           <>

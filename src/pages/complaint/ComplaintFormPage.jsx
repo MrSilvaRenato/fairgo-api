@@ -121,6 +121,15 @@ export default function ComplaintFormPage() {
     }).catch(() => {})
   }, [])
 
+  /* ── Pre-filled company name from URL (unregistered path) ── */
+  useEffect(() => {
+    const name = searchParams.get('company_name')
+    if (!name || selectedCompany) return
+    setCompanySearch(name)
+    setUnregName(name)
+    setShowUnregistered(true)
+  }, [])
+
   /* ── Company search ── */
   const searchTimeout = useRef(null)
   const handleCompanySearch = (q) => {
