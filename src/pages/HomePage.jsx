@@ -964,7 +964,7 @@ export default function HomePage() {
                 <Link to="/search" className="btn btn-primary justify-center sm:justify-start whitespace-nowrap">
                   Find &amp; claim your business <Icon name="arrow-r" size={14} />
                 </Link>
-                <Link to="/companies/register" className="btn btn-secondary justify-center sm:justify-start whitespace-nowrap text-sm">
+                <Link to="/register?role=business" className="btn btn-secondary justify-center sm:justify-start whitespace-nowrap text-sm">
                   Register a new business
                 </Link>
               </div>
