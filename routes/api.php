@@ -90,6 +90,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('dashboard/consumer',  ConsumerDashboardController::class);
     Route::get('dashboard/company',   CompanyDashboardController::class);
     Route::patch('company/settings',  [CompanyController::class, 'updateSettings']);
+    Route::post('company/logo',       [CompanyController::class, 'uploadLogo']);
     Route::post('company/abn/verify', [AbnVerificationController::class, 'verify']);
 });
 

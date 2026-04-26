@@ -7,6 +7,7 @@ use App\Models\Complaint;
 use App\Models\Subscription;
 use App\Services\AbnLookupService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class CompanyController extends Controller
@@ -118,6 +119,34 @@ class CompanyController extends Controller
         $company->update($data);
 
         return response()->json($company->fresh());
+    }
+
+    public function uploadLogo(Request $request)
+    {
+        $company = $request->user()->company;
+
+        if (!$company) {
+            return response()->json(['message' => 'No company found.'], 404);
+        }
+
+        $request->validate([
+            'logo' => 'required|file|mimes:jpeg,jpg,png,gif,webp,svg|max:2048',
+        ]);
+
+        // Delete old uploaded logo if it was stored locally
+        if ($company->logo_url && str_contains($company->logo_url, '/storage/company-logos/')) {
+            $oldPath = str_replace('/storage/', '', parse_url($company->logo_url, PHP_URL_PATH));
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        $file     = $request->file('logo');;
+        $ext      = $file->getClientOriginalExtension();
+        $filename = 'logo-' . Str::random(12) . '.' . $ext;
+        $path     = $file->storeAs("company-logos/{$company->id}", $filename, 'public');
+
+        $company->update(['logo_url' => '/storage/' . $path]);
+
+        return response()->json(['logo_url' => $company->logo_url]);
     }
 
     public function lookupAbn(Request $request, string $abn)

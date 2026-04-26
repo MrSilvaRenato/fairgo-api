@@ -17,13 +17,16 @@ export default function CompanySettingsPage() {
   const [form, setForm] = useState({
     name: '', industry: '', description: '', website: '', logo_url: '',
   })
-  const [loading, setLoading]       = useState(true)
-  const [saving, setSaving]         = useState(false)
-  const [showDelete, setShowDelete] = useState(false)
+  const [loading, setLoading]           = useState(true)
+  const [saving, setSaving]             = useState(false)
+  const [showDelete, setShowDelete]     = useState(false)
   const [abnVerifying, setAbnVerifying] = useState(false)
-  const [abnResult, setAbnResult]   = useState(null)
-  const [saved, setSaved]     = useState(false)
-  const [errors, setErrors]   = useState({})
+  const [abnResult, setAbnResult]       = useState(null)
+  const [saved, setSaved]               = useState(false)
+  const [errors, setErrors]             = useState({})
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [logoError, setLogoError]         = useState(null)
+  const [logoDragOver, setLogoDragOver]   = useState(false)
 
   useEffect(() => {
     api.get('/dashboard/company').then((res) => {
@@ -40,6 +43,33 @@ export default function CompanySettingsPage() {
   }, [])
 
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value })
+
+  const uploadLogo = async (file) => {
+    if (!file) return
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
+    if (!allowed.includes(file.type)) {
+      setLogoError('Please upload a JPG, PNG, GIF, WebP or SVG file.')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoError('File must be under 2 MB.')
+      return
+    }
+    setLogoError(null); setLogoUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('logo', file)
+      const res = await api.post('/company/logo', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setCompany((c) => ({ ...c, logo_url: res.data.logo_url }))
+      setForm((f) => ({ ...f, logo_url: res.data.logo_url }))
+    } catch (err) {
+      setLogoError(err.response?.data?.message ?? 'Upload failed. Please try again.')
+    } finally {
+      setLogoUploading(false)
+    }
+  }
 
   const submit = async (e) => {
     e.preventDefault()
@@ -89,19 +119,68 @@ export default function CompanySettingsPage() {
         <p className="text-[color:var(--color-ink-2)] text-sm mt-1">Manage your public profile, branding and contact details.</p>
       </div>
 
-      {/* Logo preview card */}
-      <div className="card p-5 flex items-center gap-5">
-        <CompanyLogo company={previewCompany} size="xl" />
-        <div>
-          <p className="font-semibold text-[color:var(--color-ink)]">{form.name || company.name}</p>
-          <p className="text-xs text-[color:var(--color-muted)] mt-0.5 capitalize">{form.industry || 'No industry set'}</p>
-          <p className="text-xs text-[color:var(--color-muted)] mt-2">
-            {form.logo_url
-              ? <span>Using custom logo URL</span>
-              : form.website
-                ? <>Logo auto-loaded from <span className="font-mono text-[color:var(--color-eucalyptus)]">{form.website}</span></>
-                : 'Add your website below to auto-load your logo'}
-          </p>
+      {/* Logo section */}
+      <div className="card p-5">
+        <h2 className="caps mb-4">Company logo</h2>
+        <div className="flex flex-col sm:flex-row items-start gap-5">
+
+          {/* Current logo preview */}
+          <div className="shrink-0 flex flex-col items-center gap-2">
+            <CompanyLogo company={previewCompany} size="xl" />
+            <p className="text-[11px] text-[color:var(--color-muted)]">Current logo</p>
+          </div>
+
+          {/* Upload area */}
+          <div className="flex-1 w-full">
+            <div
+              onDragOver={(e) => { e.preventDefault(); setLogoDragOver(true) }}
+              onDragLeave={() => setLogoDragOver(false)}
+              onDrop={(e) => { e.preventDefault(); setLogoDragOver(false); uploadLogo(e.dataTransfer.files[0]) }}
+              onClick={() => document.getElementById('logo-file-input').click()}
+              className={`relative border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition ${
+                logoDragOver
+                  ? 'border-[color:var(--color-eucalyptus)] bg-[color:var(--color-eucalyptus-3)]'
+                  : 'border-[color:var(--color-line)] hover:border-[color:var(--color-eucalyptus)] hover:bg-[color:var(--color-eucalyptus-3)]'
+              }`}
+            >
+              <input
+                id="logo-file-input"
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                className="hidden"
+                onChange={(e) => uploadLogo(e.target.files[0])}
+              />
+              {logoUploading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <svg className="w-6 h-6 animate-spin text-[color:var(--color-eucalyptus)]" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                  </svg>
+                  <p className="text-sm text-[color:var(--color-muted)]">Uploading…</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <Icon name="upload" size={24} className="text-[color:var(--color-muted)]" />
+                  <p className="text-sm font-medium text-[color:var(--color-ink)]">
+                    Drop your logo here or <span className="text-[color:var(--color-eucalyptus)] underline">browse</span>
+                  </p>
+                  <p className="text-xs text-[color:var(--color-muted)]">JPG, PNG, WebP, SVG · Max 2 MB</p>
+                </div>
+              )}
+            </div>
+
+            {logoError && (
+              <p className="text-xs text-[color:var(--color-clay)] mt-2">{logoError}</p>
+            )}
+
+            <p className="text-xs text-[color:var(--color-muted)] mt-3">
+              {form.logo_url && form.logo_url.startsWith('/storage/')
+                ? '✅ Using your uploaded logo'
+                : form.website
+                  ? <>Logo auto-fetched from <span className="font-mono">{form.website}</span> — upload above to override</>
+                  : 'No logo yet — upload one above or add your website URL below to auto-fetch it'}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -182,17 +261,6 @@ export default function CompanySettingsPage() {
             </div>
           </Field>
 
-          <Field
-            label="Custom logo URL"
-            error={errors.logo_url?.[0]}
-            hint="Optional — overrides auto-fetched logo"
-          >
-            <input
-              name="logo_url" value={form.logo_url} onChange={handle}
-              className="input"
-              placeholder="https://cdn.example.com/logo.png"
-            />
-          </Field>
 
           <Field
             label="Short description"

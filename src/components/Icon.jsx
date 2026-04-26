@@ -35,6 +35,7 @@ export default function Icon({ name, size = 16, className = '', strokeWidth = 1.
     case 'calendar': return <svg {...common}><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
     case 'menu':     return <svg {...common}><path d="M4 6h16M4 12h16M4 18h16"/></svg>
     case 'plus':     return <svg {...common}><path d="M12 5v14M5 12h14"/></svg>
+    case 'upload':   return <svg {...common}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
     default: return null
   }
 }
