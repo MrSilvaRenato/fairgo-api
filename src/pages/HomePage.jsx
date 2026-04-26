@@ -75,29 +75,38 @@ export default function HomePage() {
 
   // Companies browse
   const [managedQuery,   setManagedQuery]   = useState('')
-  const [showAllCompanies, setShowAllCompanies] = useState(false)
+  const [showAllCompanies, setShowAllCompanies] = useState(true)
   const [claimedList,    setClaimedList]    = useState([])
   const [allList,        setAllList]        = useState([])
   const [managedLoading, setManagedLoading] = useState(true)
 
-  // Always load claimed companies on mount
+  // Load all companies on mount
   useEffect(() => {
-    api.get('/complaints/company-search', { params: { claimed: true } })
-      .then((r) => setClaimedList(r.data ?? []))
+    api.get('/complaints/company-search')
+      .then((r) => setAllList(r.data ?? []))
       .catch(() => {})
       .finally(() => setManagedLoading(false))
   }, [])
 
-  // Load all companies only when expanded or searching
+  // Load claimed companies when toggled
   useEffect(() => {
-    if (!showAllCompanies && !managedQuery) return
+    if (showAllCompanies) return
+    if (claimedList.length > 0) return
+    api.get('/complaints/company-search', { params: { claimed: true } })
+      .then((r) => setClaimedList(r.data ?? []))
+      .catch(() => {})
+  }, [showAllCompanies])
+
+  // Search always queries all
+  useEffect(() => {
+    if (!managedQuery) return
     const t = setTimeout(() => {
       api.get('/complaints/company-search', { params: { q: managedQuery } })
         .then((r) => setAllList(r.data ?? []))
         .catch(() => {})
-    }, managedQuery ? 300 : 0)
+    }, 300)
     return () => clearTimeout(t)
-  }, [managedQuery, showAllCompanies])
+  }, [managedQuery])
 
   const displayedCompanies = managedQuery
     ? allList
@@ -444,23 +453,44 @@ export default function HomePage() {
       <section id="actively-managed" className="mb-16">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
           <div>
-            <div className="caps mb-1" style={{ color: 'var(--color-eucalyptus)' }}>✅ Actively managed</div>
+            <div className="caps mb-1" style={{ color: 'var(--color-eucalyptus)' }}>
+              {showAllCompanies ? '🏢 All registered businesses' : '✅ Actively managed'}
+            </div>
             <h2 className="font-display text-[32px] font-semibold tracking-tight">
               Businesses on the platform
             </h2>
             <p className="text-sm text-[color:var(--color-muted)] mt-1">
-              Companies actively managing their profile on Aus Fair Go.
+              {showAllCompanies
+                ? 'All Australian businesses registered on Aus Fair Go.'
+                : 'Companies actively managing their profile on Aus Fair Go.'}
             </p>
           </div>
-          <button
-            onClick={() => { setShowAllCompanies((v) => !v); setManagedQuery('') }}
-            className="text-sm text-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)] underline underline-offset-4 transition shrink-0">
-            {showAllCompanies ? '← Show actively managed only' : 'Browse all registered businesses →'}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => { setShowAllCompanies(true); setManagedQuery('') }}
+              className={`text-sm px-4 py-2 rounded-full font-medium transition border ${
+                showAllCompanies
+                  ? 'text-[color:var(--color-paper)] border-[color:var(--color-ink)]'
+                  : 'text-[color:var(--color-ink-2)] border-[color:var(--color-line)] hover:border-[color:var(--color-ink-2)]'
+              }`}
+              style={showAllCompanies ? { background: 'var(--color-ink)' } : {}}>
+              All registered
+            </button>
+            <button
+              onClick={() => { setShowAllCompanies(false); setManagedQuery('') }}
+              className={`text-sm px-4 py-2 rounded-full font-medium transition border ${
+                !showAllCompanies
+                  ? 'border-[color:var(--color-eucalyptus)]'
+                  : 'text-[color:var(--color-ink-2)] border-[color:var(--color-line)] hover:border-[color:var(--color-eucalyptus)]'
+              }`}
+              style={!showAllCompanies ? { background: 'var(--color-eucalyptus)', color: 'var(--color-paper)' } : {}}>
+              ✅ Actively managed
+            </button>
+          </div>
         </div>
 
-        {/* Search — only visible when expanded */}
-        {(showAllCompanies || managedQuery) && (
+        {/* Search */}
+        {(
           <div className="relative mb-4 max-w-sm">
             <Icon name="search" size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)] pointer-events-none" />
             <input
