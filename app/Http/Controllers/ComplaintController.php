@@ -129,7 +129,7 @@ class ComplaintController extends Controller
             }
         }
 
-        $complaint->load(['consumer:id,name,email', 'company:id,name,slug,user_id', 'company.user:id,name,email']);
+        $complaint->load(['consumer:id,name,email', 'company:id,name,slug,logo_url,website,user_id', 'company.user:id,name,email']);
 
         CalculateCompanyScore::dispatch($complaint->company_id);
 
@@ -148,7 +148,7 @@ class ComplaintController extends Controller
 
         return response()->json(
             array_merge(
-                $complaint->load(['consumer:id,name', 'company:id,name,slug'])->toArray(),
+                $complaint->load(['consumer:id,name', 'company:id,name,slug,logo_url,website'])->toArray(),
                 ['moderation_status' => $complaint->moderation_status]
             ),
             201
@@ -172,7 +172,7 @@ class ComplaintController extends Controller
         }
 
         // Base relations for everyone
-        $relations = ['consumer:id,name,id_verification_status', 'company:id,name,slug,website,claimed,abn_verified,verified_badge', 'response', 'feedback.consumer:id,name', 'replies.user:id,name,role', 'attachments'];
+        $relations = ['consumer:id,name,id_verification_status', 'company:id,name,slug,logo_url,website,claimed,abn_verified,verified_badge', 'response', 'feedback.consumer:id,name', 'replies.user:id,name,role', 'attachments'];
         $complaint->load($relations);
 
         $data = $complaint->toArray();
@@ -215,7 +215,7 @@ class ComplaintController extends Controller
 
     public function index(Request $request)
     {
-        $query = Complaint::with(['consumer:id,name,id_verification_status', 'company:id,name,slug'])
+        $query = Complaint::with(['consumer:id,name,id_verification_status', 'company:id,name,slug,logo_url,website'])
             ->where('is_public', true)
             ->where('status', '!=', 'removed')
             ->whereNotIn('moderation_status', ['flagged', 'rejected'])

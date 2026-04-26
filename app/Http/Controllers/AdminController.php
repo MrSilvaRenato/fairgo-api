@@ -57,7 +57,7 @@ class AdminController extends Controller
 
     public function complaints(Request $request)
     {
-        $query = Complaint::with(['consumer:id,name,email', 'company:id,name,slug']);
+        $query = Complaint::with(['consumer:id,name,email', 'company:id,name,slug,logo_url,website']);
 
         if ($request->status) {
             $query->where('status', $request->status);
@@ -150,7 +150,7 @@ class AdminController extends Controller
     // GET /admin/users
     public function users(Request $request)
     {
-        $query = User::with('company:id,name,slug')
+        $query = User::with('company:id,name,slug,logo_url,website')
             ->withCount('complaints')
             ->latest();
 
@@ -173,7 +173,7 @@ class AdminController extends Controller
     {
         $status = $request->get('status', 'flagged'); // flagged | pending | rejected | edited
 
-        $query = Complaint::with(['consumer:id,name,email', 'company:id,name,slug'])
+        $query = Complaint::with(['consumer:id,name,email', 'company:id,name,slug,logo_url,website'])
             ->where('moderation_status', $status)
             ->latest();
 
@@ -229,7 +229,7 @@ class AdminController extends Controller
             }
         }
 
-        return response()->json($complaint->fresh(['consumer:id,name,email', 'company:id,name,slug']));
+        return response()->json($complaint->fresh(['consumer:id,name,email', 'company:id,name,slug,logo_url,website']));
     }
 
     // GET /admin/stub-companies — companies auto-created from unregistered complaints
