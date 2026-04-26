@@ -584,7 +584,6 @@ export default function HomePage() {
               Best &amp; worst rated businesses
             </h2>
           </div>
-
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setClaimedOnly((v) => !v)}
@@ -595,46 +594,39 @@ export default function HomePage() {
               }`}>
               ✅ Actively managed
             </button>
-
             <div className="flex rounded-full border hairline bg-[color:var(--color-card)] p-1 gap-1 w-fit">
-            {[['best', 'Best'], ['worst', 'Worst']].map(([v, l]) => (
-              <button key={v} onClick={() => setBoardMode(v)}
-                className={`text-xs font-medium px-4 py-1.5 rounded-full transition ${
-                  boardMode === v
-                    ? 'bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
-                    : 'text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]'
-                }`}>
-                {l}
-              </button>
-            ))}
+              {[['best', 'Best'], ['worst', 'Worst']].map(([v, l]) => (
+                <button key={v} onClick={() => setBoardMode(v)}
+                  className={`text-xs font-medium px-4 py-1.5 rounded-full transition ${
+                    boardMode === v
+                      ? 'bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                      : 'text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]'
+                  }`}>
+                  {l}
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Industry filter — top pills + overflow dropdown */}
-        <div className="flex gap-2 flex-wrap items-center mb-5">
-          {/* Always show "All" + first VISIBLE_PILLS industries */}
+        {/* Industry filter pills */}
+        <div className="flex gap-2 flex-wrap items-center mb-6">
           {['all', ...industries.slice(0, VISIBLE_PILLS)].map((ind) => (
             <button key={ind} onClick={() => { setActiveIndustry(ind); setMoreOpen(false) }}
               className={`chip capitalize ${activeIndustry === ind ? 'chip-active' : ''}`}>
               {ind === 'all' ? 'All industries' : ind}
             </button>
           ))}
-
-          {/* Overflow dropdown */}
           {industries.length > VISIBLE_PILLS && (
             <div className="relative" ref={moreRef}>
               <button
                 onClick={() => setMoreOpen((v) => !v)}
-                className={`chip ${industries.slice(VISIBLE_PILLS).includes(activeIndustry) ? 'chip-active' : ''}`}
-              >
+                className={`chip ${industries.slice(VISIBLE_PILLS).includes(activeIndustry) ? 'chip-active' : ''}`}>
                 {industries.slice(VISIBLE_PILLS).includes(activeIndustry)
                   ? <span className="capitalize">{activeIndustry}</span>
-                  : <span>+{industries.length - VISIBLE_PILLS} more</span>
-                }
+                  : <span>+{industries.length - VISIBLE_PILLS} more</span>}
                 <Icon name="chevron-d" size={12} />
               </button>
-
               {moreOpen && (
                 <div className="absolute z-20 left-0 top-full mt-1.5 bg-[color:var(--color-card)] border hairline rounded-2xl shadow-xl py-1.5 min-w-[180px]">
                   {industries.slice(VISIBLE_PILLS).map((ind) => (
@@ -651,90 +643,173 @@ export default function HomePage() {
           )}
         </div>
 
-        {loadingBoard ? (
-          <div className="card divide-y hairline-2 overflow-hidden">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center gap-4 p-4 animate-pulse">
-                <div className="w-6 h-4 bg-[color:var(--color-paper-2)] rounded" />
-                <div className="w-10 h-10 bg-[color:var(--color-paper-2)] rounded-xl" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-[color:var(--color-paper-2)] rounded w-1/3" />
-                  <div className="h-3 bg-[color:var(--color-paper-2)] rounded w-1/5" />
-                </div>
-                <div className="w-16 h-6 bg-[color:var(--color-paper-2)] rounded-full" />
+        {/* Two-column layout: ranked list (left) + Top 3 podium (right) */}
+        <div className="flex flex-col lg:flex-row gap-6">
+
+          {/* ── Left: ranked list ───────────────────────────── */}
+          <div className="flex-1 min-w-0">
+            {loadingBoard ? (
+              <div className="card divide-y hairline-2 overflow-hidden">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 p-4 animate-pulse">
+                    <div className="w-6 h-4 bg-[color:var(--color-paper-2)] rounded" />
+                    <div className="w-10 h-10 bg-[color:var(--color-paper-2)] rounded-xl" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-[color:var(--color-paper-2)] rounded w-1/3" />
+                      <div className="h-3 bg-[color:var(--color-paper-2)] rounded w-1/5" />
+                    </div>
+                    <div className="w-16 h-6 bg-[color:var(--color-paper-2)] rounded-full" />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : displayList.length === 0 ? (
-          <div className="card p-12 text-center">
-            <div className="font-display italic-display text-[22px] mb-2">Nothing to rank yet.</div>
-            <p className="text-sm text-[color:var(--color-muted)]">No companies in this category have enough data.</p>
-          </div>
-        ) : (
-          <div className="card divide-y hairline-2 overflow-hidden">
-            {displayList.map((c, i) => {
-              const b = BAND[c.badge] ?? BAND.not_rated
-              const rank = boardMode === 'best' ? i + 1 : displayList.length - i
-              return (
-                <Link key={c.id} to={`/companies/${c.slug}`}
-                  className="flex items-center gap-4 px-5 py-4 hover:bg-[color:var(--color-paper-2)]/60 transition group">
-                  <span className="font-mono text-sm font-medium w-8 text-center shrink-0 text-[color:var(--color-muted)]">
-                    {String(rank).padStart(2, '0')}
-                  </span>
-
-                  <CompanyLogo company={c} size="md" />
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-[15px] text-[color:var(--color-ink)] truncate group-hover:underline decoration-[color:var(--color-ink)]/30 underline-offset-4">
-                        {c.name}
-                      </p>
-                      {c.verified_badge && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
-                          style={{ color: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
-                          <Icon name="verified" size={10} /> Verified
-                        </span>
-                      )}
-                      {c.not_recommended && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
-                          style={{ color: 'var(--color-clay)', background: 'var(--color-clay-soft)' }}>
-                          <Icon name="flag" size={10} /> Not recommended
-                        </span>
-                      )}
-                      {c.claimed && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
-                          style={{ color: '#166534', borderColor: '#86efac', background: '#f0fdf4' }}>
-                          ✅ Actively Managed
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-[color:var(--color-muted)] capitalize mt-0.5">
-                      {c.industry ?? 'Unknown'} · {c.total} complaints
-                    </p>
-                  </div>
-
-                  <div className="hidden sm:flex items-center gap-4 shrink-0">
-                    <div className="w-28">
-                      <div className="flex justify-between text-[10px] font-mono text-[color:var(--color-muted)] mb-1">
-                        <span>Score</span>
-                        <span className="text-[color:var(--color-ink)] font-medium">{c.score}</span>
+            ) : displayList.length === 0 ? (
+              <div className="card p-12 text-center">
+                <div className="font-display italic-display text-[22px] mb-2">Nothing to rank yet.</div>
+                <p className="text-sm text-[color:var(--color-muted)]">No companies in this category have enough data.</p>
+              </div>
+            ) : (
+              <div className="card divide-y hairline-2 overflow-hidden">
+                {displayList.map((c, i) => {
+                  const b = BAND[c.badge] ?? BAND.not_rated
+                  const rank = boardMode === 'best' ? i + 1 : displayList.length - i
+                  return (
+                    <Link key={c.id} to={`/companies/${c.slug}`}
+                      className="flex items-center gap-4 px-5 py-4 hover:bg-[color:var(--color-paper-2)]/60 transition group">
+                      <span className="font-mono text-sm font-medium w-8 text-center shrink-0 text-[color:var(--color-muted)]">
+                        {String(rank).padStart(2, '0')}
+                      </span>
+                      <CompanyLogo company={c} size="md" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium text-[15px] text-[color:var(--color-ink)] truncate group-hover:underline decoration-[color:var(--color-ink)]/30 underline-offset-4">
+                            {c.name}
+                          </p>
+                          {c.verified_badge && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                              style={{ color: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
+                              <Icon name="verified" size={10} /> Verified
+                            </span>
+                          )}
+                          {c.not_recommended && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                              style={{ color: 'var(--color-clay)', background: 'var(--color-clay-soft)' }}>
+                              <Icon name="flag" size={10} /> Not recommended
+                            </span>
+                          )}
+                          {c.claimed && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                              style={{ color: '#166534', background: '#f0fdf4' }}>
+                              ✅ Actively Managed
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-[color:var(--color-muted)] capitalize mt-0.5">
+                          {c.industry ?? 'Unknown'} · {c.total} complaints
+                        </p>
                       </div>
-                      <div className="progress">
-                        <span style={{ width: `${c.score}%`, background: b.ring }} />
+                      <div className="hidden sm:flex items-center gap-4 shrink-0">
+                        <div className="w-24">
+                          <div className="flex justify-between text-[10px] font-mono text-[color:var(--color-muted)] mb-1">
+                            <span>Score</span>
+                            <span className="text-[color:var(--color-ink)] font-medium">{c.score}</span>
+                          </div>
+                          <div className="progress">
+                            <span style={{ width: `${c.score}%`, background: b.ring }} />
+                          </div>
+                        </div>
+                        <span className="caps w-[60px] text-right" style={{ color: b.text }}>{b.label}</span>
+                      </div>
+                      <div className="sm:hidden shrink-0 text-right">
+                        <span className="font-display text-[20px] font-semibold leading-none">{c.score}</span>
+                        <p className="caps mt-0.5" style={{ color: b.text }}>{b.label}</p>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ── Right: Top 3 podium cards ───────────────────── */}
+          {!loadingBoard && displayList.length > 0 && boardMode === 'best' && (
+            <div className="lg:w-[300px] shrink-0 flex flex-col gap-3">
+              <p className="caps text-[color:var(--color-muted)] mb-1">Top performers</p>
+              {displayList.slice(0, 3).map((c, i) => {
+                const b    = BAND[c.badge] ?? BAND.not_rated
+                const medals = ['🥇', '🥈', '🥉']
+                const responded  = Math.round((c.response_rate ?? 0) * (c.total ?? 0))
+                const resolved   = Math.round((c.resolution_rate ?? 0) * (c.total ?? 0))
+                // SVG gauge — half-circle, 0-100 maps to 0-180deg arc
+                const R = 38, cx = 50, cy = 50
+                const startAngle = 180, sweep = 180
+                const scoreAngle = startAngle + (c.score / 100) * sweep
+                const toRad = (deg) => (deg * Math.PI) / 180
+                const arcX  = cx + R * Math.cos(toRad(scoreAngle - 180))
+                const arcY  = cy + R * Math.sin(toRad(scoreAngle - 180))
+                const trackStart = { x: cx - R, y: cy }
+                const trackEnd   = { x: cx + R, y: cy }
+                const fillEnd    = { x: arcX, y: arcY }
+                return (
+                  <Link key={c.id} to={`/companies/${c.slug}`}
+                    className="card p-4 hover:shadow-md transition group">
+                    {/* Header */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xl leading-none">{medals[i]}</span>
+                      <CompanyLogo company={c} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[color:var(--color-ink)] truncate group-hover:underline underline-offset-2">
+                          {c.name}
+                        </p>
+                        <p className="text-[11px] text-[color:var(--color-muted)] capitalize">{c.industry ?? 'Unknown'}</p>
                       </div>
                     </div>
-                    <span className="caps w-[64px] text-right" style={{ color: b.text }}>{b.label}</span>
-                  </div>
 
-                  <div className="sm:hidden shrink-0 text-right">
-                    <span className="font-display text-[20px] font-semibold leading-none">{c.score}</span>
-                    <p className="caps mt-0.5" style={{ color: b.text }}>{b.label}</p>
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-        )}
+                    {/* Score gauge */}
+                    <div className="flex items-end justify-between gap-3">
+                      <svg viewBox="0 0 100 55" className="w-[90px] shrink-0" style={{ overflow: 'visible' }}>
+                        {/* Track */}
+                        <path
+                          d={`M ${trackStart.x} ${trackStart.y} A ${R} ${R} 0 0 1 ${trackEnd.x} ${trackEnd.y}`}
+                          fill="none" stroke="var(--color-line)" strokeWidth="7" strokeLinecap="round" />
+                        {/* Fill */}
+                        <path
+                          d={`M ${trackStart.x} ${trackStart.y} A ${R} ${R} 0 ${c.score > 50 ? 1 : 0} 1 ${fillEnd.x} ${fillEnd.y}`}
+                          fill="none" stroke={b.ring} strokeWidth="7" strokeLinecap="round" />
+                        {/* Needle dot */}
+                        <circle cx={fillEnd.x} cy={fillEnd.y} r="4.5" fill={b.ring} />
+                        {/* Score text */}
+                        <text x="50" y="46" textAnchor="middle" fontSize="16" fontWeight="700"
+                          fill="var(--color-ink)" fontFamily="inherit">{c.score}</text>
+                      </svg>
+
+                      {/* Stats */}
+                      <div className="flex-1 space-y-2">
+                        <div>
+                          <p className="text-[10px] text-[color:var(--color-muted)] uppercase tracking-wide">Responded</p>
+                          <p className="text-sm font-semibold text-[color:var(--color-ink)]">
+                            {responded}<span className="text-[color:var(--color-muted)] font-normal text-xs"> / {c.total}</span>
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-[color:var(--color-muted)] uppercase tracking-wide">Resolved</p>
+                          <p className="text-sm font-semibold text-[color:var(--color-ink)]">
+                            {resolved}<span className="text-[color:var(--color-muted)] font-normal text-xs"> / {c.total}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Band label */}
+                    <div className="mt-3 pt-2.5 border-t hairline flex items-center justify-between">
+                      <span className="caps text-[10px]" style={{ color: b.text }}>{b.label}</span>
+                      {c.claimed && <span className="text-[10px] text-[#166534]">✅ Actively managed</span>}
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </section>
 
       {/* ═══════════════ LIVE ACTIVITY FEED ═══════════════ */}
