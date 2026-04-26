@@ -735,25 +735,28 @@ export default function HomePage() {
             <div className="lg:w-[300px] shrink-0 flex flex-col gap-3">
               <p className="caps text-[color:var(--color-muted)] mb-1">Top performers</p>
               {displayList.slice(0, 3).map((c, i) => {
-                const b    = BAND[c.badge] ?? BAND.not_rated
-                const medals = ['🥇', '🥈', '🥉']
-                const responded  = Math.round((c.response_rate ?? 0) * (c.total ?? 0))
-                const resolved   = Math.round((c.resolution_rate ?? 0) * (c.total ?? 0))
-                // SVG gauge — half-circle, 0-100 maps to 0-180deg arc
-                const R = 38, cx = 50, cy = 50
-                const startAngle = 180, sweep = 180
-                const scoreAngle = startAngle + (c.score / 100) * sweep
-                const toRad = (deg) => (deg * Math.PI) / 180
-                const arcX  = cx + R * Math.cos(toRad(scoreAngle - 180))
-                const arcY  = cy + R * Math.sin(toRad(scoreAngle - 180))
-                const trackStart = { x: cx - R, y: cy }
-                const trackEnd   = { x: cx + R, y: cy }
-                const fillEnd    = { x: arcX, y: arcY }
+                const b        = BAND[c.badge] ?? BAND.not_rated
+                const medals   = ['🥇', '🥈', '🥉']
+                const responded = Math.round((c.response_rate    ?? 0) * (c.total ?? 0))
+                const resolved  = Math.round((c.resolution_rate  ?? 0) * (c.total ?? 0))
+
+                // ── Half-circle gauge (left=0, right=100) ──────────────────
+                // Arc from left (180°) to right (0°) across the TOP of circle.
+                // In SVG coords: x = cx + R·cos(θ),  y = cy - R·sin(θ)
+                // sweep-flag=0 (counter-clockwise on screen) draws the top arc.
+                const R  = 40, gcx = 50, gcy = 48
+                const toRad   = d => (d * Math.PI) / 180
+                const angleDeg = 180 - (c.score / 100) * 180   // 180→0 as score 0→100
+                const nx = gcx + R * Math.cos(toRad(angleDeg))
+                const ny = gcy - R * Math.sin(toRad(angleDeg))
+                const largeArc = c.score > 50 ? 1 : 0
+
                 return (
                   <Link key={c.id} to={`/companies/${c.slug}`}
                     className="card p-4 hover:shadow-md transition group">
-                    {/* Header */}
-                    <div className="flex items-center gap-2 mb-3">
+
+                    {/* Company header */}
+                    <div className="flex items-center gap-2 mb-4">
                       <span className="text-xl leading-none">{medals[i]}</span>
                       <CompanyLogo company={c} size="sm" />
                       <div className="flex-1 min-w-0">
@@ -764,42 +767,41 @@ export default function HomePage() {
                       </div>
                     </div>
 
-                    {/* Score gauge */}
-                    <div className="flex items-end justify-between gap-3">
-                      <svg viewBox="0 0 100 55" className="w-[90px] shrink-0" style={{ overflow: 'visible' }}>
-                        {/* Track */}
-                        <path
-                          d={`M ${trackStart.x} ${trackStart.y} A ${R} ${R} 0 0 1 ${trackEnd.x} ${trackEnd.y}`}
-                          fill="none" stroke="var(--color-line)" strokeWidth="7" strokeLinecap="round" />
+                    {/* Gauge + stats */}
+                    <div className="flex items-center gap-4">
+                      <svg viewBox="0 0 100 54" className="w-[100px] shrink-0">
+                        {/* Track — top half arc, counter-clockwise (sweep=0) */}
+                        <path d={`M ${gcx - R} ${gcy} A ${R} ${R} 0 0 0 ${gcx + R} ${gcy}`}
+                          fill="none" stroke="var(--color-line)" strokeWidth="9" strokeLinecap="round" />
                         {/* Fill */}
-                        <path
-                          d={`M ${trackStart.x} ${trackStart.y} A ${R} ${R} 0 ${c.score > 50 ? 1 : 0} 1 ${fillEnd.x} ${fillEnd.y}`}
-                          fill="none" stroke={b.ring} strokeWidth="7" strokeLinecap="round" />
+                        {c.score > 0 && (
+                          <path d={`M ${gcx - R} ${gcy} A ${R} ${R} 0 ${largeArc} 0 ${nx.toFixed(2)} ${ny.toFixed(2)}`}
+                            fill="none" stroke={b.ring} strokeWidth="9" strokeLinecap="round" />
+                        )}
                         {/* Needle dot */}
-                        <circle cx={fillEnd.x} cy={fillEnd.y} r="4.5" fill={b.ring} />
-                        {/* Score text */}
-                        <text x="50" y="46" textAnchor="middle" fontSize="16" fontWeight="700"
+                        <circle cx={nx.toFixed(2)} cy={ny.toFixed(2)} r="5.5" fill={b.ring} stroke="var(--color-paper)" strokeWidth="2" />
+                        {/* Score label */}
+                        <text x="50" y="45" textAnchor="middle" fontSize="17" fontWeight="700"
                           fill="var(--color-ink)" fontFamily="inherit">{c.score}</text>
                       </svg>
 
-                      {/* Stats */}
-                      <div className="flex-1 space-y-2">
+                      <div className="flex-1 space-y-2.5">
                         <div>
-                          <p className="text-[10px] text-[color:var(--color-muted)] uppercase tracking-wide">Responded</p>
-                          <p className="text-sm font-semibold text-[color:var(--color-ink)]">
+                          <p className="text-[10px] text-[color:var(--color-muted)] uppercase tracking-wide leading-none mb-0.5">Responded</p>
+                          <p className="text-sm font-semibold text-[color:var(--color-ink)] leading-tight">
                             {responded}<span className="text-[color:var(--color-muted)] font-normal text-xs"> / {c.total}</span>
                           </p>
                         </div>
                         <div>
-                          <p className="text-[10px] text-[color:var(--color-muted)] uppercase tracking-wide">Resolved</p>
-                          <p className="text-sm font-semibold text-[color:var(--color-ink)]">
+                          <p className="text-[10px] text-[color:var(--color-muted)] uppercase tracking-wide leading-none mb-0.5">Resolved</p>
+                          <p className="text-sm font-semibold text-[color:var(--color-ink)] leading-tight">
                             {resolved}<span className="text-[color:var(--color-muted)] font-normal text-xs"> / {c.total}</span>
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    {/* Band label */}
+                    {/* Footer */}
                     <div className="mt-3 pt-2.5 border-t hairline flex items-center justify-between">
                       <span className="caps text-[10px]" style={{ color: b.text }}>{b.label}</span>
                       {c.claimed && <span className="text-[10px] text-[#166534]">✅ Actively managed</span>}
