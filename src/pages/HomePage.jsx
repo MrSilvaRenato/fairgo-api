@@ -1018,7 +1018,7 @@ export default function HomePage() {
                 <Link to="/register" className="btn" style={{ background: 'var(--color-ochre)', color: 'var(--color-ink)' }}>
                   Create free account <Icon name="arrow-r" size={14} />
                 </Link>
-                <Link to="/companies/register" className="btn btn-ghost" style={{ color: 'var(--color-paper)' }}>
+                <Link to="/register?role=business" className="btn btn-ghost" style={{ color: 'var(--color-paper)' }}>
                   Register your business
                 </Link>
               </div>
