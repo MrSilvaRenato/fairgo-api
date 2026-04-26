@@ -585,6 +585,11 @@ export default function AdminPage() {
                         <span className="font-medium text-[color:var(--color-ink-2)]">{c.company?.name}</span>
                         {' · '}
                         {new Date(c.updated_at || c.created_at).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        {c.feedback?.rating && (
+                          <span className="ml-2 font-medium text-[color:var(--color-ochre)]">
+                            · {c.feedback.rating}/5 {c.feedback.would_deal_again != null ? (c.feedback.would_deal_again ? '👍' : '👎') : ''}
+                          </span>
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">

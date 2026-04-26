@@ -1111,6 +1111,14 @@ function ComplaintFeedRow({ complaint }) {
           vs <span className="font-medium text-[color:var(--color-ink-2)]">{complaint.company?.name}</span>
           <span className="mx-1.5 opacity-30">·</span>
           <span className="capitalize">{complaint.category}</span>
+          {complaint.feedback?.rating && (
+            <>
+              <span className="mx-1.5 opacity-30">·</span>
+              <span className="font-medium text-[color:var(--color-ochre)]">
+                {complaint.feedback.rating}/5 {complaint.feedback.would_deal_again != null ? (complaint.feedback.would_deal_again ? '👍' : '👎') : ''}
+              </span>
+            </>
+          )}
         </p>
       </div>
 

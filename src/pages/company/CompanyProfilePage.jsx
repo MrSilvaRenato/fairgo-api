@@ -575,8 +575,11 @@ function ComplaintRow({ c, onOpen }) {
               <Icon name="clock" size={12} /> {dateLabel}
             </span>
             {c.feedback?.rating && (
-              <span className="inline-flex items-center gap-1.5 text-[color:var(--color-ochre)] font-medium">
-                Rated {c.feedback.rating}/5
+              <span className="inline-flex items-center gap-1 text-[color:var(--color-ochre)] font-medium">
+                {c.feedback.rating}/5
+                {c.feedback.would_deal_again != null && (
+                  <span className="ml-0.5">{c.feedback.would_deal_again ? '👍' : '👎'}</span>
+                )}
               </span>
             )}
           </div>

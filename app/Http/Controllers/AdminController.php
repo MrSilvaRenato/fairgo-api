@@ -57,7 +57,7 @@ class AdminController extends Controller
 
     public function complaints(Request $request)
     {
-        $query = Complaint::with(['consumer:id,name,email', 'company:id,name,slug,logo_url,website']);
+        $query = Complaint::with(['consumer:id,name,email', 'company:id,name,slug,logo_url,website', 'feedback:id,complaint_id,rating,would_deal_again']);
 
         if ($request->status) {
             $query->where('status', $request->status);

@@ -215,7 +215,7 @@ class ComplaintController extends Controller
 
     public function index(Request $request)
     {
-        $query = Complaint::with(['consumer:id,name,id_verification_status', 'company:id,name,slug,logo_url,website'])
+        $query = Complaint::with(['consumer:id,name,id_verification_status', 'company:id,name,slug,logo_url,website', 'feedback:id,complaint_id,rating,would_deal_again'])
             ->where('is_public', true)
             ->where('status', '!=', 'removed')
             ->whereNotIn('moderation_status', ['flagged', 'rejected'])

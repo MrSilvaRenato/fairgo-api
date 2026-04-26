@@ -311,6 +311,17 @@ function ComplaintRow({ complaint }) {
           </span>
           <span className="text-xs text-[color:var(--color-muted)] opacity-40">&middot;</span>
           <span className="text-xs text-[color:var(--color-muted)] capitalize">{complaint.category}</span>
+          {complaint.feedback?.rating && (
+            <>
+              <span className="text-xs text-[color:var(--color-muted)] opacity-40">&middot;</span>
+              <span className="text-xs font-medium text-[color:var(--color-ochre)] inline-flex items-center gap-1">
+                {complaint.feedback.rating}/5
+                {complaint.feedback.would_deal_again != null && (
+                  <span>{complaint.feedback.would_deal_again ? '👍' : '👎'}</span>
+                )}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
