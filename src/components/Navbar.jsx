@@ -119,11 +119,19 @@ export default function Navbar() {
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen((v) => !v)}
-                  className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl transition-colors hover:bg-[color:var(--color-paper-2)]"
+                  className={`flex items-center gap-2 text-sm pl-3 pr-2.5 py-1.5 rounded-xl border transition-colors ${
+                    userMenuOpen
+                      ? 'border-[color:var(--color-eucalyptus)] bg-[color:var(--color-eucalyptus-3)]'
+                      : 'border-[color:var(--color-line)] hover:border-[color:var(--color-eucalyptus)] hover:bg-[color:var(--color-eucalyptus-3)]'
+                  }`}
                   style={{ color: 'var(--color-ink)' }}>
-                  <span className="text-xs text-[color:var(--color-muted)]">Hi,</span>
+                  {/* Initials avatar */}
+                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+                    style={{ background: 'var(--color-eucalyptus)', color: 'var(--color-paper)' }}>
+                    {user.name.charAt(0).toUpperCase()}
+                  </span>
                   <span className="font-semibold">{user.name.split(' ')[0]}</span>
-                  <Icon name="chevron-d" size={13} className={`transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+                  <Icon name="chevron-d" size={13} className={`text-[color:var(--color-muted)] transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {userMenuOpen && (
