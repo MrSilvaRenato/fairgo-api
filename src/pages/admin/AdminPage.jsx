@@ -50,6 +50,8 @@ export default function AdminPage() {
   const [companiesPage, setCompaniesPage] = useState(1)
   const [companiesMeta, setCompaniesMeta] = useState(null)
   const [modFilter, setModFilter]         = useState('flagged')
+  const [idVerifications, setIdVerifications] = useState([])
+  const [idFilter, setIdFilter]               = useState('pending')
   const [expandedMod, setExpandedMod]     = useState(null)
 
   // Complaints-tab filters
@@ -123,6 +125,13 @@ export default function AdminPage() {
       return
     }
 
+    if (tab === 'id-verifications') {
+      api.get('/admin/id-verifications', { params: { status: idFilter } })
+        .then((r) => setIdVerifications(r.data.data))
+        .finally(() => setLoading(false))
+      return
+    }
+
     // complaints
     api.get('/admin/complaints', {
       params: {
@@ -140,7 +149,7 @@ export default function AdminPage() {
         setCMeta({ total: r.data.total, last_page: r.data.last_page, current_page: r.data.current_page })
       })
       .finally(() => setLoading(false))
-  }, [tab, q, companyFilter, companySort, companiesPage, modFilter, claimFilter, cStatus, cCategory, cModStatus, cSort, cPage])
+  }, [tab, q, companyFilter, companySort, companiesPage, modFilter, claimFilter, idFilter, cStatus, cCategory, cModStatus, cSort, cPage])
 
   useEffect(() => { load() }, [load])
 
@@ -190,7 +199,19 @@ export default function AdminPage() {
     setUsers((p) => p.map((u) => u.id === id ? { ...u, ...res.data } : u))
   }
 
-  const TABS = ['complaints', 'moderation', 'companies', 'unregistered', 'claims', 'users']
+  /* ID verification actions */
+  const approveId = async (userId) => {
+    await api.post(`/admin/id-verifications/${userId}/approve`)
+    setIdVerifications((p) => p.filter((u) => u.id !== userId))
+    api.get('/admin/stats').then((r) => setStats(r.data))
+  }
+  const rejectId = async (userId, note) => {
+    await api.post(`/admin/id-verifications/${userId}/reject`, { note })
+    setIdVerifications((p) => p.filter((u) => u.id !== userId))
+    api.get('/admin/stats').then((r) => setStats(r.data))
+  }
+
+  const TABS = ['complaints', 'moderation', 'companies', 'unregistered', 'claims', 'users', 'id-verifications']
 
   return (
     <div className="max-w-5xl mx-auto space-y-5">
@@ -254,11 +275,12 @@ export default function AdminPage() {
                 ? 'bg-[color:var(--color-eucalyptus)] text-[color:var(--color-paper)] shadow-sm'
                 : 'text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]'
             }`}>
-            {t === 'moderation'   && stats?.moderation_flagged > 0 ? `Mod (${stats.moderation_flagged})`
-            : t === 'unregistered' && stats?.stub_companies > 0   ? `Unreg (${stats.stub_companies})`
-            : t === 'claims'       && stats?.pending_claims > 0   ? `Claims (${stats.pending_claims})`
-            : t === 'moderation'   ? 'Moderation'
-            : t === 'unregistered' ? 'Unreg.'
+            {t === 'moderation'        && stats?.moderation_flagged > 0 ? `Mod (${stats.moderation_flagged})`
+            : t === 'unregistered'     && stats?.stub_companies > 0    ? `Unreg (${stats.stub_companies})`
+            : t === 'claims'           && stats?.pending_claims > 0    ? `Claims (${stats.pending_claims})`
+            : t === 'moderation'       ? 'Moderation'
+            : t === 'unregistered'     ? 'Unreg.'
+            : t === 'id-verifications' ? 'ID Verify'
             : t.charAt(0).toUpperCase() + t.slice(1)
             }
           </button>
@@ -474,6 +496,16 @@ export default function AdminPage() {
             {['pending', 'approved', 'rejected', 'all'].map((f) => (
               <button key={f} onClick={() => setClaimFilter(f)}
                 className={`chip capitalize ${claimFilter === f ? 'chip-active' : ''}`}>
+                {f}
+              </button>
+            ))}
+          </div>
+        )}
+        {tab === 'id-verifications' && (
+          <div className="flex gap-1.5 flex-wrap">
+            {['pending', 'approved', 'rejected', 'all'].map((f) => (
+              <button key={f} onClick={() => setIdFilter(f)}
+                className={`chip capitalize ${idFilter === f ? 'chip-active' : ''}`}>
                 {f}
               </button>
             ))}
@@ -874,6 +906,23 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* ── ID Verifications tab ── */}
+      {tab === 'id-verifications' && !loading && (
+        <div className="card overflow-hidden">
+          {idVerifications.length === 0 ? (
+            <p className="p-10 text-sm text-[color:var(--color-muted)] text-center">
+              No {idFilter === 'all' ? '' : idFilter} ID verification requests.
+            </p>
+          ) : (
+            <ul className="divide-y divide-[color:var(--color-border)]">
+              {idVerifications.map((u) => (
+                <IdVerificationRow key={u.id} user={u} onApprove={approveId} onReject={rejectId} />
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {/* Additional stats row */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -897,6 +946,95 @@ export default function AdminPage() {
 }
 
 /* ─── Claim card ─────────────────────────────────────────── */
+/* ─── ID Verification row ────────────────────────────────── */
+function IdVerificationRow({ user: u, onApprove, onReject }) {
+  const [showReject, setShowReject] = useState(false)
+  const [note, setNote]             = useState('')
+  const [busy, setBusy]             = useState(false)
+
+  const STATUS_CFG = {
+    pending:  { label: '⏳ Pending',  fg: '#8A5A1F',                 bg: '#F3E2C3' },
+    approved: { label: '✅ Approved', fg: 'var(--color-eucalyptus)', bg: 'var(--color-eucalyptus-3)' },
+    rejected: { label: '❌ Rejected', fg: 'var(--color-clay)',       bg: 'var(--color-clay-soft)' },
+  }
+  const cfg = STATUS_CFG[u.id_verification_status] ?? STATUS_CFG.pending
+
+  const handleApprove = async () => {
+    setBusy(true)
+    await onApprove(u.id)
+    setBusy(false)
+  }
+  const handleReject = async () => {
+    setBusy(true)
+    await onReject(u.id, note)
+    setBusy(false)
+    setShowReject(false)
+  }
+
+  return (
+    <li className="p-4 hover:bg-[color:var(--color-paper-2)] transition">
+      <div className="flex items-start gap-4">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold"
+          style={{ background: 'var(--color-eucalyptus-3)', color: 'var(--color-eucalyptus)' }}>
+          {u.name.charAt(0).toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-0.5">
+            <span className="text-sm font-semibold text-[color:var(--color-ink)]">{u.name}</span>
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ color: cfg.fg, background: cfg.bg }}>{cfg.label}</span>
+          </div>
+          <p className="text-xs text-[color:var(--color-muted)]">{u.email}</p>
+          <p className="text-xs text-[color:var(--color-muted)] mt-0.5">
+            Submitted: {new Date(u.submitted_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+            {u.id_verified_at && ` · Verified: ${new Date(u.id_verified_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+          </p>
+          {u.id_rejection_note && (
+            <p className="text-xs mt-1 px-2 py-1 rounded-lg"
+              style={{ background: 'var(--color-clay-soft)', color: 'var(--color-clay)' }}>
+              Rejection note: {u.id_rejection_note}
+            </p>
+          )}
+        </div>
+        {u.id_verification_status === 'pending' && (
+          <div className="flex gap-2 shrink-0">
+            <button onClick={handleApprove} disabled={busy}
+              className="btn text-xs px-3 py-1.5"
+              style={{ background: 'var(--color-eucalyptus)', color: 'var(--color-paper)' }}>
+              Approve
+            </button>
+            <button onClick={() => setShowReject(!showReject)} disabled={busy}
+              className="btn btn-secondary text-xs px-3 py-1.5"
+              style={{ color: 'var(--color-clay)' }}>
+              Reject
+            </button>
+          </div>
+        )}
+      </div>
+      {showReject && (
+        <div className="mt-3 pl-14 space-y-2">
+          <textarea
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            placeholder="Rejection reason (optional)…"
+            rows={2}
+            className="input w-full text-sm resize-none"
+          />
+          <div className="flex gap-2">
+            <button onClick={handleReject} disabled={busy}
+              className="btn text-xs px-3 py-1.5"
+              style={{ background: 'var(--color-clay)', color: 'var(--color-paper)' }}>
+              {busy ? 'Rejecting…' : 'Confirm reject'}
+            </button>
+            <button onClick={() => setShowReject(false)}
+              className="btn btn-secondary text-xs">Cancel</button>
+          </div>
+        </div>
+      )}
+    </li>
+  )
+}
+
 function ClaimCard({ claim, onApprove, onReject }) {
   const [showReject, setShowReject] = useState(false)
   const [reason, setReason]         = useState('')
