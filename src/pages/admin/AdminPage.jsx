@@ -222,28 +222,6 @@ export default function AdminPage() {
         <p className="text-sm text-[color:var(--color-muted)] mt-0.5">Moderate content and manage the platform</p>
       </div>
 
-      {/* Stats strip */}
-      {stats && (
-        <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3">
-          {[
-            { label: 'Users',       value: stats.total_users },
-            { label: 'Companies',   value: stats.total_companies },
-            { label: 'Complaints',  value: stats.total_complaints },
-            { label: 'Open',        value: stats.open_complaints,        accent: stats.open_complaints > 0 },
-            { label: 'Resolved',    value: stats.resolved,               green: true },
-            { label: '🤖 Flagged',  value: stats.moderation_flagged,     accent: stats.moderation_flagged > 0 },
-            { label: '🏢 Unreg.',   value: stats.stub_companies,         accent: stats.stub_companies > 0 },
-            { label: '📋 Claims',   value: stats.pending_claims ?? 0,    accent: (stats.pending_claims ?? 0) > 0 },
-          ].map((s) => (
-            <div key={s.label} className="card p-3 sm:p-4">
-              <p className={`font-display text-xl sm:text-[28px] font-semibold leading-none ${
-                s.green ? 'text-[color:var(--color-eucalyptus)]' : s.accent ? 'text-[color:var(--color-ochre)]' : 'text-[color:var(--color-ink)]'
-              }`}>{s.value}</p>
-              <p className="text-[10px] sm:text-xs text-[color:var(--color-muted)] mt-1 leading-tight">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Unregistered companies alert banner */}
       {stats?.stub_companies > 0 && (
@@ -266,20 +244,20 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-2">
+      {/* Tabs + inline stats */}
+      <div className="flex flex-wrap items-center gap-2">
+
+        {/* Clickable nav tabs */}
         {TABS.map((t) => {
           const active = tab === t
-
-          // Count shown on every tab — pending/flagged counts are highlighted red
           const { count, urgent } = {
-            complaints:        { count: stats?.total_complaints,          urgent: false },
-            moderation:        { count: stats?.moderation_flagged,        urgent: (stats?.moderation_flagged ?? 0) > 0 },
-            companies:         { count: stats?.total_companies,           urgent: false },
-            unregistered:      { count: stats?.stub_companies,            urgent: (stats?.stub_companies ?? 0) > 0 },
-            claims:            { count: stats?.pending_claims,            urgent: (stats?.pending_claims ?? 0) > 0 },
-            users:             { count: stats?.total_users,               urgent: false },
-            'id-verifications':{ count: stats?.pending_id_verifications,  urgent: (stats?.pending_id_verifications ?? 0) > 0 },
+            complaints:          { count: stats?.total_complaints,           urgent: false },
+            moderation:          { count: stats?.moderation_flagged,         urgent: (stats?.moderation_flagged ?? 0) > 0 },
+            companies:           { count: stats?.total_companies,            urgent: false },
+            unregistered:        { count: stats?.stub_companies,             urgent: (stats?.stub_companies ?? 0) > 0 },
+            claims:              { count: stats?.pending_claims,             urgent: (stats?.pending_claims ?? 0) > 0 },
+            users:               { count: stats?.total_users,                urgent: false },
+            'id-verifications':  { count: stats?.pending_id_verifications,   urgent: (stats?.pending_id_verifications ?? 0) > 0 },
           }[t] ?? { count: null, urgent: false }
 
           const label =
@@ -309,6 +287,23 @@ export default function AdminPage() {
             </button>
           )
         })}
+
+        {/* Divider */}
+        {stats && <span className="w-px h-5 bg-[color:var(--color-line)] mx-1" />}
+
+        {/* Read-only stat pills — Open, Resolved, Flagged */}
+        {stats && [
+          { label: 'Open',     value: stats.open_complaints, color: '#8A5A1F',                  bg: '#F3E2C3' },
+          { label: 'Resolved', value: stats.resolved,        color: 'var(--color-eucalyptus)',   bg: 'var(--color-eucalyptus-3)' },
+          { label: 'Flagged',  value: stats.moderation_flagged, color: 'var(--color-clay)',      bg: 'var(--color-clay-soft)' },
+        ].map(s => (
+          <span key={s.label}
+            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full"
+            style={{ background: s.bg, color: s.color }}>
+            {s.label}
+            <span className="text-[10px] font-mono font-bold">{s.value}</span>
+          </span>
+        ))}
       </div>
 
       {/* ── Complaints filter panel ────────────────────────── */}
@@ -947,24 +942,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Additional stats row */}
-      {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'Unresolved',          value: stats.unresolved,          accent: 'clay' },
-            { label: 'Removed complaints',  value: stats.removed,             accent: 'muted' },
-            { label: 'Verified companies',  value: stats.verified_companies,  accent: 'eucalyptus' },
-            { label: 'Flagged companies',   value: stats.flagged_companies,   accent: 'clay' },
-          ].map((s) => (
-            <div key={s.label} className="card p-4">
-              <p className={`font-display text-[24px] font-semibold leading-none text-[color:var(--color-${s.accent})]`}>
-                {s.value}
-              </p>
-              <p className="text-xs text-[color:var(--color-muted)] mt-1">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
