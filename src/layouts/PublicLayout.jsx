@@ -1,4 +1,4 @@
-import { Outlet, Link } from 'react-router-dom'
+import { Outlet, Link, ScrollRestoration } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import useAuthStore from '../store/authStore'
 
@@ -19,6 +19,7 @@ export default function PublicLayout() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-paper)' }}>
+      <ScrollRestoration />
       <Navbar />
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8">
         <Outlet />
@@ -120,7 +121,7 @@ export default function PublicLayout() {
 }
 
 function FooterLink({ to, href, external = false, children }) {
-  const cls = "text-sm transition-colors hover:text-[color:var(--color-eucalyptus)]"
+  const cls = "block py-1 text-sm transition-colors hover:text-[color:var(--color-eucalyptus)]"
   const style = { color: 'var(--color-ink-2)' }
 
   if (href || external) {
