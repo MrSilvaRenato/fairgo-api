@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import Icon from './Icon'
@@ -35,9 +35,22 @@ export default function Navbar() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-  const scrollTo = useScrollTo()
+  const [menuOpen, setMenuOpen]       = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [scrolled, setScrolled]       = useState(false)
+  const scrollTo  = useScrollTo()
+  const userMenuRef = useRef(null)
+
+  // Close user dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -95,52 +108,82 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-2 shrink-0">
           {user ? (
             <>
-              {/* Greeting */}
-              <span className="text-xs px-2" style={{ color: 'var(--color-muted)' }}>
-                Hi, <span className="font-semibold" style={{ color: 'var(--color-ink)' }}>{user.name.split(' ')[0]}</span>
-              </span>
-
-              <div className="w-px h-4 bg-[color:var(--color-line)]" />
-
-              {user.role === 'admin' && (
-                <Link to="/admin" className={linkCls('/admin')}>Admin</Link>
-              )}
-
-              {user.role === 'company_admin' && (
-                <>
-                  <Link to="/company/dashboard"  className={linkCls('/company/dashboard')}>Dashboard</Link>
-                  <Link to="/company/analytics"  className={linkCls('/company/analytics')}>Analytics</Link>
-                  <Link to="/company/billing"    className={linkCls('/company/billing')}>Billing</Link>
-                  <Link to="/company/settings"   className={linkCls('/company/settings')}>Settings</Link>
-                  <Link to="/profile"            className={linkCls('/profile')}>Profile</Link>
-                </>
-              )}
-
+              {/* Consumer CTA stays visible outside dropdown */}
               {user.role === 'consumer' && (
-                <>
-                  <Link to="/dashboard" className={`${linkCls('/dashboard')} relative`}>
-                    Dashboard
-                    {user.unread_replies > 0 && (
-                      <span className="absolute -top-0.5 -right-1 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center"
-                        style={{ background: 'var(--color-clay)', color: 'var(--color-paper)' }}>
-                        {user.unread_replies > 9 ? '9+' : user.unread_replies}
-                      </span>
-                    )}
-                  </Link>
-                  <Link to="/profile" className={linkCls('/profile')}>Profile</Link>
-                  <Link to="/complaints/new" className="btn btn-primary text-xs px-4 py-2">
-                    + New complaint
-                  </Link>
-                </>
+                <Link to="/complaints/new" className="btn btn-primary text-xs px-4 py-2">
+                  + New complaint
+                </Link>
               )}
 
-              <button onClick={handleLogout}
-                className="text-xs px-2.5 py-1.5 rounded-lg transition-colors"
-                style={{ color: 'var(--color-muted)' }}
-                onMouseEnter={e => e.currentTarget.style.color = 'var(--color-clay)'}
-                onMouseLeave={e => e.currentTarget.style.color = 'var(--color-muted)'}>
-                Logout
-              </button>
+              {/* User dropdown */}
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  onClick={() => setUserMenuOpen((v) => !v)}
+                  className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl transition-colors hover:bg-[color:var(--color-paper-2)]"
+                  style={{ color: 'var(--color-ink)' }}>
+                  <span className="text-xs text-[color:var(--color-muted)]">Hi,</span>
+                  <span className="font-semibold">{user.name.split(' ')[0]}</span>
+                  <Icon name="chevron-d" size={13} className={`transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full mt-1.5 w-52 bg-[color:var(--color-card)] border hairline rounded-2xl shadow-xl py-1.5 z-50">
+                    <div className="px-3 py-2 border-b hairline mb-1">
+                      <p className="text-xs font-semibold text-[color:var(--color-ink)] truncate">{user.name}</p>
+                      <p className="text-[11px] text-[color:var(--color-muted)] capitalize">{user.role.replace('_', ' ')}</p>
+                    </div>
+
+                    {user.role === 'admin' && (
+                      <DropdownLink to="/admin" onClick={() => setUserMenuOpen(false)}>
+                        <Icon name="verified" size={14} /> Admin panel
+                      </DropdownLink>
+                    )}
+
+                    {user.role === 'company_admin' && (
+                      <>
+                        <DropdownLink to="/company/dashboard" onClick={() => setUserMenuOpen(false)}>
+                          <Icon name="chart" size={14} /> Dashboard
+                        </DropdownLink>
+                        <DropdownLink to="/company/analytics" onClick={() => setUserMenuOpen(false)}>
+                          <Icon name="sparkle" size={14} /> Analytics
+                        </DropdownLink>
+                        <DropdownLink to="/company/settings" onClick={() => setUserMenuOpen(false)}>
+                          <Icon name="settings" size={14} /> Settings
+                        </DropdownLink>
+                        <DropdownLink to="/company/billing" onClick={() => setUserMenuOpen(false)}>
+                          <Icon name="billing" size={14} /> Billing
+                        </DropdownLink>
+                      </>
+                    )}
+
+                    {user.role === 'consumer' && (
+                      <DropdownLink to="/dashboard" onClick={() => setUserMenuOpen(false)}>
+                        <Icon name="chart" size={14} />
+                        <span className="flex-1">Dashboard</span>
+                        {user.unread_replies > 0 && (
+                          <span className="min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center"
+                            style={{ background: 'var(--color-clay)', color: 'var(--color-paper)' }}>
+                            {user.unread_replies > 9 ? '9+' : user.unread_replies}
+                          </span>
+                        )}
+                      </DropdownLink>
+                    )}
+
+                    <DropdownLink to="/profile" onClick={() => setUserMenuOpen(false)}>
+                      <Icon name="user" size={14} /> Profile
+                    </DropdownLink>
+
+                    <div className="border-t hairline mt-1 pt-1">
+                      <button
+                        onClick={() => { setUserMenuOpen(false); handleLogout() }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-xl transition-colors hover:bg-[color:var(--color-clay-soft)]"
+                        style={{ color: 'var(--color-clay)' }}>
+                        <Icon name="logout" size={14} /> Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <>
@@ -154,11 +197,7 @@ export default function Navbar() {
 
               <Link to="/register?role=business"
                 className="text-sm px-3 py-1.5 rounded-lg font-medium transition-colors border"
-                style={{
-                  color: 'var(--color-eucalyptus)',
-                  borderColor: 'var(--color-eucalyptus)',
-                  background: 'transparent',
-                }}
+                style={{ color: 'var(--color-eucalyptus)', borderColor: 'var(--color-eucalyptus)', background: 'transparent' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-eucalyptus)'; e.currentTarget.style.color = 'var(--color-paper)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-eucalyptus)' }}>
                 For Business
@@ -242,6 +281,16 @@ export default function Navbar() {
         </div>
       )}
     </nav>
+  )
+}
+
+function DropdownLink({ to, onClick, children }) {
+  return (
+    <Link to={to} onClick={onClick}
+      className="flex items-center gap-2.5 px-3 py-2 text-sm rounded-xl transition-colors hover:bg-[color:var(--color-paper-2)]"
+      style={{ color: 'var(--color-ink)' }}>
+      {children}
+    </Link>
   )
 }
 
