@@ -57,8 +57,7 @@ class AdminController extends Controller
 
     public function complaints(Request $request)
     {
-        $query = Complaint::with(['consumer:id,name,email', 'company:id,name,slug'])
-            ->latest();
+        $query = Complaint::with(['consumer:id,name,email', 'company:id,name,slug']);
 
         if ($request->status) {
             $query->where('status', $request->status);
@@ -83,7 +82,7 @@ class AdminController extends Controller
             });
         }
 
-        $request->sort === 'oldest' ? $query->oldest() : $query->latest();
+        $request->sort === 'oldest' ? $query->oldest('updated_at') : $query->latest('updated_at');
 
         $perPage = min((int) ($request->per_page ?? 25), 100);
 
