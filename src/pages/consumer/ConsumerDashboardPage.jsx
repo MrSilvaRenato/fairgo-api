@@ -60,12 +60,11 @@ export default function ConsumerDashboardPage() {
     })
   }
 
-  if (loading) return <Skeleton />
-  if (!data)   return null
+  const complaints = data?.complaints ?? []
+  const stats      = data?.stats ?? {}
+  const claims     = data?.claims ?? []
 
-  const { stats, complaints, claims = [] } = data
-
-  // Cross-filtered counts (status counts respect category filter; category counts respect status filter)
+  // Cross-filtered counts — must be before any early returns (Rules of Hooks)
   const statusCounts = useMemo(() => {
     const base = category ? complaints.filter(c => c.category === category) : complaints
     const counts = {}
@@ -95,6 +94,9 @@ export default function ConsumerDashboardPage() {
     if (sort === 'oldest') list = [...list].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
     return list
   }, [complaints, filter, category, search, sort])
+
+  if (loading) return <Skeleton />
+  if (!data)   return null
 
   const needsAction  = complaints.filter((c) => c.status === 'responded').length
   const totalUnread  = complaints.reduce((sum, c) => sum + (c.unread_count ?? 0), 0)
