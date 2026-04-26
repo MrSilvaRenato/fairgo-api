@@ -287,8 +287,12 @@ export default function ComplaintsPage() {
 /* ── Individual complaint row ──────────────────────────────── */
 function ComplaintRow({ complaint }) {
   const st = STATUS_STYLE[complaint.status] ?? STATUS_STYLE.open
-  const daysAgo = Math.floor((Date.now() - new Date(complaint.created_at)) / 86400000)
-  const dateLabel = daysAgo === 0 ? 'today' : daysAgo === 1 ? '1d ago' : `${daysAgo}d ago`
+  const lastActive = new Date(complaint.updated_at || complaint.created_at)
+  const daysAgo = Math.floor((Date.now() - lastActive) / 86400000)
+  const timeStr = lastActive.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
+  const dateLabel = daysAgo === 0
+    ? `today · ${timeStr}`
+    : daysAgo === 1 ? `1d ago · ${timeStr}` : `${daysAgo}d ago`
 
   return (
     <Link to={`/complaints/${complaint.id}`}
