@@ -38,7 +38,7 @@ class CompanyDashboardController extends Controller
         ];
 
         return response()->json([
-            'company'    => $company->load('score', 'subscription'),
+            'company'    => $company->load('score', 'subscription', 'user:id,name,email'),
             'stats'      => $stats,
             'complaints' => $complaints,
         ]);
