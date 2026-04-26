@@ -532,7 +532,7 @@ export default function HomePage() {
         ) : (
           <>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {displayedCompanies.map((c) => {
+              {(managedQuery ? displayedCompanies : displayedCompanies.slice(0, 6)).map((c) => {
                 const b = BAND[c.badge] ?? BAND.not_rated
                 return (
                   <div key={c.id} className="card p-4 flex flex-col gap-2">
@@ -580,6 +580,18 @@ export default function HomePage() {
               })}
             </div>
 
+            {/* Browse all CTA — only shown when not searching */}
+            {!managedQuery && displayedCompanies.length > 6 && (
+              <div className="mt-5 text-center">
+                <Link to="/search"
+                  className="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 rounded-xl border transition"
+                  style={{ color: 'var(--color-ink-2)', borderColor: 'var(--color-line)' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-eucalyptus)'; e.currentTarget.style.color = 'var(--color-eucalyptus)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-line)'; e.currentTarget.style.color = 'var(--color-ink-2)' }}>
+                  Browse all {displayedCompanies.length} businesses <Icon name="arrow-r" size={14} />
+                </Link>
+              </div>
+            )}
           </>
         )}
       </section>
