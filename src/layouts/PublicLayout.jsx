@@ -80,6 +80,7 @@ export default function PublicLayout() {
                 Legal
               </p>
               <ul className="space-y-2.5">
+                <FooterLink to="/how-scoring-works">How scoring works</FooterLink>
                 <FooterLink to="/community-guidelines">Community Guidelines</FooterLink>
                 <FooterLink to="/terms">Terms &amp; Conditions</FooterLink>
                 <FooterLink to="/privacy">Privacy Policy</FooterLink>
