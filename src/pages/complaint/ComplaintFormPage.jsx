@@ -26,18 +26,22 @@ function Spinner({ size = 16 }) {
   )
 }
 
-/* ── Company avatar (favicon / initials fallback) ── */
+/* ── Company avatar (uploaded logo → favicon → initials) ── */
 function CompanyAvatar({ company, size = 40 }) {
   const [err, setErr] = useState(false)
   const initial = (company.name || '?')[0].toUpperCase()
+
+  const uploadedLogo = company.logo_url?.startsWith('/storage/') ? company.logo_url : null
   const faviconUrl = company.website
     ? `https://www.google.com/s2/favicons?sz=64&domain=${company.website.replace(/^https?:\/\//, '')}`
     : null
+  const src = uploadedLogo || faviconUrl || company.logo_url || null
 
-  if (faviconUrl && !err) {
+  if (src && !err) {
     return (
       <img
-        src={faviconUrl}
+        key={src}
+        src={src}
         alt=""
         width={size} height={size}
         onError={() => setErr(true)}
