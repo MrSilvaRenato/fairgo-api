@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
 import PublicLayout from '../layouts/PublicLayout'
+import ProtectedRoute from '../components/ProtectedRoute'
 import HomePage from '../pages/HomePage'
 import NotFoundPage from '../pages/NotFoundPage'
 import RegisterPage from '../pages/auth/RegisterPage'
@@ -31,34 +32,62 @@ const router = createBrowserRouter([
   {
     element: <PublicLayout />,
     children: [
-      { path: '/',                    element: <HomePage /> },
-      { path: '/register',            element: <RegisterPage /> },
-      { path: '/login',               element: <LoginPage /> },
-      { path: '/companies/register',   element: <CompanyRegisterPage /> },
-      { path: '/companies/:slug',       element: <CompanyProfilePage /> },
-      { path: '/companies/:slug/claim', element: <ClaimPage /> },
-      { path: '/complaints',             element: <ComplaintsPage /> },
-      { path: '/complaints/new',        element: <ComplaintFormPage /> },
-      { path: '/complaints/:id',         element: <ComplaintPage /> },
-      { path: '/complaints/:id/resolve', element: <ResolvePage /> },
-      { path: '/dashboard',              element: <ConsumerDashboardPage /> },
-      { path: '/company/dashboard',       element: <CompanyDashboardPage /> },
-      { path: '/company/analytics',       element: <CompanyAnalyticsPage /> },
-      { path: '/company/settings',        element: <CompanySettingsPage /> },
-      { path: '/company/billing',          element: <BillingPage /> },
-      { path: '/admin',                    element: <AdminPage /> },
-      { path: '/search',                   element: <SearchPage /> },
-      { path: '/most-complained',          element: <MostComplainedPage /> },
-      { path: '/community-guidelines',    element: <CommunityGuidelinesPage /> },
-      { path: '/terms',                   element: <TermsPage /> },
-      { path: '/privacy',                 element: <PrivacyPage /> },
-      { path: '/email/verify',             element: <EmailVerifyPage /> },
+
+      // ── Fully public ────────────────────────────────────────────────────────
+      { path: '/',                         element: <HomePage /> },
+      { path: '/register',                 element: <RegisterPage /> },
+      { path: '/login',                    element: <LoginPage /> },
       { path: '/forgot-password',          element: <ForgotPasswordPage /> },
       { path: '/reset-password',           element: <ResetPasswordPage /> },
-      { path: '/profile',                  element: <ProfilePage /> },
-      // Step 15 – /dashboard
-      // Step 16 – /company/dashboard
-      // Step 21 – /admin
+      { path: '/email/verify',             element: <EmailVerifyPage /> },
+      { path: '/search',                   element: <SearchPage /> },
+      { path: '/most-complained',          element: <MostComplainedPage /> },
+      { path: '/complaints',               element: <ComplaintsPage /> },
+      { path: '/complaints/:id',           element: <ComplaintPage /> },
+      { path: '/companies/:slug',          element: <CompanyProfilePage /> },
+      { path: '/companies/:slug/claim',    element: <ClaimPage /> },
+      { path: '/community-guidelines',     element: <CommunityGuidelinesPage /> },
+      { path: '/terms',                    element: <TermsPage /> },
+      { path: '/privacy',                  element: <PrivacyPage /> },
+
+      // ── Any authenticated user ───────────────────────────────────────────
+      {
+        element: <ProtectedRoute />,
+        children: [
+          { path: '/profile',              element: <ProfilePage /> },
+          { path: '/complaints/new',       element: <ComplaintFormPage /> },
+          { path: '/complaints/:id/resolve', element: <ResolvePage /> },
+        ],
+      },
+
+      // ── Consumer only ────────────────────────────────────────────────────
+      {
+        element: <ProtectedRoute role="consumer" />,
+        children: [
+          { path: '/dashboard',            element: <ConsumerDashboardPage /> },
+        ],
+      },
+
+      // ── Company admin only ───────────────────────────────────────────────
+      {
+        element: <ProtectedRoute role="company_admin" />,
+        children: [
+          { path: '/company/dashboard',    element: <CompanyDashboardPage /> },
+          { path: '/company/analytics',    element: <CompanyAnalyticsPage /> },
+          { path: '/company/settings',     element: <CompanySettingsPage /> },
+          { path: '/company/billing',      element: <BillingPage /> },
+          { path: '/companies/register',   element: <CompanyRegisterPage /> },
+        ],
+      },
+
+      // ── Admin only ───────────────────────────────────────────────────────
+      {
+        element: <ProtectedRoute role="admin" />,
+        children: [
+          { path: '/admin',                element: <AdminPage /> },
+        ],
+      },
+
     ],
   },
   { path: '*', element: <NotFoundPage /> },
