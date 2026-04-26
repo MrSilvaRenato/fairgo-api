@@ -23,14 +23,12 @@ export default function CompanyLogo({ company, size = 'md', className = '' }) {
   }
   const sizeClass = sizes[size] ?? sizes.md
 
-  // Google Favicon is primary — logo_url only used if explicitly set (future company uploads)
-  const primarySrc = googleFaviconUrl(company?.website) || company?.logo_url || null
-  const initials   = (company?.name ?? '?').charAt(0).toUpperCase()
+  // Priority: uploaded logo_url first, then Google favicon from website
+  const uploadedLogo = company?.logo_url?.startsWith('/storage/') ? company.logo_url : null
+  const src          = uploadedLogo || googleFaviconUrl(company?.website) || company?.logo_url || null
+  const initials     = (company?.name ?? '?').charAt(0).toUpperCase()
 
-  const [src]           = useState(primarySrc)
-  const [failed, setFailed] = useState(!primarySrc)
-
-  const handleError = () => setFailed(true)
+  const [failed, setFailed] = useState(false)
 
   if (failed || !src) {
     return (
@@ -42,9 +40,10 @@ export default function CompanyLogo({ company, size = 'md', className = '' }) {
 
   return (
     <img
+      key={src}
       src={src}
       alt={company?.name ?? ''}
-      onError={handleError}
+      onError={() => setFailed(true)}
       className={`${sizeClass} rounded-xl object-contain bg-white border border-gray-100 p-1 shrink-0 ${className}`}
     />
   )
