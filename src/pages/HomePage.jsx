@@ -602,22 +602,8 @@ export default function HomePage() {
           <div>
             <div className="caps">Rankings</div>
             <h2 className="font-display text-[32px] font-semibold tracking-tight mt-1">
-              Best &amp; worst rated businesses
+              Company Performance
             </h2>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex rounded-full border hairline bg-[color:var(--color-card)] p-1 gap-1 w-fit">
-              {[['best', 'Best'], ['worst', 'Worst']].map(([v, l]) => (
-                <button key={v} onClick={() => setBoardMode(v)}
-                  className={`text-xs font-medium px-4 py-1.5 rounded-full transition ${
-                    boardMode === v
-                      ? 'bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
-                      : 'text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]'
-                  }`}>
-                  {l}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 
