@@ -756,29 +756,29 @@ export default function HomePage() {
                       </div>
                     </div>
 
-                    {/* Gauge + stats */}
-                    <div className="flex items-center gap-3">
-                      <div className="shrink-0">
-                        <ScoreMeter score={c.score} band={c.badge} size={110} hideLabel />
+                    {/* Gauge — centred, big enough to look right */}
+                    <div className="flex justify-center my-1">
+                      <ScoreMeter score={c.score} band={c.badge} size={160} hideLabel />
+                    </div>
+
+                    {/* Stats row */}
+                    <div className="flex gap-3 mt-1">
+                      <div className="flex-1 bg-[color:var(--color-paper-2)] rounded-xl px-3 py-2">
+                        <p className="text-[10px] text-[color:var(--color-muted)] uppercase tracking-wide leading-none mb-0.5">Responded</p>
+                        <p className="text-sm font-semibold text-[color:var(--color-ink)]">
+                          {responded}<span className="text-[color:var(--color-muted)] font-normal text-xs"> / {c.total}</span>
+                        </p>
                       </div>
-                      <div className="flex-1 space-y-3">
-                        <div>
-                          <p className="text-[10px] text-[color:var(--color-muted)] uppercase tracking-wide leading-none mb-0.5">Responded</p>
-                          <p className="text-sm font-semibold text-[color:var(--color-ink)] leading-tight">
-                            {responded}<span className="text-[color:var(--color-muted)] font-normal text-xs"> / {c.total}</span>
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-[color:var(--color-muted)] uppercase tracking-wide leading-none mb-0.5">Resolved</p>
-                          <p className="text-sm font-semibold text-[color:var(--color-ink)] leading-tight">
-                            {resolved}<span className="text-[color:var(--color-muted)] font-normal text-xs"> / {c.total}</span>
-                          </p>
-                        </div>
+                      <div className="flex-1 bg-[color:var(--color-paper-2)] rounded-xl px-3 py-2">
+                        <p className="text-[10px] text-[color:var(--color-muted)] uppercase tracking-wide leading-none mb-0.5">Resolved</p>
+                        <p className="text-sm font-semibold text-[color:var(--color-ink)]">
+                          {resolved}<span className="text-[color:var(--color-muted)] font-normal text-xs"> / {c.total}</span>
+                        </p>
                       </div>
                     </div>
 
                     {/* Footer */}
-                    <div className="mt-2 pt-2.5 border-t hairline flex items-center justify-between">
+                    <div className="mt-3 pt-2.5 border-t hairline flex items-center justify-between">
                       <span className="caps text-[10px]" style={{ color: b.text }}>{b.label}</span>
                       {c.claimed && <span className="text-[10px] text-[#166534]">✅ Actively managed</span>}
                     </div>
