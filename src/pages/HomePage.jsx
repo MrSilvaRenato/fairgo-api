@@ -606,15 +606,6 @@ export default function HomePage() {
             </h2>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => setClaimedOnly((v) => !v)}
-              className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition ${
-                claimedOnly
-                  ? 'bg-[#f0fdf4] border-[#86efac] text-[#166534]'
-                  : 'border-[color:var(--color-line)] text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] bg-[color:var(--color-card)]'
-              }`}>
-              ✅ Actively managed
-            </button>
             <div className="flex rounded-full border hairline bg-[color:var(--color-card)] p-1 gap-1 w-fit">
               {[['best', 'Best'], ['worst', 'Worst']].map(([v, l]) => (
                 <button key={v} onClick={() => setBoardMode(v)}
