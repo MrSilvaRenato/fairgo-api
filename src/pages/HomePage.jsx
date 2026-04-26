@@ -641,11 +641,8 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* Two-column layout: ranked list (left) + Top 3 podium (right) */}
-        <div className="flex flex-col lg:flex-row gap-6">
-
-          {/* ── Left: ranked list ───────────────────────────── */}
-          <div className="flex-1 min-w-0">
+        <div className="flex flex-col gap-6">
+          <div className="w-full">
             {loadingBoard ? (
               <div className="card divide-y hairline-2 overflow-hidden">
                 {[...Array(5)].map((_, i) => (
@@ -728,63 +725,6 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* ── Right: Top 3 podium cards ───────────────────── */}
-          {!loadingBoard && displayList.length > 0 && boardMode === 'best' && (
-            <div className="lg:w-[300px] shrink-0 flex flex-col gap-3">
-              <p className="caps text-[color:var(--color-muted)] mb-1">Top performers</p>
-              {displayList.slice(0, 3).map((c, i) => {
-                const b         = BAND[c.badge] ?? BAND.not_rated
-                const medals    = ['🥇', '🥈', '🥉']
-                const responded = Math.round((c.response_rate   ?? 0) * (c.total ?? 0))
-                const resolved  = Math.round((c.resolution_rate ?? 0) * (c.total ?? 0))
-
-                return (
-                  <Link key={c.id} to={`/companies/${c.slug}`}
-                    className="card p-4 hover:shadow-md transition group">
-
-                    {/* Company header */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-xl leading-none">{medals[i]}</span>
-                      <CompanyLogo company={c} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[color:var(--color-ink)] truncate group-hover:underline underline-offset-2">
-                          {c.name}
-                        </p>
-                        <p className="text-[11px] text-[color:var(--color-muted)] capitalize">{c.industry ?? 'Unknown'}</p>
-                      </div>
-                    </div>
-
-                    {/* Gauge — centred, big enough to look right */}
-                    <div className="flex justify-center my-1">
-                      <ScoreMeter score={c.score} band={c.badge} size={160} scoreOnly />
-                    </div>
-
-                    {/* Stats row */}
-                    <div className="flex gap-3 mt-1">
-                      <div className="flex-1 bg-[color:var(--color-paper-2)] rounded-xl px-3 py-2">
-                        <p className="text-[10px] text-[color:var(--color-muted)] uppercase tracking-wide leading-none mb-0.5">Responded</p>
-                        <p className="text-sm font-semibold text-[color:var(--color-ink)]">
-                          {responded}<span className="text-[color:var(--color-muted)] font-normal text-xs"> / {c.total}</span>
-                        </p>
-                      </div>
-                      <div className="flex-1 bg-[color:var(--color-paper-2)] rounded-xl px-3 py-2">
-                        <p className="text-[10px] text-[color:var(--color-muted)] uppercase tracking-wide leading-none mb-0.5">Resolved</p>
-                        <p className="text-sm font-semibold text-[color:var(--color-ink)]">
-                          {resolved}<span className="text-[color:var(--color-muted)] font-normal text-xs"> / {c.total}</span>
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="mt-3 pt-2.5 border-t hairline flex items-center justify-between">
-                      <span className="caps text-[10px]" style={{ color: b.text }}>{b.label}</span>
-                      {c.claimed && <span className="text-[10px] text-[#166534]">✅ Actively managed</span>}
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
         </div>
       </section>
 
