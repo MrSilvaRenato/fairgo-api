@@ -17,6 +17,7 @@ export default function ProfilePage() {
 
   useSeoMeta({ title: 'My profile — Aus Fair Go' })
 
+  const [authChecked, setAuthChecked] = useState(false)
   const [profile,   setProfile]   = useState(null)
   const [loading,   setLoading]   = useState(true)
   const [saving,    setSaving]    = useState(false)
@@ -30,14 +31,21 @@ export default function ProfilePage() {
   const fileRef = useRef(null)
 
   useEffect(() => {
+    fetchUser().finally(() => setAuthChecked(true))
+  }, [])
+
+  useEffect(() => {
+    if (!authChecked) return
+    if (!authUser) return
     api.get('/profile')
       .then(r => {
         setProfile(r.data)
         setForm({ name: r.data.name ?? '', phone: r.data.phone ?? '', address: r.data.address ?? '' })
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [authChecked, authUser])
 
+  if (!authChecked) return null
   if (!authUser) return <Navigate to="/login?next=/profile" replace />
 
   const handle = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }))
