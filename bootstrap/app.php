@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         // Apply ban check to every authenticated API request
         $middleware->appendToGroup('api', \App\Http\Middleware\EnsureNotBanned::class);
+        // Bot prerender — intercept crawler requests before SPA serves them
+        $middleware->prependToGroup('web', \App\Http\Middleware\BotPrerender::class);
     })
     ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule): void {
         $schedule->job(new \App\Jobs\ExpireUnansweredComplaints)->hourly();
