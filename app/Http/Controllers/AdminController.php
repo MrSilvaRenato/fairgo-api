@@ -317,6 +317,8 @@ class AdminController extends Controller
             'id_rejection_note'      => null,
         ]);
 
+        $user->notify(new \App\Notifications\IdVerificationApproved());
+
         return response()->json(['message' => 'Verified.', 'user' => $user->fresh()]);
     }
 
@@ -327,11 +329,15 @@ class AdminController extends Controller
             'note' => 'nullable|string|max:500',
         ]);
 
+        $note = $data['note'] ?? 'Your document could not be verified.';
+
         $user->update([
             'id_verification_status' => 'rejected',
             'id_verified_at'         => null,
-            'id_rejection_note'      => $data['note'] ?? 'Your document could not be verified.',
+            'id_rejection_note'      => $note,
         ]);
+
+        $user->notify(new \App\Notifications\IdVerificationRejected($note));
 
         return response()->json(['message' => 'Rejected.', 'user' => $user->fresh()]);
     }

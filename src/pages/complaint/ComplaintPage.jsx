@@ -270,6 +270,12 @@ export default function ComplaintPage() {
               {complaint.consumer?.name?.[0]?.toUpperCase()}
             </span>
             <span className="font-medium text-[color:var(--color-ink-2)]">{complaint.consumer?.name}</span>
+            {complaint.consumer?.id_verification_status === 'approved' && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ color: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
+                <Icon name="verified" size={10} /> ID Verified
+              </span>
+            )}
           </span>
           <span>·</span>
           <span>{new Date(complaint.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}</span>

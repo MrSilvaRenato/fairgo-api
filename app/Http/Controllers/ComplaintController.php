@@ -172,7 +172,7 @@ class ComplaintController extends Controller
         }
 
         // Base relations for everyone
-        $relations = ['consumer:id,name', 'company:id,name,slug,website', 'response', 'feedback', 'replies.user:id,name,role', 'attachments'];
+        $relations = ['consumer:id,name,id_verification_status', 'company:id,name,slug,website', 'response', 'feedback', 'replies.user:id,name,role', 'attachments'];
         $complaint->load($relations);
 
         $data = $complaint->toArray();
@@ -215,7 +215,7 @@ class ComplaintController extends Controller
 
     public function index(Request $request)
     {
-        $query = Complaint::with(['consumer:id,name', 'company:id,name,slug'])
+        $query = Complaint::with(['consumer:id,name,id_verification_status', 'company:id,name,slug'])
             ->where('is_public', true)
             ->where('status', '!=', 'removed')
             ->whereNotIn('moderation_status', ['flagged', 'rejected'])
