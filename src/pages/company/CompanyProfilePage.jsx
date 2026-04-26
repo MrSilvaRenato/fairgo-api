@@ -431,9 +431,9 @@ function ComplaintsBlock({ company, complaints, onOpen }) {
     if (sort === 'unresolved') {
       list.sort((a, b) => (b.status === 'unresolved' ? 1 : 0) - (a.status === 'unresolved' ? 1 : 0))
     } else if (sort === 'oldest') {
-      list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      list.sort((a, b) => new Date(a.updated_at || a.created_at) - new Date(b.updated_at || b.created_at))
     } else {
-      list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      list.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
     }
     return list
   }, [complaints, q, cat, stat, sort])
@@ -528,8 +528,14 @@ function ComplaintsBlock({ company, complaints, onOpen }) {
 
 function ComplaintRow({ c, onOpen }) {
   const st = STATUS_STYLE[c.status] ?? STATUS_STYLE.open
-  const daysAgo = Math.floor((Date.now() - new Date(c.created_at)) / 86400000)
-  const dateLabel = daysAgo === 0 ? 'today' : daysAgo === 1 ? '1 day ago' : `${daysAgo}d ago`
+  const ts       = new Date(c.updated_at || c.created_at)
+  const daysAgo  = Math.floor((Date.now() - ts) / 86400000)
+  const timeStr  = ts.toLocaleString('en-AU', { hour: '2-digit', minute: '2-digit' }).toLowerCase()
+  const dateLabel = daysAgo === 0
+    ? `today · ${timeStr}`
+    : daysAgo === 1
+      ? `1 day ago · ${timeStr}`
+      : `${daysAgo}d ago`
 
   return (
     <li>
