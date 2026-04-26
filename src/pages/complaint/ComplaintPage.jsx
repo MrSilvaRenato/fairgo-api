@@ -490,6 +490,13 @@ export default function ComplaintPage() {
               <p className="font-semibold text-sm text-[color:var(--color-ink)]">
                 {complaint.feedback.resolved ? 'Consumer marked this resolved' : 'Consumer marked this unresolved'}
               </p>
+              <p className="text-xs text-[color:var(--color-muted)] mt-0.5">
+                {complaint.feedback.consumer?.name && (
+                  <span className="font-medium text-[color:var(--color-ink-2)]">{complaint.feedback.consumer.name}</span>
+                )}
+                {complaint.feedback.consumer?.name && complaint.feedback.created_at && ' · '}
+                {complaint.feedback.created_at && new Date(complaint.feedback.created_at).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </p>
             </div>
           </div>
           {complaint.feedback.rating && (
