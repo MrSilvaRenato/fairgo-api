@@ -47,9 +47,9 @@ class DemoSeeder extends Seeder
             [
                 'name'            => '[DEMO] Test Company',
                 'slug'            => 'demo-test-company',
-                'abn'             => '00000000000',
+                'abn'             => '78624472980',
                 'abn_entity_name' => 'Demo Test Company Pty Ltd',
-                'abn_verified'    => false,
+                'abn_verified'    => true,
                 'website'         => 'https://ausfairgo.com.au',
                 'description'     => 'This is a demonstration company created to showcase how Aus Fair Go works. It is not a real business.',
                 'user_id'         => $companyUser->id,
