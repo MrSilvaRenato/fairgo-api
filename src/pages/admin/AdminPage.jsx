@@ -267,24 +267,36 @@ export default function AdminPage() {
       )}
 
       {/* Tabs */}
-      <div className="card p-1 grid grid-cols-3 sm:flex gap-1">
-        {TABS.map((t) => (
-          <button key={t} onClick={() => { setTab(t); setQ(''); setCStatus(''); setCCategory(''); setCModStatus(''); setCSort('latest'); setCPage(1) }}
-            className={`sm:flex-1 py-2 px-1 rounded-xl text-xs sm:text-sm font-medium capitalize transition text-center leading-tight ${
-              tab === t
-                ? 'bg-[color:var(--color-eucalyptus)] text-[color:var(--color-paper)] shadow-sm'
-                : 'text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]'
-            }`}>
-            {t === 'moderation'        && stats?.moderation_flagged > 0 ? `Mod (${stats.moderation_flagged})`
-            : t === 'unregistered'     && stats?.stub_companies > 0    ? `Unreg (${stats.stub_companies})`
-            : t === 'claims'           && stats?.pending_claims > 0    ? `Claims (${stats.pending_claims})`
-            : t === 'moderation'       ? 'Moderation'
-            : t === 'unregistered'     ? 'Unreg.'
+      <div className="flex flex-wrap gap-1.5">
+        {TABS.map((t) => {
+          const active = tab === t
+          const badge =
+            t === 'moderation'    && stats?.moderation_flagged > 0 ? stats.moderation_flagged
+            : t === 'unregistered'  && stats?.stub_companies > 0   ? stats.stub_companies
+            : t === 'claims'        && stats?.pending_claims > 0   ? stats.pending_claims
+            : null
+          const label =
+            t === 'moderation'       ? 'Moderation'
+            : t === 'unregistered'   ? 'Unregistered'
             : t === 'id-verifications' ? 'ID Verify'
             : t.charAt(0).toUpperCase() + t.slice(1)
-            }
-          </button>
-        ))}
+          return (
+            <button key={t}
+              onClick={() => { setTab(t); setQ(''); setCStatus(''); setCCategory(''); setCModStatus(''); setCSort('latest'); setCPage(1) }}
+              className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full border transition ${
+                active
+                  ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                  : 'border-[color:var(--color-line)] text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)]'
+              }`}>
+              {label}
+              {badge && (
+                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full leading-none ${
+                  active ? 'bg-white/20 text-white' : 'bg-[color:var(--color-clay)]/15 text-[color:var(--color-clay)]'
+                }`}>{badge}</span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       {/* ── Complaints filter panel ────────────────────────── */}
