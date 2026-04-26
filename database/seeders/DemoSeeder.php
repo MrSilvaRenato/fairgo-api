@@ -155,6 +155,86 @@ class DemoSeeder extends Seeder
             ]
         );
 
+        // Complaint 4 — Resolved with positive feedback
+        $c4 = Complaint::firstOrCreate(
+            ['consumer_id' => $consumer->id, 'company_id' => $company->id, 'title' => '[DEMO] Internet speed not matching advertised plan'],
+            [
+                'description'         => '[DEMO COMPLAINT] Paying for a 100Mbps plan but consistently getting under 20Mbps. Speed tests documented over 6 weeks.',
+                'expected_resolution' => 'Consistent delivery of advertised speeds or refund of the difference.',
+                'category'            => 'service',
+                'status'              => 'resolved',
+                'is_public'           => true,
+                'moderation_status'   => 'approved',
+                'expires_at'          => now()->addDays(1),
+                'incident_date'       => now()->subDays(25),
+                'amount_involved'     => 79.90,
+                'contact_attempted'   => true,
+                'reference_number'    => 'DEMO-004',
+            ]
+        );
+
+        CompanyResponse::firstOrCreate(
+            ['complaint_id' => $c4->id],
+            [
+                'company_id'   => $company->id,
+                'content'      => '[DEMO RESPONSE] We apologise for the inconvenience. After reviewing your account our technical team identified a node issue in your area. This has been rectified and we have applied a $40 credit to your account for the disruption.',
+                'responded_at' => now()->subDays(12),
+            ]
+        );
+
+        ResolutionFeedback::firstOrCreate(
+            ['complaint_id' => $c4->id],
+            [
+                'consumer_id'      => $consumer->id,
+                'resolved'         => true,
+                'rating'           => 5,
+                'comment'          => '[DEMO] They fixed the issue and credited my account. Very happy with the outcome.',
+                'would_deal_again' => true,
+            ]
+        );
+
+        // Complaint 5 — Resolved with positive feedback (hits MIN_FOR_RATING = 5)
+        $c5 = Complaint::firstOrCreate(
+            ['consumer_id' => $consumer->id, 'company_id' => $company->id, 'title' => '[DEMO] Overcharged on energy bill for 4 months'],
+            [
+                'description'         => '[DEMO COMPLAINT] Incorrectly billed for 4 consecutive cycles despite submitting meter photos each time. Total overcharge approximately $380.',
+                'expected_resolution' => 'Credit of $380 applied and corrected future billing.',
+                'category'            => 'billing',
+                'status'              => 'resolved',
+                'is_public'           => true,
+                'moderation_status'   => 'approved',
+                'expires_at'          => now()->addDays(1),
+                'incident_date'       => now()->subDays(30),
+                'amount_involved'     => 380.00,
+                'contact_attempted'   => true,
+                'reference_number'    => 'DEMO-005',
+            ]
+        );
+
+        CompanyResponse::firstOrCreate(
+            ['complaint_id' => $c5->id],
+            [
+                'company_id'   => $company->id,
+                'content'      => '[DEMO RESPONSE] Thank you for your patience. We have reviewed your billing history and confirmed the metering error. A credit of $380 has been applied to your account and your meter has been recalibrated.',
+                'responded_at' => now()->subDays(18),
+            ]
+        );
+
+        ResolutionFeedback::firstOrCreate(
+            ['complaint_id' => $c5->id],
+            [
+                'consumer_id'      => $consumer->id,
+                'resolved'         => true,
+                'rating'           => 4,
+                'comment'          => '[DEMO] Full credit received. Took a few weeks but they did make it right.',
+                'would_deal_again' => true,
+            ]
+        );
+
+        // Recalculate score now that we have 5 complaints
+        $scoreService = app(\App\Services\ScoreService::class);
+        $scoreService->calculate($company);
+
         $this->command->info('✅ Demo data seeded.');
         $this->command->table(
             ['Role', 'Email', 'Password'],
