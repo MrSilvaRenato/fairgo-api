@@ -88,14 +88,13 @@ export default function HomePage() {
       .finally(() => setManagedLoading(false))
   }, [])
 
-  // Load claimed companies when toggled
+  // Load claimed companies (used for stat bar + toggled view)
   useEffect(() => {
-    if (showAllCompanies) return
     if (claimedList.length > 0) return
     api.get('/complaints/company-search', { params: { claimed: true } })
       .then((r) => setClaimedList(r.data ?? []))
       .catch(() => {})
-  }, [showAllCompanies])
+  }, [])
 
   // Search always queries all
   useEffect(() => {
