@@ -300,10 +300,15 @@ export default function HomePage() {
                 </div>
               )}
               {open && query.length >= 2 && results.companies.length === 0 && results.complaints.length === 0 && !searching && (
-                <div className="absolute z-20 left-0 right-0 mt-2 bg-[color:var(--color-card)] rounded-2xl shadow-xl border hairline px-4 py-5 text-sm text-[color:var(--color-muted)] text-center">
-                  No match —{' '}
-                  <Link to="/companies/register" className="text-[color:var(--color-eucalyptus)] hover:underline font-medium">
-                    register a business
+                <div className="absolute z-20 left-0 right-0 mt-2 bg-[color:var(--color-card)] rounded-2xl shadow-xl border hairline px-4 py-5 text-center">
+                  <p className="text-sm text-[color:var(--color-muted)] mb-3">
+                    No results for <span className="font-medium text-[color:var(--color-ink)]">"{query}"</span>
+                  </p>
+                  <Link
+                    to={`/complaints/new?company_name=${encodeURIComponent(query.trim())}`}
+                    onClick={() => setOpen(false)}
+                    className="inline-flex items-center gap-2 btn btn-primary text-sm px-4 py-2">
+                    File a complaint against "{query}" <Icon name="arrow-r" size={13} />
                   </Link>
                 </div>
               )}
