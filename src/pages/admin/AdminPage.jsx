@@ -584,7 +584,7 @@ export default function AdminPage() {
                         {' → '}
                         <span className="font-medium text-[color:var(--color-ink-2)]">{c.company?.name}</span>
                         {' · '}
-                        {new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {new Date(c.created_at).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
@@ -660,7 +660,7 @@ export default function AdminPage() {
                       {' → '}
                       <span className="font-medium text-[color:var(--color-ink-2)]">{c.company?.name}</span>
                       {' · '}
-                      {new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {new Date(c.created_at).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </p>
                     {c.moderation_note && (
                       <p className="text-[11px] mt-1 text-[color:var(--color-ochre)] italic">

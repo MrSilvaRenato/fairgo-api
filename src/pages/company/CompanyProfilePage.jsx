@@ -607,7 +607,7 @@ function DetailSheet({ complaint, company, onClose }) {
         <div className="sticky top-0 z-10 bg-[color:var(--color-paper)]/90 backdrop-blur border-b hairline-2 flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2 text-xs font-mono text-[color:var(--color-muted)]">
             <span>#{c.id}</span><span>·</span>
-            <span>{new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+            <span>{new Date(c.created_at).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
           </div>
           <div className="flex items-center gap-1">
             <button className="p-2 rounded-lg hover:bg-[color:var(--color-paper-2)]" aria-label="Share"><Icon name="share" size={16} /></button>

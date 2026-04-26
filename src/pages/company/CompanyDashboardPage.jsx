@@ -443,10 +443,10 @@ function ComplaintCard({ complaint: c, company, respondingTo, setRespondingTo, o
             <span className="flex items-center gap-1">
               <Icon name="calendar" size={11} />
               {['resolved', 'unresolved'].includes(c.status)
-                ? <>Closed {new Date(c.updated_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</>
+                ? <>Closed {new Date(c.updated_at).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</>
                 : c.updated_at !== c.created_at
-                  ? <>Updated {new Date(c.updated_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</>
-                  : <>Filed {new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</>
+                  ? <>Updated {new Date(c.updated_at).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</>
+                  : <>Filed {new Date(c.created_at).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</>
               }
             </span>
           </div>
