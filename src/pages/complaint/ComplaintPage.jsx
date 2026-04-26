@@ -5,6 +5,7 @@ import useAuthStore from '../../store/authStore'
 import CompanyResponseForm from '../../components/CompanyResponseForm'
 import CompanyLogo from '../../components/CompanyLogo'
 import AiReviewedBadge from '../../components/AiReviewedBadge'
+import Icon from '../../components/Icon'
 import useSeoMeta from '../../hooks/useSeoMeta'
 
 const STATUS_CONFIG = {
