@@ -1,10 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import api from '../../lib/axios'
 import useAuthStore from '../../store/authStore'
 import Icon from '../../components/Icon'
 import EmailVerifyBanner from '../../components/EmailVerifyBanner'
 import DeleteAccountModal from '../../components/DeleteAccountModal'
+
+const CATEGORIES = [
+  { value: '',         label: 'All',      emoji: null  },
+  { value: 'billing',  label: 'Billing',  emoji: '💳' },
+  { value: 'delivery', label: 'Delivery', emoji: '📦' },
+  { value: 'service',  label: 'Service',  emoji: '🎧' },
+  { value: 'refund',   label: 'Refund',   emoji: '↩️' },
+  { value: 'fraud',    label: 'Fraud',    emoji: '⚠️' },
+  { value: 'other',    label: 'Other',    emoji: '📋' },
+]
 
 const STATUS = {
   open:              { label: 'Open',              fg: 'var(--color-eucalyptus)',  bg: 'var(--color-eucalyptus-3)' },
@@ -21,6 +31,9 @@ export default function ConsumerDashboardPage() {
   const [data, setData]             = useState(null)
   const [loading, setLoading]       = useState(true)
   const [filter, setFilter]         = useState('all')
+  const [category, setCategory]     = useState('')
+  const [search, setSearch]         = useState('')
+  const [sort, setSort]             = useState('newest')
   const [showDelete, setShowDelete] = useState(false)
 
   const load = () => {
@@ -51,17 +64,55 @@ export default function ConsumerDashboardPage() {
   if (!data)   return null
 
   const { stats, complaints, claims = [] } = data
-  const filtered = filter === 'all' ? complaints : complaints.filter((c) => c.status === filter)
+
+  // Cross-filtered counts (status counts respect category filter; category counts respect status filter)
+  const statusCounts = useMemo(() => {
+    const base = category ? complaints.filter(c => c.category === category) : complaints
+    const counts = {}
+    base.forEach(c => { counts[c.status] = (counts[c.status] ?? 0) + 1 })
+    return counts
+  }, [complaints, category])
+
+  const categoryCounts = useMemo(() => {
+    const base = filter !== 'all' ? complaints.filter(c => c.status === filter) : complaints
+    const counts = {}
+    base.forEach(c => { counts[c.category] = (counts[c.category] ?? 0) + 1 })
+    return counts
+  }, [complaints, filter])
+
+  const filtered = useMemo(() => {
+    let list = complaints
+    if (filter !== 'all') list = list.filter(c => c.status === filter)
+    if (category)         list = list.filter(c => c.category === category)
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter(c =>
+        c.title?.toLowerCase().includes(q) ||
+        c.company?.name?.toLowerCase().includes(q) ||
+        c.description?.toLowerCase().includes(q)
+      )
+    }
+    if (sort === 'oldest') list = [...list].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    return list
+  }, [complaints, filter, category, search, sort])
 
   const needsAction  = complaints.filter((c) => c.status === 'responded').length
   const totalUnread  = complaints.reduce((sum, c) => sum + (c.unread_count ?? 0), 0)
 
   const statItems = [
-    { label: 'Total',        value: stats.total,      key: 'all' },
-    { label: 'Open',         value: stats.open,        key: 'open' },
-    { label: 'Responded',    value: stats.responded,   key: 'responded' },
-    { label: 'Resolved',     value: stats.resolved,    key: 'resolved' },
-    { label: 'Unresolved',   value: stats.unresolved,  key: 'unresolved' },
+    { label: 'Total',      value: stats.total,     key: 'all' },
+    { label: 'Open',       value: stats.open,       key: 'open' },
+    { label: 'Responded',  value: stats.responded,  key: 'responded' },
+    { label: 'Resolved',   value: stats.resolved,   key: 'resolved' },
+    { label: 'Unresolved', value: stats.unresolved, key: 'unresolved' },
+  ]
+
+  const STATUS_PILLS = [
+    { key: 'all',       label: 'All',       dot: null },
+    { key: 'open',      label: 'Open',      dot: 'var(--color-eucalyptus)' },
+    { key: 'responded', label: 'Responded', dot: '#3B4B7A' },
+    { key: 'resolved',  label: 'Resolved',  dot: 'var(--color-eucalyptus)' },
+    { key: 'unresolved',label: 'Unresolved',dot: 'var(--color-clay)' },
   ]
 
   return (
@@ -140,14 +191,110 @@ export default function ConsumerDashboardPage() {
         ))}
       </div>
 
+      {/* Magic filter panel */}
+      <div className="card p-4 space-y-4">
+        {/* Search + Sort */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Icon name="search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)]" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search complaints, companies…"
+              className="input pl-9 text-sm w-full"
+            />
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {['newest', 'oldest'].map(s => (
+              <button key={s} onClick={() => setSort(s)}
+                className={`text-[11px] font-medium px-3 py-1.5 rounded-full border transition capitalize ${
+                  sort === s
+                    ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                    : 'border-[color:var(--color-line)] text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)]'
+                }`}>{s}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Status pills */}
+        <div>
+          <p className="caps text-[10px] text-[color:var(--color-muted)] mb-2">Status</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {STATUS_PILLS.map(opt => {
+              const count = opt.key === 'all'
+                ? (category ? complaints.filter(c => c.category === category).length : complaints.length)
+                : (statusCounts[opt.key] ?? 0)
+              const active = filter === opt.key
+              return (
+                <button key={opt.key} onClick={() => setFilter(opt.key)}
+                  className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-full border transition ${
+                    active
+                      ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                      : 'border-[color:var(--color-line)] text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)]'
+                  }`}>
+                  {opt.dot && <span className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ background: active ? 'var(--color-paper)' : opt.dot }} />}
+                  {opt.label}
+                  {count > 0 && (
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full leading-none ${
+                      active ? 'bg-white/20 text-white' : 'bg-[color:var(--color-ink)]/10 text-[color:var(--color-ink)]'
+                    }`}>{count}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Category pills */}
+        <div>
+          <p className="caps text-[10px] text-[color:var(--color-muted)] mb-2">Category</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {CATEGORIES.map(opt => {
+              const count = opt.value
+                ? (categoryCounts[opt.value] ?? 0)
+                : Object.values(categoryCounts).reduce((a, b) => a + b, 0)
+              const active = category === opt.value
+              return (
+                <button key={opt.value} onClick={() => setCategory(opt.value)}
+                  className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-full border transition ${
+                    active
+                      ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                      : 'border-[color:var(--color-line)] text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)]'
+                  }`}>
+                  {opt.emoji && <span className="text-[10px]">{opt.emoji}</span>}
+                  {opt.label}
+                  {count > 0 && (
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full leading-none ${
+                      active ? 'bg-white/20 text-white' : 'bg-[color:var(--color-ink)]/10 text-[color:var(--color-ink)]'
+                    }`}>{count}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Result count + clear */}
+        {(filter !== 'all' || category || search) && (
+          <div className="flex items-center justify-between text-xs text-[color:var(--color-muted)] pt-1 border-t hairline-2">
+            <span>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</span>
+            <button onClick={() => { setFilter('all'); setCategory(''); setSearch('') }}
+              className="text-[color:var(--color-eucalyptus)] hover:underline font-medium">
+              Clear filters
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* List */}
       {filtered.length === 0 ? (
         <div className="card p-14 text-center">
           <div className="font-display italic-display text-[24px] mb-2 text-[color:var(--color-muted)]">Nothing here yet.</div>
           <p className="text-sm text-[color:var(--color-muted)] mb-6">
-            {filter === 'all' ? 'Had a bad experience? Put it on the public record.' : 'No complaints with this status.'}
+            {filter === 'all' && !category && !search ? 'Had a bad experience? Put it on the public record.' : 'No complaints match these filters.'}
           </p>
-          {filter === 'all' && (
+          {filter === 'all' && !category && !search && (
             <Link to="/complaints/new" className="btn btn-primary">Submit your first complaint</Link>
           )}
         </div>
