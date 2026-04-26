@@ -93,6 +93,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('company/abn/verify', [AbnVerificationController::class, 'verify']);
 });
 
+// User profile
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('profile',                    [\App\Http\Controllers\ProfileController::class, 'show']);
+    Route::patch('profile',                  [\App\Http\Controllers\ProfileController::class, 'update']);
+    Route::post('profile/id-verification',   [\App\Http\Controllers\ProfileController::class, 'uploadId']);
+});
+
 // Analytics — Standard or Pro plan required
 Route::middleware(['auth:sanctum', 'requires.plan:standard,pro'])->group(function () {
     Route::get('dashboard/analytics', CompanyAnalyticsController::class);
@@ -121,6 +128,9 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::put('users/{user}',                  [AdminController::class, 'updateUser']);
     Route::get('moderation',                    [AdminController::class, 'moderationQueue']);
     Route::put('moderation/{complaint}',        [AdminController::class, 'moderationDecision']);
+    Route::get('id-verifications',                   [AdminController::class, 'idVerifications']);
+    Route::post('id-verifications/{user}/approve',   [AdminController::class, 'approveId']);
+    Route::post('id-verifications/{user}/reject',    [AdminController::class, 'rejectId']);
     Route::get('stub-companies',                     [AdminController::class, 'stubCompanies']);
     Route::post('stub-companies/{company}/promote',  [AdminController::class, 'promoteStub']);
     Route::get('claims',                             [CompanyClaimController::class, 'index']);

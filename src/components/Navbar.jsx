@@ -112,6 +112,7 @@ export default function Navbar() {
                   <Link to="/company/analytics"  className={linkCls('/company/analytics')}>Analytics</Link>
                   <Link to="/company/billing"    className={linkCls('/company/billing')}>Billing</Link>
                   <Link to="/company/settings"   className={linkCls('/company/settings')}>Settings</Link>
+                  <Link to="/profile"            className={linkCls('/profile')}>Profile</Link>
                 </>
               )}
 
@@ -126,6 +127,7 @@ export default function Navbar() {
                       </span>
                     )}
                   </Link>
+                  <Link to="/profile" className={linkCls('/profile')}>Profile</Link>
                   <Link to="/complaints/new" className="btn btn-primary text-xs px-4 py-2">
                     + New complaint
                   </Link>

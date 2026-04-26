@@ -25,6 +25,7 @@ import PrivacyPage from '../pages/legal/PrivacyPage'
 import EmailVerifyPage from '../pages/auth/EmailVerifyPage'
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from '../pages/auth/ResetPasswordPage'
+import ProfilePage from '../pages/ProfilePage'
 
 const router = createBrowserRouter([
   {
@@ -54,6 +55,7 @@ const router = createBrowserRouter([
       { path: '/email/verify',             element: <EmailVerifyPage /> },
       { path: '/forgot-password',          element: <ForgotPasswordPage /> },
       { path: '/reset-password',           element: <ResetPasswordPage /> },
+      { path: '/profile',                  element: <ProfilePage /> },
       // Step 15 – /dashboard
       // Step 16 – /company/dashboard
       // Step 21 – /admin

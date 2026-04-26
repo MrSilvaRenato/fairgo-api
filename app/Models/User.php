@@ -37,6 +37,11 @@ class User extends Authenticatable implements MustVerifyEmail, CanResetPassword
         'reputation_score',
         'reputation_flag',
         'deactivated_at',
+        'address',
+        'id_document_path',
+        'id_verification_status',
+        'id_verified_at',
+        'id_rejection_note',
     ];
 
     protected $hidden = [
@@ -47,11 +52,12 @@ class User extends Authenticatable implements MustVerifyEmail, CanResetPassword
     protected function casts(): array
     {
         return [
-            'email_verified_at'  => 'datetime',
-            'phone_verified_at'  => 'datetime',
-            'password'           => 'hashed',
-            'banned'             => 'boolean',
-            'deactivated_at'     => 'datetime',
+            'email_verified_at'      => 'datetime',
+            'phone_verified_at'      => 'datetime',
+            'password'               => 'hashed',
+            'banned'                 => 'boolean',
+            'deactivated_at'         => 'datetime',
+            'id_verified_at'         => 'datetime',
         ];
     }
 

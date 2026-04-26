@@ -278,4 +278,61 @@ class AdminController extends Controller
 
         return response()->json($user->fresh('company'));
     }
+
+    // GET /admin/id-verifications — list pending/all ID verification requests
+    public function idVerifications(Request $request)
+    {
+        $status = $request->get('status', 'pending');
+
+        $query = User::whereNotNull('id_verification_status')
+            ->latest('updated_at');
+
+        if ($status !== 'all') {
+            $query->where('id_verification_status', $status);
+        }
+
+        return response()->json($query->paginate(25)->through(fn ($u) => [
+            'id'                     => $u->id,
+            'name'                   => $u->name,
+            'email'                  => $u->email,
+            'role'                   => $u->role,
+            'id_verification_status' => $u->id_verification_status,
+            'id_verified_at'         => $u->id_verified_at?->toISOString(),
+            'id_rejection_note'      => $u->id_rejection_note,
+            'has_document'           => (bool) $u->id_document_path,
+            'submitted_at'           => $u->updated_at->toISOString(),
+        ]));
+    }
+
+    // POST /admin/id-verifications/{user}/approve
+    public function approveId(Request $request, User $user)
+    {
+        if (!$user->id_document_path) {
+            return response()->json(['message' => 'No document submitted.'], 422);
+        }
+
+        $user->update([
+            'id_verification_status' => 'approved',
+            'id_verified_at'         => now(),
+            'id_rejection_note'      => null,
+        ]);
+
+        return response()->json(['message' => 'Verified.', 'user' => $user->fresh()]);
+    }
+
+    // POST /admin/id-verifications/{user}/reject
+    public function rejectId(Request $request, User $user)
+    {
+        $data = $request->validate([
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        $user->update([
+            'id_verification_status' => 'rejected',
+            'id_verified_at'         => null,
+            'id_rejection_note'      => $data['note'] ?? 'Your document could not be verified.',
+        ]);
+
+        return response()->json(['message' => 'Rejected.', 'user' => $user->fresh()]);
+    }
 }
