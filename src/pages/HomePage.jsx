@@ -758,7 +758,7 @@ export default function HomePage() {
 
                     {/* Gauge — centred, big enough to look right */}
                     <div className="flex justify-center my-1">
-                      <ScoreMeter score={c.score} band={c.badge} size={160} hideLabel />
+                      <ScoreMeter score={c.score} band={c.badge} size={160} scoreOnly />
                     </div>
 
                     {/* Stats row */}
