@@ -7,6 +7,7 @@ use App\Models\Complaint;
 use App\Models\Subscription;
 use App\Services\AbnLookupService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class CompanyController extends Controller
@@ -120,6 +121,34 @@ class CompanyController extends Controller
         return response()->json($company->fresh());
     }
 
+    public function uploadLogo(Request $request)
+    {
+        $company = $request->user()->company;
+
+        if (!$company) {
+            return response()->json(['message' => 'No company found.'], 404);
+        }
+
+        $request->validate([
+            'logo' => 'required|file|mimes:jpeg,jpg,png,gif,webp,svg|max:2048',
+        ]);
+
+        // Delete old uploaded logo if it was stored locally
+        if ($company->logo_url && str_contains($company->logo_url, '/storage/company-logos/')) {
+            $oldPath = str_replace('/storage/', '', parse_url($company->logo_url, PHP_URL_PATH));
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        $file     = $request->file('logo');;
+        $ext      = $file->getClientOriginalExtension();
+        $filename = 'logo-' . Str::random(12) . '.' . $ext;
+        $path     = $file->storeAs("company-logos/{$company->id}", $filename, 'public');
+
+        $company->update(['logo_url' => '/storage/' . $path]);
+
+        return response()->json(['logo_url' => $company->logo_url]);
+    }
+
     public function lookupAbn(Request $request, string $abn)
     {
         $result = $this->abn->lookup($abn);
@@ -133,10 +162,29 @@ class CompanyController extends Controller
 
     public function search(Request $request)
     {
-        $companies = Company::where('name', 'like', '%' . $request->q . '%')
-            ->select('id', 'name', 'slug', 'industry')
-            ->limit(10)
-            ->get();
+        $query = Company::with('score')->select('id', 'name', 'slug', 'industry', 'website', 'logo_url', 'claimed');
+
+        if ($request->filled('q')) {
+            $query->where('name', 'like', '%' . $request->q . '%');
+        }
+
+        if ($request->boolean('claimed')) {
+            $query->where('claimed', true);
+        }
+
+        $companies = $query->orderBy('name')->limit(200)->get()
+            ->map(fn($c) => [
+                'id'       => $c->id,
+                'name'     => $c->name,
+                'slug'     => $c->slug,
+                'industry' => $c->industry,
+                'website'  => $c->website,
+                'logo_url' => $c->logo_url,
+                'claimed'  => (bool) $c->claimed,
+                'score'    => round($c->score?->score ?? 0, 1),
+                'badge'    => $c->score?->badge ?? 'not_rated',
+                'total'    => $c->score?->total_complaints ?? 0,
+            ]);
 
         return response()->json($companies);
     }

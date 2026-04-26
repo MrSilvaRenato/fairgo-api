@@ -26,16 +26,38 @@ class AdminController extends Controller
             'moderation_pending'   => Complaint::where('moderation_status', 'pending')->count(),
             'moderation_flagged'   => Complaint::where('moderation_status', 'flagged')->count(),
             'moderation_rejected'  => Complaint::where('moderation_status', 'rejected')->count(),
-            'stub_companies'       => Company::where('is_stub', true)->count(),
-            'pending_claims'       => CompanyClaim::where('status', 'pending')->count(),
+            'stub_companies'          => Company::where('is_stub', true)->count(),
+            'pending_claims'          => CompanyClaim::where('status', 'pending')->count(),
+            'pending_id_verifications' => User::where('id_verification_status', 'pending')->count(),
         ]);
     }
 
     // GET /admin/complaints
+    public function complaintCategoryCounts(Request $request)
+    {
+        $base = Complaint::query();
+        if ($request->moderation_status) $base->where('moderation_status', $request->moderation_status);
+
+        // Category counts — optionally scoped to a status
+        $catQuery = clone $base;
+        if ($request->status) $catQuery->where('status', $request->status);
+        $category = $catQuery->selectRaw('category, count(*) as total')
+            ->groupBy('category')
+            ->pluck('total', 'category');
+
+        // Status counts — optionally scoped to a category
+        $stQuery = clone $base;
+        if ($request->category) $stQuery->where('category', $request->category);
+        $status = $stQuery->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return response()->json(compact('category', 'status'));
+    }
+
     public function complaints(Request $request)
     {
-        $query = Complaint::with(['consumer:id,name,email', 'company:id,name,slug'])
-            ->latest();
+        $query = Complaint::with(['consumer:id,name,email', 'company:id,name,slug,logo_url,website', 'feedback:id,complaint_id,rating,would_deal_again']);
 
         if ($request->status) {
             $query->where('status', $request->status);
@@ -45,14 +67,26 @@ class AdminController extends Controller
             $query->where('moderation_status', $request->moderation_status);
         }
 
+        if ($request->category) {
+            $query->where('category', $request->category);
+        }
+
         if ($request->q) {
-            $query->where(function ($q) use ($request) {
-                $q->where('title', 'like', "%{$request->q}%")
-                  ->orWhere('description', 'like', "%{$request->q}%");
+            $search = $request->q;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhereHas('company',  fn ($c) => $c->where('name',  'like', "%{$search}%"))
+                  ->orWhereHas('consumer', fn ($u) => $u->where('name',  'like', "%{$search}%")
+                                                         ->orWhere('email', 'like', "%{$search}%"));
             });
         }
 
-        return response()->json($query->paginate(25));
+        $request->sort === 'oldest' ? $query->oldest('updated_at') : $query->latest('updated_at');
+
+        $perPage = min((int) ($request->per_page ?? 25), 100);
+
+        return response()->json($query->paginate($perPage));
     }
 
     // PUT /admin/complaints/{complaint}
@@ -116,7 +150,7 @@ class AdminController extends Controller
     // GET /admin/users
     public function users(Request $request)
     {
-        $query = User::with('company:id,name,slug')
+        $query = User::with('company:id,name,slug,logo_url,website')
             ->withCount('complaints')
             ->latest();
 
@@ -139,7 +173,7 @@ class AdminController extends Controller
     {
         $status = $request->get('status', 'flagged'); // flagged | pending | rejected | edited
 
-        $query = Complaint::with(['consumer:id,name,email', 'company:id,name,slug'])
+        $query = Complaint::with(['consumer:id,name,email', 'company:id,name,slug,logo_url,website'])
             ->where('moderation_status', $status)
             ->latest();
 
@@ -195,7 +229,7 @@ class AdminController extends Controller
             }
         }
 
-        return response()->json($complaint->fresh(['consumer:id,name,email', 'company:id,name,slug']));
+        return response()->json($complaint->fresh(['consumer:id,name,email', 'company:id,name,slug,logo_url,website']));
     }
 
     // GET /admin/stub-companies — companies auto-created from unregistered complaints
@@ -243,5 +277,68 @@ class AdminController extends Controller
         $user->update($data);
 
         return response()->json($user->fresh('company'));
+    }
+
+    // GET /admin/id-verifications — list pending/all ID verification requests
+    public function idVerifications(Request $request)
+    {
+        $status = $request->get('status', 'pending');
+
+        $query = User::whereNotNull('id_verification_status')
+            ->latest('updated_at');
+
+        if ($status !== 'all') {
+            $query->where('id_verification_status', $status);
+        }
+
+        return response()->json($query->paginate(25)->through(fn ($u) => [
+            'id'                     => $u->id,
+            'name'                   => $u->name,
+            'email'                  => $u->email,
+            'role'                   => $u->role,
+            'id_verification_status' => $u->id_verification_status,
+            'id_verified_at'         => $u->id_verified_at?->toISOString(),
+            'id_rejection_note'      => $u->id_rejection_note,
+            'has_document'           => (bool) $u->id_document_path,
+            'submitted_at'           => $u->updated_at->toISOString(),
+        ]));
+    }
+
+    // POST /admin/id-verifications/{user}/approve
+    public function approveId(Request $request, User $user)
+    {
+        if (!$user->id_document_path) {
+            return response()->json(['message' => 'No document submitted.'], 422);
+        }
+
+        $user->update([
+            'id_verification_status' => 'approved',
+            'id_verified_at'         => now(),
+            'id_rejection_note'      => null,
+        ]);
+
+        $user->notify(new \App\Notifications\IdVerificationApproved());
+
+        return response()->json(['message' => 'Verified.', 'user' => $user->fresh()]);
+    }
+
+    // POST /admin/id-verifications/{user}/reject
+    public function rejectId(Request $request, User $user)
+    {
+        $data = $request->validate([
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        $note = $data['note'] ?? 'Your document could not be verified.';
+
+        $user->update([
+            'id_verification_status' => 'rejected',
+            'id_verified_at'         => null,
+            'id_rejection_note'      => $note,
+        ]);
+
+        $user->notify(new \App\Notifications\IdVerificationRejected($note));
+
+        return response()->json(['message' => 'Rejected.', 'user' => $user->fresh()]);
     }
 }

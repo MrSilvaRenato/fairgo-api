@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Rules\NotDisposableEmail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -13,7 +14,7 @@ class AuthController extends Controller
     {
         $data = $request->validate([
             'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email',
+            'email'    => ['required', 'email', 'unique:users,email', new NotDisposableEmail],
             'password' => 'required|string|min:8|confirmed',
             'role'     => 'sometimes|in:consumer,company_admin',
         ]);
@@ -24,6 +25,13 @@ class AuthController extends Controller
             'password' => $data['password'],
             'role'     => $data['role'] ?? 'consumer',
         ]);
+
+        // Send verification email — wrapped so a mail config issue never breaks registration
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (\Exception $e) {
+            \Log::error('Verification email failed for user ' . $user->id . ': ' . $e->getMessage());
+        }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -52,6 +60,13 @@ class AuthController extends Controller
             Auth::logout();
             throw ValidationException::withMessages([
                 'email' => ['This account has been suspended. Contact support if you believe this is an error.'],
+            ]);
+        }
+
+        if ($user->deactivated_at) {
+            Auth::logout();
+            throw ValidationException::withMessages([
+                'email' => ['This account has been deactivated.'],
             ]);
         }
 

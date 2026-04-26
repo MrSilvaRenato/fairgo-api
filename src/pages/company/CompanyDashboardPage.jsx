@@ -1,11 +1,30 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, Navigate } from 'react-router-dom'
 import api from '../../lib/axios'
 import useAuthStore from '../../store/authStore'
 import CompanyResponseForm from '../../components/CompanyResponseForm'
 import CompanyLogo from '../../components/CompanyLogo'
 import Icon from '../../components/Icon'
 import { BAND } from '../../components/ScoreMeter'
+
+const CATEGORIES = [
+  { value: '',         label: 'All',      emoji: null  },
+  { value: 'billing',  label: 'Billing',  emoji: '💳' },
+  { value: 'delivery', label: 'Delivery', emoji: '📦' },
+  { value: 'service',  label: 'Service',  emoji: '🎧' },
+  { value: 'refund',   label: 'Refund',   emoji: '↩️' },
+  { value: 'fraud',    label: 'Fraud',    emoji: '⚠️' },
+  { value: 'other',    label: 'Other',    emoji: '📋' },
+]
+
+const STATUS_PILLS = [
+  { key: 'all',        label: 'All',       dot: null },
+  { key: 'open',       label: 'Open',      dot: 'var(--color-eucalyptus)' },
+  { key: 'responded',  label: 'Responded', dot: '#3B4B7A' },
+  { key: 'resolved',   label: 'Resolved',  dot: 'var(--color-eucalyptus)' },
+  { key: 'unresolved', label: 'Unresolved',dot: 'var(--color-clay)' },
+]
+import DeleteAccountModal from '../../components/DeleteAccountModal'
 
 const STATUS = {
   open:              { label: 'Open',              fg: 'var(--color-eucalyptus)',  bg: 'var(--color-eucalyptus-3)' },
@@ -18,21 +37,44 @@ const STATUS = {
 
 export default function CompanyDashboardPage() {
   const { fetchUser, user } = useAuthStore()
+  const location = useLocation()
   const [data, setData]           = useState(null)
   const [loading, setLoading]     = useState(true)
   const [apiError, setApiError]   = useState(false)
   const [filter, setFilter]       = useState('all')
+  const [category, setCategory]   = useState('')
   const [search, setSearch]       = useState('')
+  const [sort, setSort]           = useState('newest')
   const [respondingTo, setRespondingTo] = useState(null)
 
+  const load = () => {
+    api.get('/dashboard/company')
+      .then((res) => setData(res.data))
+      .catch(() => setApiError(true))
+      .finally(() => setLoading(false))
+  }
+
+  // Re-fetch every time the user navigates to this page (location.key changes on every navigation)
   useEffect(() => {
-    fetchUser().finally(() => {
-      api.get('/dashboard/company')
-        .then((res) => setData(res.data))
-        .catch(() => setApiError(true))
-        .finally(() => setLoading(false))
+    fetchUser().finally(load)
+  }, [location.key])
+
+  const markRead = (complaintId) => {
+    setData(prev => {
+      if (!prev) return prev
+      const unreadDelta = prev.complaints.find(c => c.id === complaintId)?.unread_count ?? 0
+      return {
+        ...prev,
+        complaints: prev.complaints.map(c =>
+          c.id === complaintId ? { ...c, unread_count: 0 } : c
+        ),
+        stats: {
+          ...prev.stats,
+          unread: Math.max(0, (prev.stats.unread ?? 0) - unreadDelta),
+        },
+      }
     })
-  }, [])
+  }
 
   const handleResponseSubmitted = (complaintId, response) => {
     setData((prev) => ({
@@ -48,23 +90,50 @@ export default function CompanyDashboardPage() {
   const stats      = data?.stats ?? {}
   const company    = data?.company ?? null
 
+  const statusCounts = useMemo(() => {
+    const base = category ? complaints.filter(c => c.category === category) : complaints
+    const counts = {}
+    base.forEach(c => { counts[c.status] = (counts[c.status] ?? 0) + 1 })
+    return counts
+  }, [complaints, category])
+
+  const categoryCounts = useMemo(() => {
+    const base = filter !== 'all' ? complaints.filter(c => c.status === filter) : complaints
+    const counts = {}
+    base.forEach(c => { counts[c.category] = (counts[c.category] ?? 0) + 1 })
+    return counts
+  }, [complaints, filter])
+
   const filtered = useMemo(() => {
-    let list = filter === 'all' ? complaints : complaints.filter((c) => c.status === filter)
+    let list = complaints
+    if (filter !== 'all') list = list.filter(c => c.status === filter)
+    if (category)         list = list.filter(c => c.category === category)
     if (search.trim()) {
       const q = search.toLowerCase()
-      list = list.filter((c) =>
+      list = list.filter(c =>
         c.title?.toLowerCase().includes(q) ||
         c.consumer?.name?.toLowerCase().includes(q) ||
-        c.category?.toLowerCase().includes(q)
+        c.description?.toLowerCase().includes(q)
       )
     }
+    if (sort === 'oldest') list = [...list].sort((a, b) => new Date(a.updated_at) - new Date(b.updated_at))
+    else list = [...list].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
     return list
-  }, [complaints, filter, search])
+  }, [complaints, filter, category, search, sort])
 
   if (loading) return <Skeleton />
 
-  // API failed but user IS a company_admin — company exists, transient error
-  if (apiError && user?.role === 'company_admin') {
+  // Not logged in at all — send to login
+  if (!user) return <Navigate to="/login?next=/company/dashboard" replace />
+
+  // Logged in but not a company admin — send to login
+  if (user.role !== 'company_admin') return <Navigate to="/login?next=/company/dashboard" replace />
+
+  // company_admin with no company linked — guide them to register or claim
+  if (!user?.company_id) return <NoCompanyPrompt />
+
+  // API failed but user HAS a company linked — transient error
+  if (apiError && user?.company_id) {
     return (
       <div className="max-w-lg mx-auto py-24 px-4 text-center">
         <p className="text-4xl mb-4">⚠️</p>
@@ -75,15 +144,14 @@ export default function CompanyDashboardPage() {
     )
   }
 
-  // No company linked to this account at all
-  if (apiError || !data) return <NoCompanyPrompt />
+  if (!data) return <NoCompanyPrompt />
 
   const score = company.score
   const band  = score?.badge ?? 'not_rated'
   const b     = BAND[band]
 
   const needsResponse = complaints.filter((c) => c.status === 'open' && !c.response).length
-  const totalUnread   = stats.unread ?? 0
+  const totalUnread   = complaints.reduce((sum, c) => sum + (c.unread_count ?? 0), 0)
 
   const statItems = [
     { label: 'Total',       value: stats.total,            key: 'all' },
@@ -186,25 +254,100 @@ export default function CompanyDashboardPage() {
         ))}
       </div>
 
-      {/* Search + filter bar */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Icon name="search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)]" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search complaints, consumers, categories…"
-            className="input pl-9 text-sm w-full"
-          />
+      {/* Magic filter panel */}
+      <div className="card p-4 space-y-4">
+        {/* Search + Sort */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Icon name="search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)]" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search complaints, consumers…"
+              className="input pl-9 text-sm w-full"
+            />
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {['newest', 'oldest'].map(s => (
+              <button key={s} onClick={() => setSort(s)}
+                className={`text-[11px] font-medium px-3 py-1.5 rounded-full border transition capitalize ${
+                  sort === s
+                    ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                    : 'border-[color:var(--color-line)] text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)]'
+                }`}>{s}</button>
+            ))}
+          </div>
         </div>
-        <div className="flex gap-1.5 flex-wrap">
-          {['all', 'open', 'responded', 'resolved', 'unresolved'].map((f) => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`chip capitalize ${filter === f ? 'chip-active' : ''}`}>
-              {f.replace('_', ' ')}
+
+        {/* Status pills */}
+        <div>
+          <p className="caps text-[10px] text-[color:var(--color-muted)] mb-2">Status</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {STATUS_PILLS.map(opt => {
+              const count = opt.key === 'all'
+                ? (category ? complaints.filter(c => c.category === category).length : complaints.length)
+                : (statusCounts[opt.key] ?? 0)
+              const active = filter === opt.key
+              return (
+                <button key={opt.key} onClick={() => setFilter(opt.key)}
+                  className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-full border transition ${
+                    active
+                      ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                      : 'border-[color:var(--color-line)] text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)]'
+                  }`}>
+                  {opt.dot && <span className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ background: active ? 'var(--color-paper)' : opt.dot }} />}
+                  {opt.label}
+                  {count > 0 && (
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full leading-none ${
+                      active ? 'bg-white/20 text-white' : 'bg-[color:var(--color-ink)]/10 text-[color:var(--color-ink)]'
+                    }`}>{count}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Category pills */}
+        <div>
+          <p className="caps text-[10px] text-[color:var(--color-muted)] mb-2">Category</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {CATEGORIES.map(opt => {
+              const count = opt.value
+                ? (categoryCounts[opt.value] ?? 0)
+                : Object.values(categoryCounts).reduce((a, b) => a + b, 0)
+              const active = category === opt.value
+              return (
+                <button key={opt.value} onClick={() => setCategory(opt.value)}
+                  className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-full border transition ${
+                    active
+                      ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                      : 'border-[color:var(--color-line)] text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)]'
+                  }`}>
+                  {opt.emoji && <span className="text-[10px]">{opt.emoji}</span>}
+                  {opt.label}
+                  {count > 0 && (
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full leading-none ${
+                      active ? 'bg-white/20 text-white' : 'bg-[color:var(--color-ink)]/10 text-[color:var(--color-ink)]'
+                    }`}>{count}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Result count + clear */}
+        {(filter !== 'all' || category || search) && (
+          <div className="flex items-center justify-between text-xs text-[color:var(--color-muted)] pt-1 border-t hairline-2">
+            <span>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</span>
+            <button onClick={() => { setFilter('all'); setCategory(''); setSearch('') }}
+              className="text-[color:var(--color-eucalyptus)] hover:underline font-medium">
+              Clear filters
             </button>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Complaints inbox */}
@@ -214,7 +357,7 @@ export default function CompanyDashboardPage() {
             {search ? 'No results found.' : 'Inbox is clear.'}
           </div>
           <p className="text-sm text-[color:var(--color-muted)]">
-            {search ? 'Try a different search term.' : filter === 'all' ? 'No complaints yet.' : `No ${filter} complaints.`}
+            {filter !== 'all' || category || search ? 'No complaints match these filters.' : 'No complaints yet.'}
           </p>
         </div>
       ) : (
@@ -227,6 +370,7 @@ export default function CompanyDashboardPage() {
               respondingTo={respondingTo}
               setRespondingTo={setRespondingTo}
               onResponseSubmitted={handleResponseSubmitted}
+              onRead={markRead}
             />
           ))}
         </ul>
@@ -239,7 +383,7 @@ export default function CompanyDashboardPage() {
 }
 
 /* ─── Complaint card ─────────────────────────────────────── */
-function ComplaintCard({ complaint: c, company, respondingTo, setRespondingTo, onResponseSubmitted }) {
+function ComplaintCard({ complaint: c, company, respondingTo, setRespondingTo, onResponseSubmitted, onRead }) {
   const st          = STATUS[c.status] ?? STATUS.open
   const unreadCount = c.unread_count ?? 0
   const daysLeft    = c.expires_at
@@ -284,6 +428,7 @@ function ComplaintCard({ complaint: c, company, respondingTo, setRespondingTo, o
 
           {/* Title */}
           <Link to={`/complaints/${c.id}`}
+            onClick={() => unreadCount > 0 && onRead?.(c.id)}
             className="font-semibold text-[color:var(--color-ink)] hover:text-[color:var(--color-eucalyptus)] transition block leading-snug mb-1.5">
             {c.title}
           </Link>
@@ -297,7 +442,12 @@ function ComplaintCard({ complaint: c, company, respondingTo, setRespondingTo, o
             <span>·</span>
             <span className="flex items-center gap-1">
               <Icon name="calendar" size={11} />
-              {new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+              {['resolved', 'unresolved'].includes(c.status)
+                ? <>Closed {new Date(c.updated_at).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</>
+                : c.updated_at !== c.created_at
+                  ? <>Updated {new Date(c.updated_at).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</>
+                  : <>Filed {new Date(c.created_at).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</>
+              }
             </span>
           </div>
         </div>
@@ -311,7 +461,9 @@ function ComplaintCard({ complaint: c, company, respondingTo, setRespondingTo, o
               {respondingTo === c.id ? 'Cancel' : 'Respond'}
             </button>
           ) : (
-            <Link to={`/complaints/${c.id}`} className="btn btn-secondary text-xs">
+            <Link to={`/complaints/${c.id}`}
+              onClick={() => unreadCount > 0 && onRead?.(c.id)}
+              className="btn btn-secondary text-xs">
               View <Icon name="arrow-r" size={12} />
             </Link>
           )}
@@ -358,6 +510,11 @@ function ComplaintCard({ complaint: c, company, respondingTo, setRespondingTo, o
         <div className="mt-4 pt-4 border-t hairline-2">
           <CompanyResponseForm
             complaintId={c.id}
+            consumerName={c.consumer?.name || ''}
+            refNumber={c.reference_number || ''}
+            companyName={c.company?.name || company?.name || ''}
+            category={c.category || 'other'}
+            complaintDescription={c.description || ''}
             onSubmitted={(response) => onResponseSubmitted(c.id, response)}
           />
         </div>
@@ -406,26 +563,106 @@ function TrustBadge({ slug }) {
 
 /* ─── No company prompt ──────────────────────────────────── */
 function NoCompanyPrompt() {
+  const [claims, setClaims]         = useState([])
+  const [showDelete, setShowDelete] = useState(false)
+
+  useEffect(() => {
+    api.get('/dashboard/consumer')
+      .then((r) => setClaims(r.data.claims ?? []))
+      .catch(() => {})
+  }, [])
+
+  const latestClaim = claims[claims.length - 1] ?? null
+
   return (
-    <div className="max-w-lg mx-auto py-16 px-4 text-center">
-      <div className="w-16 h-16 bg-[color:var(--color-eucalyptus-3)] rounded-2xl flex items-center justify-center mx-auto mb-5">
-        <Icon name="building" size={28} className="text-[color:var(--color-eucalyptus)]" />
+    <div className="max-w-lg mx-auto py-12 px-4">
+
+      {/* Claim status banner — shown when there's a claim history */}
+      {latestClaim && (
+        <div className={`card p-5 mb-6 border-l-4 ${
+          latestClaim.status === 'approved' ? 'border-[color:var(--color-eucalyptus)]' :
+          latestClaim.status === 'rejected' ? 'border-[color:var(--color-clay)]' :
+          'border-[color:var(--color-ochre)]'
+        }`}>
+          <div className="flex items-start gap-3">
+            <span className="text-2xl shrink-0">
+              {latestClaim.status === 'approved' ? '✅' : latestClaim.status === 'rejected' ? '❌' : '⏳'}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm" style={{ color: 'var(--color-ink)' }}>
+                Claim for {latestClaim.company_name}
+              </p>
+              {latestClaim.status === 'pending' && (
+                <p className="text-xs mt-1" style={{ color: 'var(--color-ink-2)' }}>
+                  Your claim is under review. We'll notify you by email once a decision is made.
+                </p>
+              )}
+              {latestClaim.status === 'approved' && (
+                <p className="text-xs mt-1" style={{ color: 'var(--color-eucalyptus)' }}>
+                  Approved — please refresh the page to access your dashboard.
+                </p>
+              )}
+              {latestClaim.status === 'rejected' && (
+                <>
+                  <p className="text-xs mt-1" style={{ color: 'var(--color-clay)' }}>
+                    Your claim was not approved.
+                  </p>
+                  {latestClaim.rejection_reason && (
+                    <p className="text-xs mt-1.5 px-3 py-2 rounded-lg" style={{ background: 'var(--color-clay-soft)', color: 'var(--color-clay)' }}>
+                      <span className="font-semibold">Reason: </span>{latestClaim.rejection_reason}
+                    </p>
+                  )}
+                  <p className="text-xs mt-2" style={{ color: 'var(--color-muted)' }}>
+                    You can submit a new claim with additional documentation, or contact{' '}
+                    <a href="mailto:support@ausfairgo.com.au" className="underline">support@ausfairgo.com.au</a>.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main CTA */}
+      <div className="text-center">
+        <div className="w-16 h-16 bg-[color:var(--color-eucalyptus-3)] rounded-2xl flex items-center justify-center mx-auto mb-5">
+          <Icon name="building" size={28} className="text-[color:var(--color-eucalyptus)]" />
+        </div>
+        <h2 className="font-display text-2xl font-semibold mb-2">No business linked yet</h2>
+        <p className="text-[color:var(--color-muted)] text-sm leading-relaxed mb-8 max-w-sm mx-auto">
+          Register a new business or claim one already listed in our database.
+        </p>
+        <div className="flex flex-col gap-3">
+          <Link to="/companies/register" className="btn btn-primary w-full justify-center text-sm py-3">
+            Register a new business
+          </Link>
+          <Link to="/search" className="btn btn-secondary w-full justify-center text-sm py-3">
+            Find &amp; claim your existing company →
+          </Link>
+        </div>
+        <p className="text-xs text-[color:var(--color-muted)] mt-4">
+          Already registered? <button onClick={() => window.location.reload()} className="underline hover:text-[color:var(--color-ink)]">Refresh the page</button>
+        </p>
       </div>
-      <h2 className="font-display text-2xl font-semibold mb-2">No business linked to your account</h2>
-      <p className="text-[color:var(--color-muted)] text-sm leading-relaxed mb-8 max-w-sm mx-auto">
-        This dashboard is for business owners. If your company is already listed on Aus Fair Go, you can claim it — or register a new business below.
-      </p>
-      <div className="flex flex-col gap-3">
-        <Link to="/companies/register" className="btn btn-primary w-full justify-center text-sm py-3">
-          Register a new business
-        </Link>
-        <Link to="/search" className="btn btn-secondary w-full justify-center text-sm py-3">
-          Find &amp; claim your existing company →
-        </Link>
+
+      {/* Danger zone */}
+      <div className="mt-10 card p-5 border border-[color:var(--color-clay)]">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-sm font-semibold" style={{ color: 'var(--color-ink)' }}>Deactivate account</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>
+              Remove your login access and personal contact info.
+            </p>
+          </div>
+          <button onClick={() => setShowDelete(true)}
+            className="btn text-xs font-semibold shrink-0 px-4 py-2 rounded-xl"
+            style={{ background: 'var(--color-clay-soft)', color: 'var(--color-clay)', border: '1px solid var(--color-clay)' }}>
+            Deactivate account
+          </button>
+        </div>
       </div>
-      <p className="text-xs text-[color:var(--color-muted)] mt-4">
-        Already registered? <button onClick={() => window.location.reload()} className="underline hover:text-[color:var(--color-ink)]">Refresh the page</button>
-      </p>
+
+      {showDelete && <DeleteAccountModal onClose={() => setShowDelete(false)} isCompany />}
     </div>
   )
 }

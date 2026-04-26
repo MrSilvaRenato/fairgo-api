@@ -4,14 +4,27 @@ namespace App\Models;
 
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Contracts\Auth\CanResetPassword;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail, CanResetPassword
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
+    use \Illuminate\Auth\Passwords\CanResetPassword;
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new \App\Notifications\ResetPasswordNotification($token));
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new \App\Notifications\VerifyEmailNotification());
+    }
 
     protected $fillable = [
         'name',
@@ -23,6 +36,12 @@ class User extends Authenticatable
         'banned',
         'reputation_score',
         'reputation_flag',
+        'deactivated_at',
+        'address',
+        'id_document_path',
+        'id_verification_status',
+        'id_verified_at',
+        'id_rejection_note',
     ];
 
     protected $hidden = [
@@ -33,10 +52,12 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at'  => 'datetime',
-            'phone_verified_at'  => 'datetime',
-            'password'           => 'hashed',
-            'banned'             => 'boolean',
+            'email_verified_at'      => 'datetime',
+            'phone_verified_at'      => 'datetime',
+            'password'               => 'hashed',
+            'banned'                 => 'boolean',
+            'deactivated_at'         => 'datetime',
+            'id_verified_at'         => 'datetime',
         ];
     }
 

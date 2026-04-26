@@ -2,6 +2,49 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import useAuthStore from '../../store/authStore'
 
+/* ── Password strength bar ──────────────────────────────────── */
+function passwordScore(pw) {
+  if (!pw) return 0
+  let score = 0
+  if (pw.length >= 8)  score++
+  if (pw.length >= 12) score++
+  if (/[A-Z]/.test(pw) || /[0-9]/.test(pw)) score++
+  if (/[^A-Za-z0-9]/.test(pw) || (pw.length >= 8 && /[A-Z]/.test(pw) && /[0-9]/.test(pw))) score++
+  return Math.min(score, 4)
+}
+const STRENGTH_LABEL = ['', 'Weak', 'Fair', 'Good', 'Strong']
+const STRENGTH_COLOR = ['', '#ef4444', '#f59e0b', '#3b82f6', '#10b981']
+
+function PasswordStrength({ password }) {
+  const score = passwordScore(password)
+  if (!password) return null
+  return (
+    <div className="mt-2 space-y-1">
+      <div className="flex gap-1">
+        {[1,2,3,4].map(n => (
+          <div key={n} className="h-1 flex-1 rounded-full transition-all duration-300"
+            style={{ background: n <= score ? STRENGTH_COLOR[score] : 'var(--color-line)' }} />
+        ))}
+      </div>
+      <p className="text-xs font-medium" style={{ color: STRENGTH_COLOR[score] }}>
+        {STRENGTH_LABEL[score]}
+        {score < 2 && ' — try adding numbers or uppercase letters'}
+      </p>
+    </div>
+  )
+}
+
+function LogoMark({ size = 48 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
+      <circle cx="20" cy="20" r="19" fill="var(--color-eucalyptus)" />
+      <path d="M12 26c6-2 10-6 14-14-1 9-5 14-14 14Z" fill="var(--color-ochre-2)" opacity="0.95" />
+      <path d="M12 26c6-2 10-6 14-14-1 9-5 14-14 14Z" fill="var(--color-paper)" opacity="0.9" transform="translate(-2,-2)" />
+      <path d="M8 30h24" stroke="var(--color-paper)" strokeWidth="1.2" strokeLinecap="round" opacity="0.7" />
+    </svg>
+  )
+}
+
 const DRAFT_KEY = 'fairgo_complaint_draft'
 
 export default function RegisterPage() {
@@ -9,12 +52,13 @@ export default function RegisterPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const next = searchParams.get('next') ?? '/'
-  const hasDraft  = !!sessionStorage.getItem(DRAFT_KEY)
-  const isClaim   = next.includes('/claim')
+  const hasDraft    = !!sessionStorage.getItem(DRAFT_KEY)
+  const isClaim     = next.includes('/claim')
+  const isBusiness  = searchParams.get('role') === 'business'
 
   const [form, setForm] = useState({
     name: '', email: '', password: '', password_confirmation: '',
-    role: 'consumer',
+    role: isBusiness ? 'company_admin' : 'consumer',
   })
   const [errors, setErrors] = useState({})
 
@@ -31,13 +75,28 @@ export default function RegisterPage() {
         navigate(next)
       }
     } catch (err) {
-      if (err.response?.status === 422) setErrors(err.response.data.errors ?? {})
+      if (err.response?.status === 422) {
+        setErrors(err.response.data.errors ?? {})
+      } else {
+        setErrors({ email: ['Something went wrong. Please try again.'] })
+      }
     }
   }
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center -mt-8 py-8">
       <div className="w-full max-w-md">
+
+        {/* Business registration context banner */}
+        {isBusiness && !isClaim && (
+          <div className="mb-6 flex items-start gap-3 bg-[color:var(--color-eucalyptus-3)] border border-[color:var(--color-eucalyptus)] rounded-2xl px-4 py-4">
+            <span className="text-2xl shrink-0">🏢</span>
+            <div>
+              <p className="text-sm font-semibold text-[color:var(--color-ink)]">Register your business on Aus Fair Go</p>
+              <p className="text-xs text-[color:var(--color-ink-2)] mt-0.5">Step 1 of 2 — Create your personal account, then you'll add your business details (ABN, company name, etc.).</p>
+            </div>
+          </div>
+        )}
 
         {/* Claim context banner */}
         {isClaim && (
@@ -66,18 +125,21 @@ export default function RegisterPage() {
         )}
 
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-lg">FG</span>
+          <div className="flex justify-center mb-4">
+            <LogoMark size={52} />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {hasDraft ? 'Create your free account' : isClaim ? 'Create your free account' : 'Create your account'}
+            {hasDraft ? 'Create your free account'
+              : isClaim ? 'Create your free account'
+              : isBusiness ? 'Create your business account'
+              : 'Create your account'}
           </h1>
           <p className="text-sm text-gray-500 mt-1">Free forever. No credit card required.</p>
         </div>
 
         <div className="card p-8">
-          {/* Account type toggle — hide for complaint drafts and claim flows (consumer only) */}
-          {!hasDraft && !isClaim && (
+          {/* Account type toggle — hide for complaint drafts, claim flows, and direct business signup */}
+          {!hasDraft && !isClaim && !isBusiness && (
             <div className="grid grid-cols-2 gap-2 mb-6 p-1 bg-gray-100 rounded-xl">
               {[
                 { value: 'consumer',      label: 'Consumer', icon: '👤' },
@@ -112,6 +174,7 @@ export default function RegisterPage() {
             <Field label="Password" error={errors.password?.[0]}>
               <input name="password" type="password" value={form.password} onChange={handle} required
                 className="input" placeholder="Min 8 characters" autoComplete="new-password" />
+              <PasswordStrength password={form.password} />
             </Field>
 
             <Field label="Confirm password">
@@ -129,7 +192,10 @@ export default function RegisterPage() {
                   </svg>
                   Creating account…
                 </span>
-              ) : hasDraft ? 'Create account & submit complaint' : isClaim ? 'Create account & continue to claim' : 'Create account'}
+              ) : hasDraft ? 'Create account & submit complaint'
+              : isClaim ? 'Create account & continue to claim'
+              : isBusiness ? 'Create account & continue →'
+              : 'Create account'}
             </button>
           </form>
         </div>

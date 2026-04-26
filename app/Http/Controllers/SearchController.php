@@ -36,7 +36,7 @@ class SearchController extends Controller
                 'claimed'  => (bool) $c->claimed,
             ]);
 
-        $complaints = Complaint::with(['company:id,name,slug', 'consumer:id,name'])
+        $complaints = Complaint::with(['company:id,name,slug,logo_url,website', 'consumer:id,name'])
             ->where('is_public', true)
             ->where('status', '!=', 'removed')
             ->where(function ($query) use ($q) {

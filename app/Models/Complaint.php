@@ -28,6 +28,8 @@ class Complaint extends Model
         'reference_number',
         'amount_involved',
         'contact_attempted',
+        'phone',
+        'anonymous_hash',
     ];
 
     protected function casts(): array
@@ -67,5 +69,10 @@ class Complaint extends Model
     public function replies()
     {
         return $this->hasMany(ComplaintReply::class);
+    }
+
+    public function attachments()
+    {
+        return $this->hasMany(ComplaintAttachment::class);
     }
 }

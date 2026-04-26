@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\CompanyClaim;
 use App\Models\Subscription;
+use App\Notifications\ClaimApproved;
+use App\Notifications\ClaimRejected;
+use App\Services\AbnLookupService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -13,7 +16,7 @@ class CompanyClaimController extends Controller
     /**
      * Submit a new claim — requires auth.
      */
-    public function store(Request $request, Company $company)
+    public function store(Request $request, Company $company, AbnLookupService $abnService)
     {
         $user = $request->user();
 
@@ -46,15 +49,43 @@ class CompanyClaimController extends Controller
             'message'           => 'required|string|min:30|max:1000',
         ]);
 
-        // Verify ABN matches what's on record
+        // Verify submitted ABN is real via the ABR
         $submittedAbn = preg_replace('/\D/', '', $validated['abn_confirmation']);
-        $companyAbn   = preg_replace('/\D/', '', $company->abn ?? '');
 
-        if ($companyAbn && $submittedAbn !== $companyAbn) {
+        if (!$abnService->validateChecksum($submittedAbn)) {
             return response()->json([
-                'message' => 'The ABN you entered does not match our records for this company.',
-                'errors'  => ['abn_confirmation' => ['ABN does not match.']],
+                'message' => 'The ABN you entered is not valid.',
+                'errors'  => ['abn_confirmation' => ['Invalid ABN format.']],
             ], 422);
+        }
+
+        try {
+            $abnData = $abnService->lookup($submittedAbn);
+        } catch (\Throwable) {
+            $abnData = null;
+        }
+
+        if (!$abnData) {
+            return response()->json([
+                'message' => 'The ABN you entered could not be verified with the Australian Business Register. Please check and try again.',
+                'errors'  => ['abn_confirmation' => ['ABN not found in the ABR.']],
+            ], 422);
+        }
+
+        // For stub companies (fake ABN), update with the real verified ABN
+        // For claimed companies this won't run (blocked above), but for stubs
+        // we store the real ABN so future claims are also verified correctly
+        $storedAbn = preg_replace('/\D/', '', $company->abn ?? '');
+        if ($storedAbn !== $submittedAbn) {
+            // If already claimed by someone else with a verified ABN — must match exactly
+            if ($company->claimed && $company->abn_verified) {
+                return response()->json([
+                    'message' => 'The ABN you entered does not match our records for this company.',
+                    'errors'  => ['abn_confirmation' => ['ABN does not match.']],
+                ], 422);
+            }
+            // Unclaimed/stub company — replace fake ABN with the real verified one
+            $company->update(['abn' => $submittedAbn, 'abn_verified' => true]);
         }
 
         $claim = CompanyClaim::create(array_merge($validated, [
@@ -138,6 +169,14 @@ class CompanyClaimController extends Controller
             ]);
         }
 
+        // Notify claimant by email
+        try {
+            $notifyUser = $targetUser ?? \App\Models\User::where('email', $claim->claimant_email)->first();
+            if ($notifyUser) {
+                $notifyUser->notify(new ClaimApproved($claim->load('company')));
+            }
+        } catch (\Throwable) {}
+
         return response()->json([
             'message' => 'Claim approved. The user now has access to the company dashboard.',
             'claim'   => $claim->fresh('company', 'claimant'),
@@ -163,6 +202,14 @@ class CompanyClaimController extends Controller
             'reviewed_at'      => now(),
             'rejection_reason' => $request->input('rejection_reason'),
         ]);
+
+        // Notify claimant by email
+        try {
+            $notifyUser = \App\Models\User::where('email', $claim->claimant_email)->first();
+            if ($notifyUser) {
+                $notifyUser->notify(new ClaimRejected($claim->load('company')));
+            }
+        } catch (\Throwable) {}
 
         return response()->json(['message' => 'Claim rejected.', 'claim' => $claim->fresh()]);
     }

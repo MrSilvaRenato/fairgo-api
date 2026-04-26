@@ -27,19 +27,17 @@ class ComplaintFiledCompany extends Notification implements ShouldQueue
     {
         $dashUrl      = rtrim(config('app.frontend_url', config('app.url')), '/') . '/company/dashboard';
         $complaintUrl = rtrim(config('app.frontend_url', config('app.url')), '/') . '/complaints/' . $this->complaint->id;
-        $consumer     = $this->complaint->consumer->name ?? 'A customer';
-        $title        = $this->complaint->title;
 
         return (new MailMessage)
             ->subject('New complaint filed against ' . $this->complaint->company->name . ' — Aus Fair Go')
-            ->greeting('Hi ' . $notifiable->name . ',')
-            ->line($consumer . ' has filed a complaint: **"' . $title . '"**')
-            ->line('This complaint is now **publicly visible** on your Aus Fair Go profile.')
-            ->line('You have **7 days** to respond. Unanswered complaints impact your score.')
-            ->action('Respond now', $complaintUrl)
-            ->line('Manage all complaints from your dashboard.')
-            ->action('Go to dashboard', $dashUrl)
-            ->salutation('Aus Fair Go');
+            ->view('emails.complaint-filed-company', [
+                'name'         => $notifiable->name,
+                'companyName'  => $this->complaint->company->name,
+                'title'        => $this->complaint->title,
+                'consumer'     => $this->complaint->consumer->name ?? 'A customer',
+                'complaintUrl' => $complaintUrl,
+                'dashUrl'      => $dashUrl,
+            ]);
     }
 
     public function toArray(object $notifiable): array

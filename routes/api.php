@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ComplaintReopenController;
 use App\Http\Controllers\PhoneVerificationController;
 use App\Http\Controllers\BillingController;
@@ -21,14 +22,24 @@ use Illuminate\Support\Facades\Route;
 
 // Auth routes
 Route::prefix('auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register']);
-    Route::post('login',    [AuthController::class, 'login']);
+    Route::post('register', [AuthController::class, 'register'])->middleware('throttle:10,1');
+    Route::post('login',    [AuthController::class, 'login'])->middleware('throttle:5,1');
+
+    // Password reset (public)
+    Route::post('forgot-password', [PasswordResetController::class, 'forgotPassword'])->middleware('throttle:5,1');
+    Route::post('reset-password',  [PasswordResetController::class, 'resetPassword'])->middleware('throttle:5,1');
+
+    // Email verification — verify uses signed URL (public), resend requires auth
+    Route::get('email/verify', [\App\Http\Controllers\EmailVerificationController::class, 'verify'])
+        ->name('verification.verify');
 
     Route::middleware('auth:sanctum')->group(function () {
-        Route::post('logout',        [AuthController::class, 'logout']);
-        Route::get('me',             [AuthController::class, 'me']);
+        Route::post('logout',          [AuthController::class, 'logout']);
+        Route::get('me',               [AuthController::class, 'me']);
+        Route::delete('account',       \App\Http\Controllers\DeleteAccountController::class);
         Route::post('phone/send',    [PhoneVerificationController::class, 'send']);
         Route::post('phone/verify',  [PhoneVerificationController::class, 'verify']);
+        Route::post('email/resend',  [\App\Http\Controllers\EmailVerificationController::class, 'resend'])->middleware('throttle:3,60');
     });
 });
 
@@ -58,17 +69,19 @@ Route::prefix('companies')->group(function () {
 
 // Complaint routes
 Route::prefix('complaints')->group(function () {
-    Route::get('/',               [ComplaintController::class, 'index']);
-    Route::get('company-search',  [CompanyController::class, 'search']);
-    Route::get('{complaint}',     [ComplaintController::class, 'show']);
+    Route::get('/',                [ComplaintController::class, 'index']);
+    Route::get('category-counts',  [ComplaintController::class, 'categoryCounts']);
+    Route::get('company-search',   [CompanyController::class, 'search']);
+    Route::get('{complaint}',               [ComplaintController::class, 'show']);
+    Route::get('{complaint}/replies',       [ComplaintReplyController::class, 'index']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/',                              [ComplaintController::class, 'store']);
         Route::post('{complaint}/response',           [CompanyResponseController::class, 'store']);
         Route::post('{complaint}/feedback',           [ResolutionFeedbackController::class, 'store']);
-        Route::get('{complaint}/replies',             [ComplaintReplyController::class, 'index']);
         Route::post('{complaint}/replies',            [ComplaintReplyController::class, 'store']);
         Route::post('{complaint}/reopen',             ComplaintReopenController::class);
+        Route::post('{complaint}/mark-read',          [ComplaintReplyController::class, 'markRead']);
     });
 });
 
@@ -77,13 +90,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('dashboard/consumer',  ConsumerDashboardController::class);
     Route::get('dashboard/company',   CompanyDashboardController::class);
     Route::patch('company/settings',  [CompanyController::class, 'updateSettings']);
+    Route::post('company/logo',       [CompanyController::class, 'uploadLogo']);
     Route::post('company/abn/verify', [AbnVerificationController::class, 'verify']);
+});
+
+// User profile
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('profile',                    [\App\Http\Controllers\ProfileController::class, 'show']);
+    Route::patch('profile',                  [\App\Http\Controllers\ProfileController::class, 'update']);
+    Route::post('profile/id-verification',   [\App\Http\Controllers\ProfileController::class, 'uploadId']);
 });
 
 // Analytics — Standard or Pro plan required
 Route::middleware(['auth:sanctum', 'requires.plan:standard,pro'])->group(function () {
     Route::get('dashboard/analytics', CompanyAnalyticsController::class);
 });
+
+// AI draft response (company admins only)
+Route::middleware('auth:sanctum')->post('ai/draft-response', [App\Http\Controllers\AiDraftController::class, 'draft']);
 
 // Billing
 Route::post('billing/webhook', [BillingController::class, 'webhook']);
@@ -97,6 +121,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::get('stats',                         [AdminController::class, 'stats']);
     Route::get('complaints',                    [AdminController::class, 'complaints']);
+    Route::get('complaints/category-counts',    [AdminController::class, 'complaintCategoryCounts']);
     Route::put('complaints/{complaint}',        [AdminController::class, 'updateComplaint']);
     Route::get('companies',                     [AdminController::class, 'companies']);
     Route::put('companies/{company}',           [AdminController::class, 'updateCompany']);
@@ -104,6 +129,9 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::put('users/{user}',                  [AdminController::class, 'updateUser']);
     Route::get('moderation',                    [AdminController::class, 'moderationQueue']);
     Route::put('moderation/{complaint}',        [AdminController::class, 'moderationDecision']);
+    Route::get('id-verifications',                   [AdminController::class, 'idVerifications']);
+    Route::post('id-verifications/{user}/approve',   [AdminController::class, 'approveId']);
+    Route::post('id-verifications/{user}/reject',    [AdminController::class, 'rejectId']);
     Route::get('stub-companies',                     [AdminController::class, 'stubCompanies']);
     Route::post('stub-companies/{company}/promote',  [AdminController::class, 'promoteStub']);
     Route::get('claims',                             [CompanyClaimController::class, 'index']);

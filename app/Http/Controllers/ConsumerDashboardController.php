@@ -12,13 +12,13 @@ class ConsumerDashboardController extends Controller
         $user = $request->user();
 
         $complaints = $user->complaints()
-            ->with(['company:id,name,slug', 'response', 'feedback'])
+            ->with(['company:id,name,slug,logo_url,website', 'response', 'feedback'])
             ->withCount([
                 'replies as unread_count' => fn($q) => $q
                     ->where('author_type', 'company')
                     ->whereNull('consumer_read_at'),
             ])
-            ->latest()
+            ->latest('updated_at')
             ->get();
 
         $stats = [

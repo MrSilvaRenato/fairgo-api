@@ -6,10 +6,12 @@ use App\Jobs\CalculateCompanyScore;
 use App\Jobs\ModerateComplaint;
 use App\Models\Company;
 use App\Models\Complaint;
+use App\Models\ComplaintAttachment;
 use App\Notifications\ComplaintFiledConsumer;
 use App\Notifications\ComplaintFiledCompany;
 use App\Services\AbnLookupService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ComplaintController extends Controller
@@ -17,13 +19,34 @@ class ComplaintController extends Controller
     public function store(Request $request, AbnLookupService $abnService)
     {
         // Only consumers can file complaints — block business accounts and admins
-        $role = $request->user()->role;
+        $user = $request->user();
+        $role = $user->role;
         if ($role !== 'consumer') {
             return response()->json([
                 'message' => $role === 'company_admin'
                     ? 'Business accounts cannot file complaints. Please use a personal consumer account.'
                     : 'You do not have permission to file complaints.',
             ], 403);
+        }
+
+        // Require verified email
+        if (!$user->hasVerifiedEmail()) {
+            return response()->json([
+                'message' => 'Please verify your email address before filing a complaint.',
+                'error_code' => 'email_unverified',
+            ], 403);
+        }
+
+        // Rate limit: 3 complaints per day per user
+        $todayCount = Complaint::where('consumer_id', $user->id)
+            ->whereDate('created_at', today())
+            ->count();
+
+        if ($todayCount >= 3) {
+            return response()->json([
+                'message' => 'You have reached the limit of 3 complaints per day. Please try again tomorrow.',
+                'error_code' => 'daily_limit_reached',
+            ], 429);
         }
 
         $data = $request->validate([
@@ -35,11 +58,13 @@ class ComplaintController extends Controller
             'expected_resolution' => 'nullable|string|max:1000',
             'category'            => 'required|in:billing,delivery,service,refund,fraud,other',
             'is_public'           => 'boolean',
-            // Evidence fields
             'incident_date'       => 'required|date|before_or_equal:today',
             'reference_number'    => 'nullable|string|max:120',
             'amount_involved'     => 'nullable|numeric|min:0|max:9999999',
             'contact_attempted'   => 'boolean',
+            'phone'               => 'nullable|string|max:30',
+            'attachments'         => 'nullable|array|max:5',
+            'attachments.*'       => 'file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240',
         ]);
 
         // ── Unregistered company path ────────────────────────────────────────
@@ -54,7 +79,6 @@ class ComplaintController extends Controller
                 ], 422);
             }
 
-            // Find existing stub or create one
             $company = Company::firstOrCreate(
                 ['abn' => $abn, 'is_stub' => true],
                 [
@@ -71,35 +95,60 @@ class ComplaintController extends Controller
         }
 
         $complaint = Complaint::create([
-            ...$data,
-            'consumer_id'       => $request->user()->id,
-            'status'            => 'open',
+            'consumer_id'       => $user->id,
+            'company_id'        => $data['company_id'],
+            'title'             => $data['title'],
+            'description'       => $data['description'],
+            'expected_resolution' => $data['expected_resolution'] ?? null,
+            'category'          => $data['category'],
             'is_public'         => $data['is_public'] ?? true,
+            'status'            => 'open',
             'expires_at'        => now()->addDays(7),
             'moderation_status' => 'pending',
+            'incident_date'     => $data['incident_date'],
+            'reference_number'  => $data['reference_number'] ?? null,
+            'amount_involved'   => $data['amount_involved'] ?? null,
             'contact_attempted' => $data['contact_attempted'] ?? false,
+            'phone'             => $data['phone'] ?? null,
         ]);
 
-        $complaint->load(['consumer:id,name,email', 'company:id,name,slug,user_id', 'company.user:id,name,email']);
+        // ── Store attachments ────────────────────────────────────────────────
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $dir  = "complaint-attachments/{$complaint->id}";
+                $stored = $file->store($dir, 'public');
 
-        CalculateCompanyScore::dispatch($complaint->company_id);
-        ModerateComplaint::dispatch($complaint->id);
-
-        // Notify consumer — confirmation
-        $request->user()->notify(new ComplaintFiledConsumer($complaint));
-
-        // Notify company admin — new complaint alert
-        $companyUser = $complaint->company->user;
-        if ($companyUser) {
-            $companyUser->notify(new ComplaintFiledCompany($complaint));
+                ComplaintAttachment::create([
+                    'complaint_id'  => $complaint->id,
+                    'original_name' => $file->getClientOriginalName(),
+                    'stored_name'   => basename($stored),
+                    'mime_type'     => $file->getMimeType(),
+                    'size'          => $file->getSize(),
+                    'path'          => $stored,
+                ]);
+            }
         }
 
-        // Re-fetch after moderation job ran (sync queue updates the record inline)
+        $complaint->load(['consumer:id,name,email', 'company:id,name,slug,logo_url,website,user_id', 'company.user:id,name,email']);
+
+        CalculateCompanyScore::dispatch($complaint->company_id);
+
+        ModerateComplaint::dispatchSync($complaint->id);
         $complaint->refresh();
+
+        $companyUser = $complaint->company->user;
+        if (in_array($complaint->moderation_status, ['approved', 'edited', null])) {
+            $user->notify(new ComplaintFiledConsumer($complaint));
+            if ($companyUser) {
+                $companyUser->notify(new ComplaintFiledCompany($complaint));
+            }
+        } else {
+            $user->notify(new ComplaintFiledConsumer($complaint));
+        }
 
         return response()->json(
             array_merge(
-                $complaint->load(['consumer:id,name', 'company:id,name,slug'])->toArray(),
+                $complaint->load(['consumer:id,name', 'company:id,name,slug,logo_url,website'])->toArray(),
                 ['moderation_status' => $complaint->moderation_status]
             ),
             201
@@ -108,37 +157,69 @@ class ComplaintController extends Controller
 
     public function show(Complaint $complaint)
     {
-        // Use optional Sanctum auth — authenticate from Bearer token if present,
-        // but don't require it so public complaints remain accessible to guests.
         $user      = auth('sanctum')->user();
         $isOwner   = $user && $user->id === $complaint->consumer_id;
         $isAdmin   = $user && $user->role === 'admin';
         $isCompany = $user && $user->role === 'company_admin' && $user->company?->id === $complaint->company_id;
 
-        // Flagged/rejected complaints are under admin review — only owner and admin can see them.
-        // The company is intentionally excluded until the admin clears or rejects the complaint.
         $underReview = in_array($complaint->moderation_status, ['flagged', 'rejected']);
         if ($underReview && !$isOwner && !$isAdmin) {
             abort(403);
         }
 
-        // Private complaints (not under review) are visible to owner, admin, and the relevant company.
         if (!$complaint->is_public && !$underReview && !$isOwner && !$isAdmin && !$isCompany) {
             abort(403);
         }
 
-        return response()->json(
-            $complaint->load(['consumer:id,name', 'company:id,name,slug', 'response', 'feedback', 'replies.user:id,name,role'])
-        );
+        // Base relations for everyone
+        $relations = ['consumer:id,name,id_verification_status', 'company:id,name,slug,logo_url,website,claimed,abn_verified,verified_badge', 'response', 'feedback.consumer:id,name', 'replies.user:id,name,role', 'attachments'];
+        $complaint->load($relations);
+
+        $data = $complaint->toArray();
+
+        // Private consumer contact details — for the consumer owner, the owning company, and admins
+        if ($isOwner || $isCompany || $isAdmin) {
+            $consumer = $complaint->consumer()->first(['id', 'name', 'email', 'phone']);
+            $data['consumer_contact'] = [
+                'name'  => $consumer->name,
+                'email' => $consumer->email,
+                'phone' => $consumer->phone ?? $complaint->phone,
+            ];
+        }
+
+        return response()->json($data);
+    }
+
+    public function categoryCounts(Request $request)
+    {
+        $base = Complaint::where('is_public', true)
+            ->where('status', '!=', 'removed')
+            ->whereNotIn('moderation_status', ['flagged', 'rejected']);
+
+        // Category counts — optionally scoped to a status
+        $catQuery = clone $base;
+        if ($request->status) $catQuery->where('status', $request->status);
+        $category = $catQuery->selectRaw('category, count(*) as total')
+            ->groupBy('category')
+            ->pluck('total', 'category');
+
+        // Status counts — optionally scoped to a category
+        $stQuery = clone $base;
+        if ($request->category) $stQuery->where('category', $request->category);
+        $status = $stQuery->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return response()->json(compact('category', 'status'));
     }
 
     public function index(Request $request)
     {
-        $query = Complaint::with(['consumer:id,name', 'company:id,name,slug'])
+        $query = Complaint::with(['consumer:id,name,id_verification_status', 'company:id,name,slug,logo_url,website', 'feedback:id,complaint_id,rating,would_deal_again'])
             ->where('is_public', true)
             ->where('status', '!=', 'removed')
             ->whereNotIn('moderation_status', ['flagged', 'rejected'])
-            ->latest();
+            ->latest('updated_at');
 
         if ($request->company_id) {
             $query->where('company_id', $request->company_id);
@@ -152,6 +233,16 @@ class ComplaintController extends Controller
             $query->where('category', $request->category);
         }
 
-        return response()->json($query->paginate(15));
+        if ($request->q) {
+            $q = $request->q;
+            $query->where(function ($sub) use ($q) {
+                $sub->where('title', 'like', "%{$q}%")
+                    ->orWhereHas('company', fn ($c) => $c->where('name', 'like', "%{$q}%"));
+            });
+        }
+
+        $perPage = min((int) ($request->per_page ?? 15), 50);
+
+        return response()->json($query->paginate($perPage));
     }
 }

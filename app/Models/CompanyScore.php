@@ -16,7 +16,7 @@ class CompanyScore extends Model
      * a numerical score and badge are shown publicly.
      * Below this threshold the company is shown as "Not enough data".
      */
-    public const MIN_FOR_RATING = 10;
+    public const MIN_FOR_RATING = 5;
 
     protected $appends = ['badge', 'is_rated', 'complaints_needed'];
 

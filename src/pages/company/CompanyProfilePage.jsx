@@ -65,6 +65,50 @@ export default function CompanyProfilePage() {
     type: 'profile',
   })
 
+  // Schema.org JSON-LD structured data
+  useEffect(() => {
+    if (!company) return
+
+    const schemaId = 'schema-company-profile'
+    const existing = document.getElementById(schemaId)
+    if (existing) existing.remove()
+
+    const ratingCount = complaints.length
+    const ratingValue = score ? Math.round(score.score * 10) / 10 : null
+
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: company.name,
+      url: company.website ?? undefined,
+      description: `Consumer complaints and reviews for ${company.name} on Aus Fair Go.`,
+      ...(company.industry ? { knowsAbout: company.industry } : {}),
+      ...(ratingValue && ratingCount > 0
+        ? {
+            aggregateRating: {
+              '@type': 'AggregateRating',
+              ratingValue: ratingValue,
+              bestRating: 100,
+              worstRating: 0,
+              ratingCount: ratingCount,
+              description: `Aus Fair Go accountability score out of 100`,
+            },
+          }
+        : {}),
+      sameAs: company.website ? [company.website] : undefined,
+    }
+
+    const script = document.createElement('script')
+    script.id = schemaId
+    script.type = 'application/ld+json'
+    script.textContent = JSON.stringify(schema)
+    document.head.appendChild(script)
+
+    return () => {
+      document.getElementById(schemaId)?.remove()
+    }
+  }, [company, complaints, score])
+
   if (loading) return <ProfileSkeleton />
   if (!company) return <NotFound />
 
@@ -128,7 +172,7 @@ function Hero({ company, score, band }) {
                 <Icon name="building" size={13} /> {company.industry}
               </span>
             )}
-            {company.abn_verified && (
+            {company.claimed && company.abn_verified && (
               <span className="chip font-semibold"
                 style={{ color: '#1d4ed8', borderColor: '#93c5fd', background: '#eff6ff' }}>
                 <Icon name="verified" size={13} /> ABN Verified
@@ -200,7 +244,7 @@ function Hero({ company, score, band }) {
           )}
 
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 max-w-xl text-sm">
-            {company.abn && <Meta label="ABN" value={company.abn} mono />}
+            {company.claimed && company.abn && <Meta label="ABN" value={company.abn} mono />}
             <Meta label="On Aus Fair Go since" value={company.created_at ? new Date(company.created_at).toLocaleDateString('en-AU', { month: 'short', year: 'numeric' }) : '—'} />
             {score && score.total_complaints > 0 && (
               <Meta
@@ -387,9 +431,9 @@ function ComplaintsBlock({ company, complaints, onOpen }) {
     if (sort === 'unresolved') {
       list.sort((a, b) => (b.status === 'unresolved' ? 1 : 0) - (a.status === 'unresolved' ? 1 : 0))
     } else if (sort === 'oldest') {
-      list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      list.sort((a, b) => new Date(a.updated_at || a.created_at) - new Date(b.updated_at || b.created_at))
     } else {
-      list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      list.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
     }
     return list
   }, [complaints, q, cat, stat, sort])
@@ -484,8 +528,14 @@ function ComplaintsBlock({ company, complaints, onOpen }) {
 
 function ComplaintRow({ c, onOpen }) {
   const st = STATUS_STYLE[c.status] ?? STATUS_STYLE.open
-  const daysAgo = Math.floor((Date.now() - new Date(c.created_at)) / 86400000)
-  const dateLabel = daysAgo === 0 ? 'today' : daysAgo === 1 ? '1 day ago' : `${daysAgo}d ago`
+  const ts       = new Date(c.updated_at || c.created_at)
+  const daysAgo  = Math.floor((Date.now() - ts) / 86400000)
+  const timeStr  = ts.toLocaleString('en-AU', { hour: '2-digit', minute: '2-digit' }).toLowerCase()
+  const dateLabel = daysAgo === 0
+    ? `today · ${timeStr}`
+    : daysAgo === 1
+      ? `1 day ago · ${timeStr}`
+      : `${daysAgo}d ago`
 
   return (
     <li>
@@ -525,8 +575,11 @@ function ComplaintRow({ c, onOpen }) {
               <Icon name="clock" size={12} /> {dateLabel}
             </span>
             {c.feedback?.rating && (
-              <span className="inline-flex items-center gap-1.5 text-[color:var(--color-ochre)] font-medium">
-                Rated {c.feedback.rating}/5
+              <span className="inline-flex items-center gap-1 text-[color:var(--color-ochre)] font-medium">
+                {c.feedback.rating}/5
+                {c.feedback.would_deal_again != null && (
+                  <span className="ml-0.5">{c.feedback.would_deal_again ? '👍' : '👎'}</span>
+                )}
               </span>
             )}
           </div>
@@ -563,7 +616,7 @@ function DetailSheet({ complaint, company, onClose }) {
         <div className="sticky top-0 z-10 bg-[color:var(--color-paper)]/90 backdrop-blur border-b hairline-2 flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2 text-xs font-mono text-[color:var(--color-muted)]">
             <span>#{c.id}</span><span>·</span>
-            <span>{new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+            <span>{new Date(c.created_at).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
           </div>
           <div className="flex items-center gap-1">
             <button className="p-2 rounded-lg hover:bg-[color:var(--color-paper-2)]" aria-label="Share"><Icon name="share" size={16} /></button>

@@ -13,7 +13,7 @@ const BAND = {
   not_rated: { label: 'Not rated', text: 'var(--color-muted)',       ring: 'var(--color-line)' },
 }
 
-export default function ScoreMeter({ score = 0, band = 'not_rated', size = 220 }) {
+export default function ScoreMeter({ score = 0, band = 'not_rated', size = 220, hideLabel = false, scoreOnly = false }) {
   const b = BAND[band] ?? BAND.not_rated
   const cx = size / 2
   const cy = size / 2
@@ -78,18 +78,20 @@ export default function ScoreMeter({ score = 0, band = 'not_rated', size = 220 }
         <path d={arcPath(animated)} stroke={b.ring} strokeWidth="10" fill="none" strokeLinecap="round" />
         {ticks}
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center pt-2">
-        <div className="caps mb-1" style={{ color: b.text }}>{b.label}</div>
-        <div
-          className="font-display font-semibold leading-none"
-          style={{ fontSize: size * 0.29, color: 'var(--color-ink)' }}
-        >
-          {band === 'not_rated' ? '—' : Math.round(animated * 100)}
+      {!hideLabel && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center pt-2">
+          {!scoreOnly && <div className="caps mb-1" style={{ color: b.text }}>{b.label}</div>}
+          <div
+            className="font-display font-semibold leading-none"
+            style={{ fontSize: scoreOnly ? size * 0.32 : size * 0.29, color: 'var(--color-ink)' }}
+          >
+            {band === 'not_rated' ? '—' : Math.round(animated * 100)}
+          </div>
+          {!scoreOnly && band !== 'not_rated' && (
+            <div className="text-xs text-[color:var(--color-muted)] mt-1">out of 100</div>
+          )}
         </div>
-        {band !== 'not_rated' && (
-          <div className="text-xs text-[color:var(--color-muted)] mt-1">out of 100</div>
-        )}
-      </div>
+      )}
     </div>
   )
 }

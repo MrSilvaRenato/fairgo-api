@@ -1,209 +1,151 @@
-import { useEffect, useState } from 'react'
-import { useSearchParams, Link } from 'react-router-dom'
+import { useEffect, useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import api from '../lib/axios'
+import useAuthStore from '../store/authStore'
 import CompanyLogo from '../components/CompanyLogo'
 import Icon from '../components/Icon'
 import useSeoMeta from '../hooks/useSeoMeta'
-
-const STATUS = {
-  open:              { label: 'Open',       fg: 'var(--color-eucalyptus)', bg: 'var(--color-eucalyptus-3)' },
-  awaiting_response: { label: 'Awaiting',   fg: '#8A5A1F',                  bg: '#F3E2C3' },
-  responded:         { label: 'Responded',  fg: '#3B4B7A',                  bg: '#DAE0EE' },
-  resolved:          { label: 'Resolved',   fg: 'var(--color-eucalyptus)', bg: '#E7EEDF' },
-  unresolved:        { label: 'Unresolved', fg: 'var(--color-clay)',       bg: 'var(--color-clay-soft)' },
-  expired:           { label: 'Expired',    fg: 'var(--color-muted)',      bg: 'var(--color-paper-2)' },
-}
+import { BAND } from '../components/ScoreMeter'
 
 export default function SearchPage() {
-  const [params, setParams] = useSearchParams()
-  const q = params.get('q') ?? ''
-  const [input, setInput]         = useState(q)
-  const [results, setResults]     = useState(null)
-  const [loading, setLoading]     = useState(false)
-  const [tab, setTab]             = useState('all')
+  const { user } = useAuthStore()
+  const [input, setInput]       = useState('')
+  const [companies, setCompanies] = useState([])
+  const [loading, setLoading]   = useState(true)
 
   useSeoMeta({
-    title: q ? `Search: "${q}"` : 'Search',
-    description: q ? `Search results for "${q}" — companies and complaints on Aus Fair Go.` : undefined,
+    title: 'Search businesses — Aus Fair Go',
+    description: 'Browse and search all Australian businesses on Aus Fair Go.',
+    url: 'https://ausfairgo.com.au/search',
   })
 
   useEffect(() => {
-    if (!q || q.length < 2) { setResults(null); return }
-    setLoading(true)
-    api.get('/search', { params: { q } })
-      .then((r) => setResults(r.data))
+    api.get('/complaints/company-search')
+      .then((r) => setCompanies(r.data ?? []))
+      .catch(() => {})
       .finally(() => setLoading(false))
-  }, [q])
+  }, [])
 
-  const submit = (e) => {
-    e.preventDefault()
-    if (input.trim().length < 2) return
-    setParams({ q: input.trim() })
-    setTab('all')
-  }
-
-  const companies  = results?.companies  ?? []
-  const complaints = results?.complaints ?? []
-  const total      = companies.length + complaints.length
-
-  const tabs = [
-    { id: 'all',        label: `All (${total})` },
-    { id: 'companies',  label: `Companies (${companies.length})` },
-    { id: 'complaints', label: `Complaints (${complaints.length})` },
-  ]
+  const filtered = useMemo(() => {
+    const q = input.trim().toLowerCase()
+    if (!q) return companies
+    return companies.filter((c) =>
+      c.name?.toLowerCase().includes(q) ||
+      c.industry?.toLowerCase().includes(q)
+    )
+  }, [input, companies])
 
   return (
-    <div className="max-w-3xl mx-auto space-y-5">
+    <div className="max-w-5xl mx-auto space-y-6">
 
-      {/* Search bar */}
-      <form onSubmit={submit} className="flex gap-2">
-        <div className="relative flex-1">
-          <Icon name="search" size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)]" />
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Search companies, complaints, categories…"
-            className="input pl-10 w-full"
-            autoFocus
-          />
-        </div>
-        <button type="submit" className="btn btn-primary px-5">Search</button>
-      </form>
+      {/* Header */}
+      <div>
+        <div className="caps mb-1">Directory</div>
+        <h1 className="font-display text-[32px] sm:text-[40px] font-semibold tracking-tight">
+          Search businesses
+        </h1>
+        <p className="text-sm text-[color:var(--color-muted)] mt-1">
+          {loading ? 'Loading…' : `${companies.length} businesses registered on Aus Fair Go`}
+        </p>
+      </div>
 
-      {/* No query yet */}
-      {!q && (
-        <div className="card p-14 text-center">
-          <p className="font-display italic-display text-[22px] text-[color:var(--color-muted)] mb-2">What are you looking for?</p>
-          <p className="text-sm text-[color:var(--color-muted)]">Search for a company name, complaint keyword, or category.</p>
-        </div>
+      {/* Search input */}
+      <div className="relative max-w-lg">
+        <Icon name="search" size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)] pointer-events-none" />
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Filter by name or industry…"
+          className="input pl-10 w-full"
+          autoFocus
+        />
+        {input && (
+          <button
+            onClick={() => setInput('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] transition">
+            <Icon name="x" size={14} />
+          </button>
+        )}
+      </div>
+
+      {/* Results count when filtering */}
+      {input.trim() && !loading && (
+        <p className="text-sm text-[color:var(--color-muted)] -mt-2">
+          {filtered.length === 0
+            ? `No businesses match "${input}"`
+            : `${filtered.length} result${filtered.length !== 1 ? 's' : ''} for "${input}"`}
+        </p>
       )}
 
-      {/* Loading */}
-      {loading && (
-        <div className="space-y-3 animate-pulse">
-          {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-[color:var(--color-paper-2)] rounded-2xl" />)}
-        </div>
-      )}
-
-      {/* Results */}
-      {results && !loading && (
-        <>
-          {/* Summary + tabs */}
-          <div>
-            <p className="text-sm text-[color:var(--color-muted)] mb-3">
-              {total === 0
-                ? `No results for "${q}"`
-                : `${total} result${total !== 1 ? 's' : ''} for "${q}"`}
-            </p>
-            {total > 0 && (
-              <div className="flex gap-1.5 flex-wrap">
-                {tabs.map((t) => (
-                  <button key={t.id} onClick={() => setTab(t.id)}
-                    className={`chip ${tab === t.id ? 'chip-active' : ''}`}>
-                    {t.label}
-                  </button>
-                ))}
+      {/* Cards */}
+      {loading ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[...Array(9)].map((_, i) => (
+            <div key={i} className="card p-4 flex items-center gap-3 animate-pulse">
+              <div className="w-10 h-10 rounded-xl bg-[color:var(--color-paper-2)] shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-[color:var(--color-paper-2)] rounded w-2/3" />
+                <div className="h-3 bg-[color:var(--color-paper-2)] rounded w-1/3" />
               </div>
-            )}
-          </div>
-
-          {/* Companies */}
-          {(tab === 'all' || tab === 'companies') && companies.length > 0 && (
-            <section>
-              {tab === 'all' && (
-                <h2 className="caps text-[color:var(--color-muted)] mb-2">Companies</h2>
-              )}
-              <div className="card overflow-hidden">
-                <ul className="divide-y divide-[color:var(--color-border)]">
-                  {companies.map((c) => (
-                    <li key={c.id}>
-                      <Link to={`/companies/${c.slug}`}
-                        className="flex items-center gap-3 p-4 hover:bg-[color:var(--color-paper-2)] transition">
-                        <CompanyLogo company={c} size="sm" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="text-sm font-semibold text-[color:var(--color-ink)]">{c.name}</p>
-                            {c.claimed && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0"
-                                style={{ color: '#166534', background: '#f0fdf4' }}>
-                                ✅ Actively Managed
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-[color:var(--color-muted)] mt-0.5 capitalize">
-                            {c.industry}
-                            {c.total > 0 && <span className="ml-1">· {c.total} complaint{c.total !== 1 ? 's' : ''}</span>}
-                          </p>
-                        </div>
-                        {c.score != null && (
-                          <div className="text-right shrink-0">
-                            <p className="font-display text-lg font-semibold text-[color:var(--color-ink)]">{Math.round(c.score)}</p>
-                            <p className="text-[10px] text-[color:var(--color-muted)] capitalize">{c.badge?.replace('_', ' ')}</p>
-                          </div>
-                        )}
-                        <Icon name="arrow-r" size={14} className="text-[color:var(--color-muted)] shrink-0" />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </section>
-          )}
-
-          {/* Complaints */}
-          {(tab === 'all' || tab === 'complaints') && complaints.length > 0 && (
-            <section>
-              {tab === 'all' && (
-                <h2 className="caps text-[color:var(--color-muted)] mb-2">Complaints</h2>
-              )}
-              <ul className="space-y-3">
-                {complaints.map((c) => {
-                  const st = STATUS[c.status] ?? STATUS.open
-                  return (
-                    <li key={c.id} className="card p-4 hover:shadow-md transition">
-                      <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                        <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-                          style={{ color: st.fg, background: st.bg }}>
-                          {st.label}
-                        </span>
-                        <span className="text-xs text-[color:var(--color-muted)] capitalize">{c.category}</span>
-                      </div>
-                      <Link to={`/complaints/${c.id}`}
-                        className="font-semibold text-[color:var(--color-ink)] hover:text-[color:var(--color-eucalyptus)] transition block leading-snug mb-1">
-                        {c.title}
-                      </Link>
-                      <p className="text-xs text-[color:var(--color-ink-2)] line-clamp-2 mb-2">{c.description}</p>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-[color:var(--color-muted)]">
-                        <span className="flex items-center gap-1">
-                          <Icon name="user" size={11} />
-                          {c.consumer?.name}
-                        </span>
-                        <span>·</span>
-                        <Link to={`/companies/${c.company?.slug}`}
-                          className="text-[color:var(--color-eucalyptus)] hover:underline font-medium">
-                          {c.company?.name}
-                        </Link>
-                        <span>·</span>
-                        <span className="flex items-center gap-1">
-                          <Icon name="calendar" size={11} />
-                          {new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </span>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            </section>
-          )}
-
-          {total === 0 && (
-            <div className="card p-14 text-center">
-              <p className="font-display italic-display text-[22px] text-[color:var(--color-muted)] mb-2">No results found.</p>
-              <p className="text-sm text-[color:var(--color-muted)]">Try a different search term or browse companies.</p>
-              <Link to="/" className="btn btn-secondary mt-4 inline-flex">Browse companies</Link>
             </div>
-          )}
-        </>
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="card p-14 text-center">
+          <p className="font-display italic-display text-[22px] text-[color:var(--color-muted)] mb-2">No businesses found.</p>
+          <p className="text-sm text-[color:var(--color-muted)]">Try a different search term.</p>
+          <button onClick={() => setInput('')} className="btn btn-secondary mt-4 inline-flex">
+            Clear filter
+          </button>
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {filtered.map((c) => {
+            const b = BAND[c.badge] ?? BAND.not_rated
+            return (
+              <div key={c.id} className="card p-4 flex flex-col gap-2">
+                <Link to={`/companies/${c.slug}`} className="flex items-center gap-3 group">
+                  <CompanyLogo company={c} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-[color:var(--color-ink)] truncate group-hover:underline underline-offset-4 decoration-[color:var(--color-ink)]/30">
+                      {c.name}
+                    </p>
+                    <p className="text-xs text-[color:var(--color-muted)] capitalize mt-0.5">
+                      {c.industry ?? 'Unknown'}
+                      {c.total > 0 && <> · {c.total} complaint{c.total !== 1 ? 's' : ''}</>}
+                    </p>
+                  </div>
+                  {c.badge !== 'not_rated' && (
+                    <span className="text-[10px] font-semibold caps shrink-0" style={{ color: b.text }}>
+                      {b.label}
+                    </span>
+                  )}
+                </Link>
+
+                {c.claimed ? (
+                  <div className="flex items-center gap-1.5 pt-1 border-t hairline">
+                    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 20 20" fill="none">
+                      <circle cx="10" cy="10" r="9" fill="#2F5D4C"/>
+                      <path d="M6 10.5l3 3 5-5" stroke="#F5F0E6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span className="text-[11px] font-semibold" style={{ color: 'var(--color-eucalyptus)' }}>
+                      Verified &amp; actively managed
+                    </span>
+                  </div>
+                ) : (
+                  <div className="pt-1 border-t hairline">
+                    <Link
+                      to={user ? `/companies/${c.slug}/claim` : `/register?role=business&next=/companies/${c.slug}/claim`}
+                      className="text-[11px] text-[color:var(--color-muted)] hover:text-[color:var(--color-eucalyptus)] transition">
+                      Is this your business?{' '}
+                      <span className="underline underline-offset-2">Claim your free dashboard →</span>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
       )}
     </div>
   )

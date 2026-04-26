@@ -27,26 +27,15 @@ class ComplaintRemovedConsumer extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $dashboardUrl = rtrim(config('app.frontend_url', config('app.url')), '/') . '/dashboard';
-
-        $mail = (new MailMessage)
+        return (new MailMessage)
             ->subject('Your complaint has been removed — Aus Fair Go')
-            ->greeting('Hi ' . $notifiable->name . ',')
-            ->line('We have reviewed your complaint and determined that it breaches our community guidelines.')
-            ->line('**Complaint:** ' . $this->complaint->title)
-            ->line('**Against:** ' . ($this->complaint->company?->name ?? 'Unknown company'));
-
-        if ($this->reason) {
-            $mail->line('**Reason for removal:** ' . $this->reason);
-        } else {
-            $mail->line('The complaint contained content that violates our guidelines (e.g. profanity, defamatory claims, or personal attacks).');
-        }
-
-        return $mail
-            ->line('If you believe this was a mistake, please contact us at hello@ausfairgo.com.au with your complaint details.')
-            ->action('Review our Community Guidelines', rtrim(config('app.frontend_url', config('app.url')), '/') . '/community-guidelines')
-            ->line('You are welcome to re-submit a complaint that complies with our guidelines.')
-            ->salutation('The Aus Fair Go team');
+            ->view('emails.complaint-removed-consumer', [
+                'name'          => $notifiable->name,
+                'title'         => $this->complaint->title,
+                'companyName'   => $this->complaint->company?->name ?? 'Unknown company',
+                'reason'        => $this->reason,
+                'guidelinesUrl' => rtrim(config('app.frontend_url', config('app.url')), '/') . '/community-guidelines',
+            ]);
     }
 
     public function toArray(object $notifiable): array

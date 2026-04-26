@@ -21,10 +21,10 @@ class CompanyDashboardController extends Controller
                     ->where('author_type', 'consumer')
                     ->whereNull('company_read_at'),
             ])
-            // Never expose complaints that are under moderation review or archived
-            ->whereNotIn('moderation_status', ['flagged', 'rejected'])
+            // Only show approved complaints — hide pending/flagged/rejected until admin clears them
+            ->whereIn('moderation_status', ['approved', 'edited'])
             ->where('status', '!=', 'removed')
-            ->latest()
+            ->latest('updated_at')
             ->get();
 
         $stats = [
@@ -38,7 +38,7 @@ class CompanyDashboardController extends Controller
         ];
 
         return response()->json([
-            'company'    => $company->load('score', 'subscription'),
+            'company'    => $company->load('score', 'subscription', 'user:id,name,email'),
             'stats'      => $stats,
             'complaints' => $complaints,
         ]);
