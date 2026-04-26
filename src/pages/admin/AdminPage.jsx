@@ -267,32 +267,44 @@ export default function AdminPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2">
         {TABS.map((t) => {
           const active = tab === t
-          const badge =
-            t === 'moderation'    && stats?.moderation_flagged > 0 ? stats.moderation_flagged
-            : t === 'unregistered'  && stats?.stub_companies > 0   ? stats.stub_companies
-            : t === 'claims'        && stats?.pending_claims > 0   ? stats.pending_claims
-            : null
+
+          // Count shown on every tab — pending/flagged counts are highlighted red
+          const { count, urgent } = {
+            complaints:        { count: stats?.total_complaints,          urgent: false },
+            moderation:        { count: stats?.moderation_flagged,        urgent: (stats?.moderation_flagged ?? 0) > 0 },
+            companies:         { count: stats?.total_companies,           urgent: false },
+            unregistered:      { count: stats?.stub_companies,            urgent: (stats?.stub_companies ?? 0) > 0 },
+            claims:            { count: stats?.pending_claims,            urgent: (stats?.pending_claims ?? 0) > 0 },
+            users:             { count: stats?.total_users,               urgent: false },
+            'id-verifications':{ count: stats?.pending_id_verifications,  urgent: (stats?.pending_id_verifications ?? 0) > 0 },
+          }[t] ?? { count: null, urgent: false }
+
           const label =
-            t === 'moderation'       ? 'Moderation'
-            : t === 'unregistered'   ? 'Unregistered'
+            t === 'moderation'         ? 'Moderation'
+            : t === 'unregistered'     ? 'Unregistered'
             : t === 'id-verifications' ? 'ID Verify'
             : t.charAt(0).toUpperCase() + t.slice(1)
+
           return (
             <button key={t}
               onClick={() => { setTab(t); setQ(''); setCStatus(''); setCCategory(''); setCModStatus(''); setCSort('latest'); setCPage(1) }}
-              className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full border transition ${
+              className={`inline-flex items-center gap-2 text-xs font-medium px-3.5 py-2 rounded-full border transition ${
                 active
                   ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
                   : 'border-[color:var(--color-line)] text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)]'
               }`}>
               {label}
-              {badge && (
+              {count != null && (
                 <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full leading-none ${
-                  active ? 'bg-white/20 text-white' : 'bg-[color:var(--color-clay)]/15 text-[color:var(--color-clay)]'
-                }`}>{badge}</span>
+                  active
+                    ? 'bg-white/20 text-white'
+                    : urgent
+                      ? 'bg-[color:var(--color-clay)]/15 text-[color:var(--color-clay)]'
+                      : 'bg-[color:var(--color-ink)]/10 text-[color:var(--color-ink)]'
+                }`}>{count}</span>
               )}
             </button>
           )

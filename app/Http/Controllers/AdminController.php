@@ -26,8 +26,9 @@ class AdminController extends Controller
             'moderation_pending'   => Complaint::where('moderation_status', 'pending')->count(),
             'moderation_flagged'   => Complaint::where('moderation_status', 'flagged')->count(),
             'moderation_rejected'  => Complaint::where('moderation_status', 'rejected')->count(),
-            'stub_companies'       => Company::where('is_stub', true)->count(),
-            'pending_claims'       => CompanyClaim::where('status', 'pending')->count(),
+            'stub_companies'          => Company::where('is_stub', true)->count(),
+            'pending_claims'          => CompanyClaim::where('status', 'pending')->count(),
+            'pending_id_verifications' => User::where('id_verification_status', 'pending')->count(),
         ]);
     }
 
