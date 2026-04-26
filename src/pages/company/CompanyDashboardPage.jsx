@@ -116,7 +116,8 @@ export default function CompanyDashboardPage() {
         c.description?.toLowerCase().includes(q)
       )
     }
-    if (sort === 'oldest') list = [...list].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    if (sort === 'oldest') list = [...list].sort((a, b) => new Date(a.updated_at) - new Date(b.updated_at))
+    else list = [...list].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
     return list
   }, [complaints, filter, category, search, sort])
 
@@ -441,7 +442,12 @@ function ComplaintCard({ complaint: c, company, respondingTo, setRespondingTo, o
             <span>·</span>
             <span className="flex items-center gap-1">
               <Icon name="calendar" size={11} />
-              {new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+              {['resolved', 'unresolved'].includes(c.status)
+                ? <>Closed {new Date(c.updated_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</>
+                : c.updated_at !== c.created_at
+                  ? <>Updated {new Date(c.updated_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</>
+                  : <>Filed {new Date(c.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</>
+              }
             </span>
           </div>
         </div>

@@ -219,7 +219,7 @@ class ComplaintController extends Controller
             ->where('is_public', true)
             ->where('status', '!=', 'removed')
             ->whereNotIn('moderation_status', ['flagged', 'rejected'])
-            ->latest();
+            ->latest('updated_at');
 
         if ($request->company_id) {
             $query->where('company_id', $request->company_id);

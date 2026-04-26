@@ -18,7 +18,7 @@ class ConsumerDashboardController extends Controller
                     ->where('author_type', 'company')
                     ->whereNull('consumer_read_at'),
             ])
-            ->latest()
+            ->latest('updated_at')
             ->get();
 
         $stats = [

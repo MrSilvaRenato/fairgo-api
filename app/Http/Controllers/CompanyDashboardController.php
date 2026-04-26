@@ -24,7 +24,7 @@ class CompanyDashboardController extends Controller
             // Only show approved complaints — hide pending/flagged/rejected until admin clears them
             ->whereIn('moderation_status', ['approved', 'edited'])
             ->where('status', '!=', 'removed')
-            ->latest()
+            ->latest('updated_at')
             ->get();
 
         $stats = [
