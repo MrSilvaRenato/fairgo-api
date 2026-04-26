@@ -15,7 +15,7 @@ class BotPrerender
      * Covers Google, Bing, Facebook, Twitter/X, LinkedIn, Slack, WhatsApp, Discord.
      */
     private const BOT_PATTERNS = [
-        'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider',
+        'googlebot', 'google-inspectiontool', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider',
         'yandexbot', 'sogou', 'exabot', 'facebookexternalhit', 'facebot',
         'twitterbot', 'linkedinbot', 'whatsapp', 'discordbot', 'slackbot',
         'telegrambot', 'applebot', 'semrushbot', 'ahrefsbot', 'mj12bot',
