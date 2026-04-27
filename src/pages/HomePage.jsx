@@ -404,6 +404,213 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ═══════════════ LIVE ACTIVITY FEED ═══════════════ */}
+      <section id="recent-complaints" className="mb-16">
+
+        {/* Section header */}
+        <div className="flex items-start sm:items-center justify-between gap-4 mb-5">
+          <div>
+            <div className="flex items-center gap-2 caps mb-1">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                  style={{ background: 'var(--color-eucalyptus)' }} />
+                <span className="relative inline-flex rounded-full h-2 w-2"
+                  style={{ background: 'var(--color-eucalyptus)' }} />
+              </span>
+              Live activity
+            </div>
+            <h2 className="font-display text-[28px] sm:text-[32px] font-semibold tracking-tight">
+              Recent complaints
+            </h2>
+          </div>
+          <Link to="/complaints"
+            className="text-sm font-medium flex items-center gap-1.5 shrink-0 hover:underline underline-offset-4 mt-1"
+            style={{ color: 'var(--color-eucalyptus)' }}>
+            View all <Icon name="arrow-r" size={13} />
+          </Link>
+        </div>
+
+        {/* ── Filter bar ─────────────────────────────────── */}
+        <div className="card p-4 mb-3 space-y-3">
+          {/* Search row */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Icon name="search" size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)] pointer-events-none" />
+              <input
+                value={feedSearch}
+                onChange={e => setFeedSearch(e.target.value)}
+                placeholder="Search by title or company..."
+                className="input pl-8 text-sm h-9 w-full"
+              />
+              {feedSearch && (
+                <button onClick={() => setFeedSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] transition">
+                  <Icon name="x" size={13} />
+                </button>
+              )}
+            </div>
+
+            {/* Expand toggle for category on mobile */}
+            <button
+              onClick={() => setFeedExpanded(v => !v)}
+              className={`flex items-center gap-1.5 text-xs font-medium px-3 h-9 rounded-xl border transition shrink-0 ${
+                feedCategory
+                  ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                  : 'border-[color:var(--color-line)] text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] bg-[color:var(--color-card)]'
+              }`}>
+              <Icon name="sparkle" size={13} />
+              <span className="hidden sm:inline">Category</span>
+              {feedCategory && <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-ochre)] ml-0.5" />}
+            </button>
+          </div>
+
+          {/* Status pills */}
+          <div className="flex gap-1.5 flex-wrap">
+            {FEED_STATUS_OPTS.map(opt => {
+              const count = opt.value
+                ? (feedCounts.status[opt.value] ?? 0)
+                : Object.values(feedCounts.status).reduce((a, b) => a + b, 0)
+              const active = feedStatus === opt.value
+              return (
+                <button key={opt.value}
+                  onClick={() => setFeedStatus(opt.value)}
+                  className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full border transition ${
+                    active
+                      ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                      : 'border-[color:var(--color-line)] bg-[color:var(--color-card)] text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)]'
+                  }`}>
+                  {opt.dot && (
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{ background: active ? 'var(--color-paper)' : opt.dot }} />
+                  )}
+                  {opt.label}
+                  {count > 0 && (
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full leading-none ${
+                      active
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[color:var(--color-ink)]/10 text-[color:var(--color-ink)]'
+                    }`}>{count}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Category pills — expanded */}
+          {feedExpanded && (
+            <div className="flex gap-1.5 flex-wrap pt-1 border-t hairline">
+              {FEED_CATEGORY_OPTS.map(opt => {
+                const count = opt.value ? (feedCounts.category[opt.value] ?? 0) : Object.values(feedCounts.category).reduce((a, b) => a + b, 0)
+                const active = feedCategory === opt.value
+                return (
+                  <button key={opt.value}
+                    onClick={() => { setFeedCategory(opt.value); setFeedExpanded(false) }}
+                    className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full border transition ${
+                      active
+                        ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
+                        : 'border-[color:var(--color-line)] bg-transparent text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)]'
+                    }`}>
+                    {opt.emoji && <span>{opt.emoji}</span>}
+                    {opt.label}
+                    {count > 0 && (
+                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full leading-none ${
+                        active
+                          ? 'bg-white/20 text-white'
+                          : 'bg-[color:var(--color-ink)]/10 text-[color:var(--color-ink)]'
+                      }`}>{count}</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Active filter pills + clear */}
+          {(feedSearch || feedStatus || feedCategory) && (
+            <div className="flex items-center gap-2 pt-1 border-t hairline flex-wrap">
+              {feedStatus && (
+                <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full font-medium"
+                  style={{ background: 'var(--color-paper-2)', color: 'var(--color-ink)' }}>
+                  {FEED_STATUS_OPTS.find(o => o.value === feedStatus)?.label}
+                  <button onClick={() => setFeedStatus('')} className="ml-0.5 opacity-50 hover:opacity-100">
+                    <Icon name="x" size={10} />
+                  </button>
+                </span>
+              )}
+              {feedCategory && (
+                <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full font-medium"
+                  style={{ background: 'var(--color-paper-2)', color: 'var(--color-ink)' }}>
+                  {FEED_CATEGORY_OPTS.find(o => o.value === feedCategory)?.emoji}{' '}
+                  {FEED_CATEGORY_OPTS.find(o => o.value === feedCategory)?.label}
+                  <button onClick={() => setFeedCategory('')} className="ml-0.5 opacity-50 hover:opacity-100">
+                    <Icon name="x" size={10} />
+                  </button>
+                </span>
+              )}
+              <button
+                onClick={() => { setFeedSearch(''); setFeedStatus(''); setFeedCategory('') }}
+                className="text-[11px] text-[color:var(--color-muted)] hover:text-[color:var(--color-clay)] transition ml-auto">
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Feed card ───────────────────────────────────── */}
+        <div className="card overflow-hidden">
+          {loadingFeed ? (
+            <div className="divide-y" style={{ borderColor: 'var(--color-line)' }}>
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-5 py-4 animate-pulse">
+                  <div className="w-2 h-2 rounded-full bg-[color:var(--color-paper-2)] shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3.5 bg-[color:var(--color-paper-2)] rounded w-2/3" />
+                    <div className="h-3 bg-[color:var(--color-paper-2)] rounded w-1/3" />
+                  </div>
+                  <div className="h-5 w-16 bg-[color:var(--color-paper-2)] rounded-full shrink-0" />
+                </div>
+              ))}
+            </div>
+          ) : complaints.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="font-display italic-display text-[20px] mb-2 text-[color:var(--color-muted)]">
+                {(feedSearch || feedStatus || feedCategory) ? 'No matching complaints.' : 'No complaints yet.'}
+              </div>
+              <p className="text-sm text-[color:var(--color-muted)] mb-5">
+                {(feedSearch || feedStatus || feedCategory)
+                  ? 'Try adjusting your filters or '
+                  : 'Be the first — '}
+                <Link to="/complaints" className="underline underline-offset-4"
+                  style={{ color: 'var(--color-eucalyptus)' }}>
+                  browse all complaints
+                </Link>.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="divide-y" style={{ borderColor: 'var(--color-line)' }}>
+                {complaints.map((c) => <ComplaintFeedRow key={c.id} complaint={c} />)}
+              </div>
+              <div className="px-5 py-3 flex items-center justify-between"
+                style={{ background: 'var(--color-paper-2)', borderTop: '1px solid var(--color-line)' }}>
+                <p className="text-xs text-[color:var(--color-muted)]">
+                  {complaintsTotal > 0 && !feedSearch && !feedStatus && !feedCategory
+                    ? <>{complaintsTotal.toLocaleString('en-AU')} complaints on the public record</>
+                    : <>Showing {complaints.length} matching</>}
+                </p>
+                <Link
+                  to={`/complaints${feedStatus || feedCategory ? `?${new URLSearchParams({ ...(feedStatus && { status: feedStatus }), ...(feedCategory && { category: feedCategory }) }).toString()}` : ''}`}
+                  className="text-xs font-medium flex items-center gap-1 hover:underline underline-offset-4"
+                  style={{ color: 'var(--color-eucalyptus)' }}>
+                  Browse all <Icon name="arrow-r" size={12} />
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
       {/* ═══════════════ STATS TRUST BAR ═══════════════ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-16">
         {[
@@ -730,213 +937,6 @@ export default function HomePage() {
             )}
           </div>
 
-        </div>
-      </section>
-
-      {/* ═══════════════ LIVE ACTIVITY FEED ═══════════════ */}
-      <section id="recent-complaints" className="mb-16">
-
-        {/* Section header */}
-        <div className="flex items-start sm:items-center justify-between gap-4 mb-5">
-          <div>
-            <div className="flex items-center gap-2 caps mb-1">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                  style={{ background: 'var(--color-eucalyptus)' }} />
-                <span className="relative inline-flex rounded-full h-2 w-2"
-                  style={{ background: 'var(--color-eucalyptus)' }} />
-              </span>
-              Live activity
-            </div>
-            <h2 className="font-display text-[28px] sm:text-[32px] font-semibold tracking-tight">
-              Recent complaints
-            </h2>
-          </div>
-          <Link to="/complaints"
-            className="text-sm font-medium flex items-center gap-1.5 shrink-0 hover:underline underline-offset-4 mt-1"
-            style={{ color: 'var(--color-eucalyptus)' }}>
-            View all <Icon name="arrow-r" size={13} />
-          </Link>
-        </div>
-
-        {/* ── Filter bar ─────────────────────────────────── */}
-        <div className="card p-4 mb-3 space-y-3">
-          {/* Search row */}
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <Icon name="search" size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)] pointer-events-none" />
-              <input
-                value={feedSearch}
-                onChange={e => setFeedSearch(e.target.value)}
-                placeholder="Search by title or company..."
-                className="input pl-8 text-sm h-9 w-full"
-              />
-              {feedSearch && (
-                <button onClick={() => setFeedSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] transition">
-                  <Icon name="x" size={13} />
-                </button>
-              )}
-            </div>
-
-            {/* Expand toggle for category on mobile */}
-            <button
-              onClick={() => setFeedExpanded(v => !v)}
-              className={`flex items-center gap-1.5 text-xs font-medium px-3 h-9 rounded-xl border transition shrink-0 ${
-                feedCategory
-                  ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
-                  : 'border-[color:var(--color-line)] text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] bg-[color:var(--color-card)]'
-              }`}>
-              <Icon name="sparkle" size={13} />
-              <span className="hidden sm:inline">Category</span>
-              {feedCategory && <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-ochre)] ml-0.5" />}
-            </button>
-          </div>
-
-          {/* Status pills */}
-          <div className="flex gap-1.5 flex-wrap">
-            {FEED_STATUS_OPTS.map(opt => {
-              const count = opt.value
-                ? (feedCounts.status[opt.value] ?? 0)
-                : Object.values(feedCounts.status).reduce((a, b) => a + b, 0)
-              const active = feedStatus === opt.value
-              return (
-                <button key={opt.value}
-                  onClick={() => setFeedStatus(opt.value)}
-                  className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full border transition ${
-                    active
-                      ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
-                      : 'border-[color:var(--color-line)] bg-[color:var(--color-card)] text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)]'
-                  }`}>
-                  {opt.dot && (
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0"
-                      style={{ background: active ? 'var(--color-paper)' : opt.dot }} />
-                  )}
-                  {opt.label}
-                  {count > 0 && (
-                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full leading-none ${
-                      active
-                        ? 'bg-white/20 text-white'
-                        : 'bg-[color:var(--color-ink)]/10 text-[color:var(--color-ink)]'
-                    }`}>{count}</span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Category pills — expanded */}
-          {feedExpanded && (
-            <div className="flex gap-1.5 flex-wrap pt-1 border-t hairline">
-              {FEED_CATEGORY_OPTS.map(opt => {
-                const count = opt.value ? (feedCounts.category[opt.value] ?? 0) : Object.values(feedCounts.category).reduce((a, b) => a + b, 0)
-                const active = feedCategory === opt.value
-                return (
-                  <button key={opt.value}
-                    onClick={() => { setFeedCategory(opt.value); setFeedExpanded(false) }}
-                    className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full border transition ${
-                      active
-                        ? 'border-[color:var(--color-ink)] bg-[color:var(--color-ink)] text-[color:var(--color-paper)]'
-                        : 'border-[color:var(--color-line)] bg-transparent text-[color:var(--color-ink-2)] hover:border-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)]'
-                    }`}>
-                    {opt.emoji && <span>{opt.emoji}</span>}
-                    {opt.label}
-                    {count > 0 && (
-                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full leading-none ${
-                        active
-                          ? 'bg-white/20 text-white'
-                          : 'bg-[color:var(--color-ink)]/10 text-[color:var(--color-ink)]'
-                      }`}>{count}</span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-
-          {/* Active filter pills + clear */}
-          {(feedSearch || feedStatus || feedCategory) && (
-            <div className="flex items-center gap-2 pt-1 border-t hairline flex-wrap">
-              {feedStatus && (
-                <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full font-medium"
-                  style={{ background: 'var(--color-paper-2)', color: 'var(--color-ink)' }}>
-                  {FEED_STATUS_OPTS.find(o => o.value === feedStatus)?.label}
-                  <button onClick={() => setFeedStatus('')} className="ml-0.5 opacity-50 hover:opacity-100">
-                    <Icon name="x" size={10} />
-                  </button>
-                </span>
-              )}
-              {feedCategory && (
-                <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full font-medium"
-                  style={{ background: 'var(--color-paper-2)', color: 'var(--color-ink)' }}>
-                  {FEED_CATEGORY_OPTS.find(o => o.value === feedCategory)?.emoji}{' '}
-                  {FEED_CATEGORY_OPTS.find(o => o.value === feedCategory)?.label}
-                  <button onClick={() => setFeedCategory('')} className="ml-0.5 opacity-50 hover:opacity-100">
-                    <Icon name="x" size={10} />
-                  </button>
-                </span>
-              )}
-              <button
-                onClick={() => { setFeedSearch(''); setFeedStatus(''); setFeedCategory('') }}
-                className="text-[11px] text-[color:var(--color-muted)] hover:text-[color:var(--color-clay)] transition ml-auto">
-                Clear all
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* ── Feed card ───────────────────────────────────── */}
-        <div className="card overflow-hidden">
-          {loadingFeed ? (
-            <div className="divide-y" style={{ borderColor: 'var(--color-line)' }}>
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="flex items-center gap-3 px-5 py-4 animate-pulse">
-                  <div className="w-2 h-2 rounded-full bg-[color:var(--color-paper-2)] shrink-0" />
-                  <div className="flex-1 space-y-1.5">
-                    <div className="h-3.5 bg-[color:var(--color-paper-2)] rounded w-2/3" />
-                    <div className="h-3 bg-[color:var(--color-paper-2)] rounded w-1/3" />
-                  </div>
-                  <div className="h-5 w-16 bg-[color:var(--color-paper-2)] rounded-full shrink-0" />
-                </div>
-              ))}
-            </div>
-          ) : complaints.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="font-display italic-display text-[20px] mb-2 text-[color:var(--color-muted)]">
-                {(feedSearch || feedStatus || feedCategory) ? 'No matching complaints.' : 'No complaints yet.'}
-              </div>
-              <p className="text-sm text-[color:var(--color-muted)] mb-5">
-                {(feedSearch || feedStatus || feedCategory)
-                  ? 'Try adjusting your filters or '
-                  : 'Be the first — '}
-                <Link to="/complaints" className="underline underline-offset-4"
-                  style={{ color: 'var(--color-eucalyptus)' }}>
-                  browse all complaints
-                </Link>.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="divide-y" style={{ borderColor: 'var(--color-line)' }}>
-                {complaints.map((c) => <ComplaintFeedRow key={c.id} complaint={c} />)}
-              </div>
-              <div className="px-5 py-3 flex items-center justify-between"
-                style={{ background: 'var(--color-paper-2)', borderTop: '1px solid var(--color-line)' }}>
-                <p className="text-xs text-[color:var(--color-muted)]">
-                  {complaintsTotal > 0 && !feedSearch && !feedStatus && !feedCategory
-                    ? <>{complaintsTotal.toLocaleString('en-AU')} complaints on the public record</>
-                    : <>Showing {complaints.length} matching</>}
-                </p>
-                <Link
-                  to={`/complaints${feedStatus || feedCategory ? `?${new URLSearchParams({ ...(feedStatus && { status: feedStatus }), ...(feedCategory && { category: feedCategory }) }).toString()}` : ''}`}
-                  className="text-xs font-medium flex items-center gap-1 hover:underline underline-offset-4"
-                  style={{ color: 'var(--color-eucalyptus)' }}>
-                  Browse all <Icon name="arrow-r" size={12} />
-                </Link>
-              </div>
-            </>
-          )}
         </div>
       </section>
 
