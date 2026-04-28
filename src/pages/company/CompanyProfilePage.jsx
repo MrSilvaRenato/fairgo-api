@@ -244,8 +244,11 @@ function Hero({ company, score, band }) {
           )}
 
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 max-w-xl text-sm">
-            {company.claimed && company.abn && <Meta label="ABN" value={company.abn} mono />}
-            <Meta label="On Aus Fair Go since" value={company.created_at ? new Date(company.created_at).toLocaleDateString('en-AU', { month: 'short', year: 'numeric' }) : '—'} />
+            <Meta
+              label="On Aus Fair Go since"
+              value={company.created_at ? new Date(company.created_at).toLocaleDateString('en-AU', { month: 'short', year: 'numeric' }) : '—'}
+              sub={company.abn_verified && company.abn ? `ABN ${company.abn}` : undefined}
+            />
             {score && score.total_complaints > 0 && (
               <Meta
                 label="Avg response"
@@ -304,7 +307,7 @@ function Hero({ company, score, band }) {
   )
 }
 
-function Meta({ label, value, mono, accent }) {
+function Meta({ label, value, mono, accent, sub }) {
   return (
     <div>
       <div className="caps mb-1">{label}</div>
@@ -315,6 +318,9 @@ function Meta({ label, value, mono, accent }) {
       >
         {value}
       </div>
+      {sub && (
+        <div className="text-[11px] font-mono mt-0.5" style={{ color: 'var(--color-muted)' }}>{sub}</div>
+      )}
     </div>
   )
 }
