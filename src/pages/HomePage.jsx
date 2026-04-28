@@ -1033,12 +1033,27 @@ export default function HomePage() {
 /* ─── Complaint feed row (compact) ──────────────── */
 function ComplaintFeedRow({ complaint }) {
   const st = STATUS_STYLE[complaint.status] ?? STATUS_STYLE.open
-  const lastActive = new Date(complaint.updated_at || complaint.created_at)
-  const daysAgo = Math.floor((Date.now() - lastActive) / 86400000)
-  const timeStr = lastActive.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
-  const dateLabel = daysAgo === 0
-    ? `today · ${timeStr}`
-    : daysAgo === 1 ? `1d ago · ${timeStr}` : `${daysAgo}d ago`
+  // const lastActive = new Date(complaint.updated_at || complaint.created_at)
+  // const daysAgo = Math.floor((Date.now() - lastActive) / 86400000)
+  // const timeStr = lastActive.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
+  // const dateLabel = daysAgo === 0
+  //   ? `today · ${timeStr}`
+  //   : daysAgo === 1 ? `1d ago · ${timeStr}` : `${daysAgo}d ago`
+
+    const lastActive = new Date(complaint.updated_at || complaint.created_at)
+
+const timeStr = lastActive.toLocaleTimeString('en-AU', {
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+const dateStr = lastActive.toLocaleDateString('en-AU', {
+  weekday: 'short',
+  day: '2-digit',
+  month: 'short',
+})
+
+const dateLabel = `${dateStr} · ${timeStr}`
 
   return (
     <Link to={`/complaints/${complaint.id}`}
