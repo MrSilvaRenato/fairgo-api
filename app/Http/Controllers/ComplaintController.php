@@ -161,6 +161,9 @@ class ComplaintController extends Controller
         $isOwner   = $user && $user->id === $complaint->consumer_id;
         $isAdmin   = $user && $user->role === 'admin';
         $isCompany = $user && $user->role === 'company_admin' && $user->company?->id === $complaint->company_id;
+        if ($complaint->company?->is_stub && !$isOwner && !$isAdmin) {
+    abort(403);
+}
 
         $underReview = in_array($complaint->moderation_status, ['flagged', 'rejected']);
         if ($underReview && !$isOwner && !$isAdmin) {
