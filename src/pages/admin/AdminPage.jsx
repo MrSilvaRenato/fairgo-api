@@ -53,6 +53,8 @@ export default function AdminPage() {
   const [idVerifications, setIdVerifications] = useState([])
   const [idFilter, setIdFilter]               = useState('pending')
   const [expandedMod, setExpandedMod]     = useState(null)
+  const [renamingStub, setRenamingStub]   = useState(null) // id of stub being renamed
+  const [renameValue, setRenameValue]     = useState('')
 
   // Complaints-tab filters
   const [cStatus,   setCStatus]   = useState('')
@@ -199,6 +201,16 @@ const rejectStub = async (id) => {
   setStubs((p) => p.filter((c) => c.id !== id))
   api.get('/admin/stats').then((r) => setStats(r.data))
 }
+  /* Rename stub company */
+  const saveRenameStub = async (id) => {
+    const name = renameValue.trim()
+    if (!name) return
+    const res = await api.put(`/admin/companies/${id}`, { name, abn_entity_name: name })
+    setStubs((p) => p.map((c) => c.id === id ? { ...c, name: res.data.name, abn_entity_name: res.data.abn_entity_name } : c))
+    setRenamingStub(null)
+    setRenameValue('')
+  }
+
   /* Company actions */
   const updateCompany = async (id, data) => {
     const res = await api.put(`/admin/companies/${id}`, data)
@@ -824,55 +836,101 @@ const rejectStub = async (id) => {
               <p>No unregistered companies. All complaints are against known businesses.</p>
             </div>
           )}
-          {stubs.map((c) => (
+          {stubs.map((c) => {
+            const abnStripped = (c.abn ?? '').replace(/\s+/g, '')
+            const abrUrl = `https://abr.business.gov.au/ABN/View?id=${abnStripped}`
+            const isRenaming = renamingStub === c.id
+            const nameIsPending = !c.abn_entity_name
+            return (
             <div key={c.id} className="card p-4">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[color:var(--color-paper-2)] flex items-center justify-center shrink-0 text-lg font-bold text-[color:var(--color-muted)]">
-                  {c.name.charAt(0).toUpperCase()}
+                  {(c.abn_entity_name || c.name || '?').charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                    <span className="text-sm font-semibold text-[color:var(--color-ink)]">{c.name}</span>
-                    {c.abn_verified && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                        style={{ color: '#1d4ed8', background: '#eff6ff' }}>
-                        ✓ ABN OK
-                      </span>
+                    {isRenaming ? (
+                      <div className="flex items-center gap-1.5 flex-1">
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveRenameStub(c.id); if (e.key === 'Escape') { setRenamingStub(null); setRenameValue('') } }}
+                          className="text-sm border rounded-lg px-2 py-1 flex-1 min-w-0"
+                          style={{ borderColor: 'var(--color-line)', background: 'var(--color-paper)' }}
+                          placeholder="Enter verified company name…"
+                        />
+                        <button onClick={() => saveRenameStub(c.id)}
+                          className="text-xs font-semibold px-2 py-1 rounded-lg"
+                          style={{ background: 'var(--color-eucalyptus)', color: 'var(--color-paper)' }}>
+                          Save
+                        </button>
+                        <button onClick={() => { setRenamingStub(null); setRenameValue('') }}
+                          className="text-xs px-2 py-1 rounded-lg"
+                          style={{ background: 'var(--color-paper-2)', color: 'var(--color-muted)' }}>
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-sm font-semibold text-[color:var(--color-ink)]">
+                          {c.abn_entity_name || c.name}
+                        </span>
+                        {nameIsPending && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                            style={{ color: '#92400e', background: '#fef3c7' }}>
+                            ⏳ Name unverified
+                          </span>
+                        )}
+                        {c.abn_verified && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                            style={{ color: '#1d4ed8', background: '#eff6ff' }}>
+                            ✓ ABN OK
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                   <p className="text-xs text-[color:var(--color-muted)]">
                     ABN: <span className="font-mono font-medium text-[color:var(--color-ink-2)]">{c.abn ?? '—'}</span>
-                    {c.abn_entity_name && <span className="ml-1 text-[color:var(--color-ink-2)]">· {c.abn_entity_name}</span>}
                     <span className="ml-1">· {c.complaints_count ?? 0} complaints</span>
                   </p>
                 </div>
               </div>
-             <div className="flex gap-2 mt-3">
-  <Link to={`/companies/${c.slug}`} target="_blank"
-    className="flex-1 text-center text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] px-3 py-2 rounded-xl hover:bg-[color:var(--color-paper-2)] transition font-medium border border-[color:var(--color-border)]">
-    View profile
-  </Link>
-
-  <button
-    onClick={() => promoteStub(c.id)}
-    className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl transition"
-    style={{ background: 'var(--color-eucalyptus)', color: 'var(--color-paper)' }}>
-    ✓ Mark registered
-  </button>
-
-  <button
-    onClick={() => rejectStub(c.id)}
-    className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl transition"
-    style={{
-      background: 'var(--color-clay-soft)',
-      color: 'var(--color-clay)',
-      border: '1px solid var(--color-clay)',
-    }}>
-    ✕ Reject
-  </button>
-</div>
+              <div className="flex gap-2 mt-3 flex-wrap">
+                <a href={abrUrl} target="_blank" rel="noopener noreferrer"
+                  className="text-xs font-medium px-3 py-2 rounded-xl transition border"
+                  style={{ borderColor: 'var(--color-line)', color: 'var(--color-muted)' }}>
+                  🔍 Verify on ABR
+                </a>
+                {!isRenaming && (
+                  <button
+                    onClick={() => { setRenamingStub(c.id); setRenameValue(c.abn_entity_name || '') }}
+                    className="text-xs font-medium px-3 py-2 rounded-xl transition border"
+                    style={{ borderColor: 'var(--color-line)', color: 'var(--color-muted)' }}>
+                    ✏ Set name
+                  </button>
+                )}
+                <Link to={`/companies/${c.slug}`} target="_blank"
+                  className="text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] px-3 py-2 rounded-xl hover:bg-[color:var(--color-paper-2)] transition font-medium border border-[color:var(--color-border)]">
+                  View profile
+                </Link>
+                <button
+                  onClick={() => promoteStub(c.id)}
+                  className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl transition"
+                  style={{ background: 'var(--color-eucalyptus)', color: 'var(--color-paper)' }}>
+                  ✓ Mark registered
+                </button>
+                <button
+                  onClick={() => rejectStub(c.id)}
+                  className="text-xs font-semibold px-3 py-2 rounded-xl transition"
+                  style={{ background: 'var(--color-clay-soft)', color: 'var(--color-clay)', border: '1px solid var(--color-clay)' }}>
+                  ✕ Reject
+                </button>
+              </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

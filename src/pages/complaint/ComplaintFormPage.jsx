@@ -512,7 +512,7 @@ if (successMessage) {
                         const formattedAbn = r.abn.replace(/(\d{2})(\d{3})(\d{3})(\d{3})/, '$1 $2 $3 $4')
                         const displayName = r.name || `ABN ${formattedAbn}`
                         return (
-                          <li key={r.abn} onClick={() => selectAbnResult({ ...r, name: displayName })}
+                          <li key={r.abn} onClick={() => selectAbnResult(r)}
                             className="flex items-center gap-3 px-4 py-3 cursor-pointer transition hover:bg-[color:var(--color-paper-2)]">
                             <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-base font-bold"
                               style={{ background: 'var(--color-eucalyptus-3)', color: 'var(--color-eucalyptus)' }}>

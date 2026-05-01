@@ -49,10 +49,18 @@ class ComplaintController extends Controller
             ], 429);
         }
 
+        // Must supply either an existing company_id or an ABN to look up
+        if (empty($request->company_id) && empty($request->company_abn)) {
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors'  => ['company_abn' => ['Please select a company or provide an ABN.']],
+            ], 422);
+        }
+
         $data = $request->validate([
-            'company_id'          => 'required_without:company_name|nullable|exists:companies,id',
-            'company_name'        => 'required_without:company_id|nullable|string|max:255',
-            'company_abn'         => 'required_with:company_name|nullable|string|max:14',
+            'company_id'          => 'nullable|exists:companies,id',
+            'company_name'        => 'nullable|string|max:255',
+            'company_abn'         => 'nullable|string|max:14',
             'title'               => 'required|string|max:255',
             'description'         => 'required|string|max:5000',
             'expected_resolution' => 'nullable|string|max:1000',
@@ -68,7 +76,7 @@ class ComplaintController extends Controller
         ]);
 
         // ── Unregistered company path ────────────────────────────────────────
-        if (empty($data['company_id']) && !empty($data['company_name'])) {
+        if (empty($data['company_id']) && !empty($data['company_abn'])) {
             $abn    = preg_replace('/\s+/', '', $data['company_abn']);
             $result = $abnService->lookup($abn);
 
@@ -79,9 +87,17 @@ class ComplaintController extends Controller
                 ], 422);
             }
 
-            // Use the authoritative entity name from the ABR when available —
-            // prevents users from saving fake company names.
-            $entityName = $result['entity_name'] ?? $data['company_name'];
+            // Use ABR authoritative name when available; fall back to user-supplied
+            // name; if still nothing, use the formatted ABN as a readable placeholder.
+            $entityName = $result['entity_name'] ?? $data['company_name'] ?? null;
+            if (!$entityName) {
+                $entityName = implode(' ', [
+                    substr($abn, 0, 2),
+                    substr($abn, 2, 3),
+                    substr($abn, 5, 3),
+                    substr($abn, 8, 3),
+                ]);
+            }
 
             $company = Company::firstOrCreate(
                 ['abn' => $abn, 'is_stub' => true],

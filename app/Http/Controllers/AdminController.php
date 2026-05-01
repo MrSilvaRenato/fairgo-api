@@ -137,10 +137,17 @@ class AdminController extends Controller
     public function updateCompany(Request $request, Company $company)
     {
         $data = $request->validate([
-            'claimed'         => 'sometimes|boolean',
-            'verified_badge'  => 'sometimes|boolean',
-            'not_recommended' => 'sometimes|boolean',
+            'claimed'          => 'sometimes|boolean',
+            'verified_badge'   => 'sometimes|boolean',
+            'not_recommended'  => 'sometimes|boolean',
+            'name'             => 'sometimes|string|max:255',
+            'abn_entity_name'  => 'sometimes|nullable|string|max:255',
         ]);
+
+        // Regenerate slug when admin renames a stub company
+        if (isset($data['name']) && $company->is_stub) {
+            $data['slug'] = \Illuminate\Support\Str::slug($data['name']) . '-' . substr($company->abn ?? '', -4);
+        }
 
         $company->update($data);
 

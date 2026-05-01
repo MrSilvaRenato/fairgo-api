@@ -56,10 +56,11 @@ export default function CompanyProfilePage() {
   const score = company?.score
   const band  = score?.badge ?? 'not_rated'
 
+  const displayName = company ? (company.abn_entity_name || company.name) : null
   useSeoMeta({
-    title:       company ? `${company.name} reviews & complaints` : undefined,
-    description: company
-      ? `Read ${complaints.length} consumer complaints about ${company.name}. Aus Fair Go score: ${score ? Math.round(score.score) : 'not rated'}. See how ${company.name} handles customer issues.`
+    title:       displayName ? `${displayName} reviews & complaints` : undefined,
+    description: displayName
+      ? `Read ${complaints.length} consumer complaints about ${displayName}. Aus Fair Go score: ${score ? Math.round(score.score) : 'not rated'}. See how ${displayName} handles customer issues.`
       : undefined,
     url: company ? `${window.location.origin}/companies/${company.slug}` : undefined,
     type: 'profile',
@@ -79,9 +80,9 @@ export default function CompanyProfilePage() {
     const schema = {
       '@context': 'https://schema.org',
       '@type': 'Organization',
-      name: company.name,
+      name: company.abn_entity_name || company.name,
       url: company.website ?? undefined,
-      description: `Consumer complaints and reviews for ${company.name} on Aus Fair Go.`,
+      description: `Consumer complaints and reviews for ${company.abn_entity_name || company.name} on Aus Fair Go.`,
       ...(company.industry ? { knowsAbout: company.industry } : {}),
       ...(ratingValue && ratingCount > 0
         ? {
@@ -117,7 +118,7 @@ export default function CompanyProfilePage() {
       <Breadcrumb company={company} />
       <Hero company={company} score={score} band={band} />
       <StatsStrip score={score} />
-      {score && <PerformancePanel slug={company.slug} companyName={company.name} />}
+      {score && <PerformancePanel slug={company.slug} companyName={company.abn_entity_name || company.name} />}
       {score && <CategoryBreakdown complaints={complaints} />}
       <ComplaintsBlock
         company={company}
@@ -201,8 +202,18 @@ function Hero({ company, score, band }) {
             )}
           </div>
 
+          {company.is_stub && !company.abn_entity_name && (
+            <div className="mb-4 px-4 py-3 rounded-xl text-sm flex items-start gap-2"
+              style={{ background: '#fef3c7', border: '1px solid #fcd34d', color: '#92400e' }}>
+              <span className="shrink-0 mt-0.5">⏳</span>
+              <span>
+                <strong>Company name pending verification.</strong> This profile was created automatically when a complaint was filed. Our team will verify the company name via the Australian Business Register.
+              </span>
+            </div>
+          )}
+
           <h1 className="font-display text-[44px] sm:text-[56px] leading-[1.02] font-semibold tracking-tight mb-4">
-            {company.name}
+            {company.abn_entity_name || company.name}
           </h1>
 
           {company.description && (
