@@ -260,11 +260,12 @@ class AdminController extends Controller
     ]);
 
     Complaint::where('company_id', $company->id)
-        ->where('moderation_status', 'pending')
-        ->update([
-            'is_public' => true,
-            'moderation_status' => 'approved',
-        ]);
+    ->where('status', '!=', 'removed')
+    ->whereNotIn('moderation_status', ['flagged', 'rejected'])
+    ->update([
+        'is_public' => true,
+        'moderation_status' => 'approved',
+    ]);
 
     \App\Jobs\CalculateCompanyScore::dispatch($company->id);
 
