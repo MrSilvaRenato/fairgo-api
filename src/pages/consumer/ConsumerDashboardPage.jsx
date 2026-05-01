@@ -363,6 +363,12 @@ function ComplaintRow({ complaint: c, onReopen, onRead }) {
               {st.label}
             </span>
             <span className="text-xs text-[color:var(--color-muted)] capitalize">{c.category}</span>
+            {c.company?.is_stub && c.status !== 'removed' && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ color: '#8A5A1F', background: '#FDF6E8', border: '1px solid #d97706' }}>
+                🏢 Pending company verification
+              </span>
+            )}
             {c.moderation_status === 'flagged' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
                 style={{ color: '#92400e', background: '#fef3c7' }}>

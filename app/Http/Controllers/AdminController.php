@@ -259,13 +259,24 @@ class AdminController extends Controller
         'abn_verified' => true,
     ]);
 
-    Complaint::where('company_id', $company->id)
-    ->where('status', '!=', 'removed')
-    ->whereNotIn('moderation_status', ['flagged', 'rejected'])
-    ->update([
-        'is_public' => true,
-        'moderation_status' => 'approved',
-    ]);
+    $complaints = Complaint::where('company_id', $company->id)
+        ->where('status', '!=', 'removed')
+        ->whereNotIn('moderation_status', ['flagged', 'rejected'])
+        ->with('consumer:id,name,email')
+        ->get();
+
+    foreach ($complaints as $complaint) {
+        $complaint->update([
+            'is_public' => true,
+            'moderation_status' => 'approved',
+        ]);
+
+        if ($complaint->consumer) {
+            $complaint->consumer->notify(
+                new \App\Notifications\ComplaintPublishedConsumer($complaint)
+            );
+        }
+    }
 
     \App\Jobs\CalculateCompanyScore::dispatch($company->id);
 
@@ -284,13 +295,24 @@ public function rejectStub(Request $request, Company $company)
 
     $note = $data['note'] ?? 'Company rejected by admin. Invalid or incorrect company/ABN submission.';
 
-    Complaint::where('company_id', $company->id)
-        ->update([
+    $complaints = Complaint::where('company_id', $company->id)
+        ->with('consumer:id,name,email')
+        ->get();
+
+    foreach ($complaints as $complaint) {
+        $complaint->update([
             'is_public' => false,
             'moderation_status' => 'rejected',
             'status' => 'removed',
             'moderation_note' => $note,
         ]);
+
+        if ($complaint->consumer) {
+            $complaint->consumer->notify(
+                new \App\Notifications\ComplaintRemovedConsumer($complaint, $note)
+            );
+        }
+    }
 
     $company->update([
         'not_recommended' => true,
