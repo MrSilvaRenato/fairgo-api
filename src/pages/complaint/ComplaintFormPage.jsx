@@ -508,25 +508,30 @@ if (successMessage) {
                           Australian Business Register
                         </span>
                       </li>
-                      {abnResults.map((r) => (
-                        <li key={r.abn} onClick={() => selectAbnResult(r)}
-                          className="flex items-center gap-3 px-4 py-3 cursor-pointer transition hover:bg-[color:var(--color-paper-2)]">
-                          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-base font-bold"
-                            style={{ background: 'var(--color-eucalyptus-3)', color: 'var(--color-eucalyptus)' }}>
-                            {r.name.charAt(0)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm text-[color:var(--color-ink)] truncate">{r.name}</p>
-                            <p className="text-xs text-[color:var(--color-muted)]">
-                              ABN {r.abn.replace(/(\d{2})(\d{3})(\d{3})(\d{3})/, '$1 $2 $3 $4')}
-                              {r.state && ` · ${r.state}`}
-                            </p>
-                          </div>
-                          <svg className="w-4 h-4 text-[color:var(--color-muted)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </li>
-                      ))}
+                      {abnResults.map((r) => {
+                        const formattedAbn = r.abn.replace(/(\d{2})(\d{3})(\d{3})(\d{3})/, '$1 $2 $3 $4')
+                        const displayName = r.name || `ABN ${formattedAbn}`
+                        return (
+                          <li key={r.abn} onClick={() => selectAbnResult({ ...r, name: displayName })}
+                            className="flex items-center gap-3 px-4 py-3 cursor-pointer transition hover:bg-[color:var(--color-paper-2)]">
+                            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-base font-bold"
+                              style={{ background: 'var(--color-eucalyptus-3)', color: 'var(--color-eucalyptus)' }}>
+                              {displayName.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm text-[color:var(--color-ink)] truncate">{displayName}</p>
+                              <p className="text-xs text-[color:var(--color-muted)]">
+                                {r.name
+                                  ? <>ABN {formattedAbn}{r.state && ` · ${r.state}`}</>
+                                  : 'ABN verified · company name will be confirmed by admin'}
+                              </p>
+                            </div>
+                            <svg className="w-4 h-4 text-[color:var(--color-muted)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </li>
+                        )
+                      })}
                     </>
                   )}
                 </ul>
@@ -540,7 +545,7 @@ if (successMessage) {
                 style={{ background: 'var(--color-paper-2)', border: '1px solid var(--color-line)' }}>
                 <p className="font-medium text-[color:var(--color-ink)]">No results found for "{companySearch}"</p>
                 <p className="text-xs text-[color:var(--color-muted)] mt-1">
-                  Try searching by ABN number, or check the spelling.
+                  Try searching by the company's ABN number instead (e.g. 74 264 019 312).
                 </p>
               </div>
             )}

@@ -30,9 +30,10 @@ class AbnSearchController extends Controller
                 return response()->json([
                     'results' => [[
                         'abn'      => $digits,
-                        'name'     => $result['entity_name'] ?? 'ABN ' . $formatted,
+                        'name'     => $result['entity_name'] ?? null,
                         'state'    => $result['state'] ?? null,
                         'postcode' => $result['postcode'] ?? null,
+                        'stub'     => $result['stub'] ?? false,
                     ]],
                     'source' => 'abn',
                     'stub'   => $result['stub'] ?? false,
