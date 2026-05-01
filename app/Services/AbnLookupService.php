@@ -15,7 +15,8 @@ use Illuminate\Support\Facades\Log;
  */
 class AbnLookupService
 {
-    private const ABR_URL = 'https://abr.business.gov.au/json/AbnDetails.aspx';
+    private const ABR_URL       = 'https://abr.business.gov.au/json/AbnDetails.aspx';
+    private const ABR_NAMES_URL = 'https://abr.business.gov.au/json/MatchingNames.aspx';
 
     public function lookup(string $abn): array
     {
@@ -67,6 +68,49 @@ class AbnLookupService
         } catch (\Throwable $e) {
             Log::warning('ABN lookup failed: ' . $e->getMessage());
             return ['valid' => false, 'abn' => $abn, 'error' => 'Lookup service unavailable'];
+        }
+    }
+
+    /**
+     * Search Australian Business Register by entity name.
+     * Returns up to 10 active matching businesses.
+     */
+    public function searchByName(string $name): array
+    {
+        $guid = config('services.abn_lookup.guid', 'fake');
+
+        if (!$guid || $guid === 'fake') {
+            return ['results' => [], 'stub' => true];
+        }
+
+        try {
+            $response = Http::timeout(8)->get(self::ABR_NAMES_URL, [
+                'name' => $name,
+                'guid' => $guid,
+            ]);
+
+            $body = preg_replace('/^callback\(/', '', $response->body());
+            $body = rtrim($body, ')');
+            $data = json_decode($body, true);
+
+            $results = collect($data['Names'] ?? [])
+                ->filter(fn($n) => ($n['AbnStatus'] ?? '') === 'Active' && ($n['IsCurrent'] ?? false))
+                ->map(fn($n) => [
+                    'abn'      => $n['Abn'],
+                    'name'     => $n['Name'],
+                    'state'    => $n['State'] ?? null,
+                    'postcode' => $n['Postcode'] ?? null,
+                    'score'    => $n['Score'] ?? 0,
+                ])
+                ->sortByDesc('score')
+                ->take(10)
+                ->values()
+                ->toArray();
+
+            return ['results' => $results, 'stub' => false];
+        } catch (\Throwable $e) {
+            Log::warning('ABN name search failed: ' . $e->getMessage());
+            return ['results' => [], 'error' => 'Search unavailable'];
         }
     }
 

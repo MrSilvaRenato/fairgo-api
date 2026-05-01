@@ -79,11 +79,15 @@ class ComplaintController extends Controller
                 ], 422);
             }
 
+            // Use the authoritative entity name from the ABR when available —
+            // prevents users from saving fake company names.
+            $entityName = $result['entity_name'] ?? $data['company_name'];
+
             $company = Company::firstOrCreate(
                 ['abn' => $abn, 'is_stub' => true],
                 [
-                    'name'            => $data['company_name'],
-                    'slug'            => Str::slug($data['company_name']) . '-' . substr($abn, -4),
+                    'name'            => $entityName,
+                    'slug'            => Str::slug($entityName) . '-' . substr($abn, -4),
                     'abn_entity_name' => $result['entity_name'] ?? null,
                     'abn_verified'    => true,
                     'is_stub'         => true,

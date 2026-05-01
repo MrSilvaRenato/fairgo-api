@@ -76,17 +76,12 @@ export default function ComplaintFormPage() {
   })
 
   /* ── Company search ── */
-  const [companySearch, setCompanySearch]     = useState('')
-  const [companies, setCompanies]             = useState([])
-  const [selectedCompany, setSelectedCompany] = useState(null)
-  const [searchLoading, setSearchLoading]     = useState(false)
-
-  /* ── Unregistered company ── */
-  const [showUnregistered, setShowUnregistered] = useState(false)
-  const [unregName, setUnregName]               = useState('')
-  const [unregAbn, setUnregAbn]                 = useState('')
-  const [abnResult, setAbnResult]               = useState(null)
-  const [abnChecking, setAbnChecking]           = useState(false)
+  const [companySearch, setCompanySearch]       = useState('')
+  const [companies, setCompanies]               = useState([])   // local DB results
+  const [abnResults, setAbnResults]             = useState([])   // ABN lookup results
+  const [selectedCompany, setSelectedCompany]   = useState(null) // existing DB company
+  const [selectedAbnResult, setSelectedAbnResult] = useState(null) // ABR lookup selection
+  const [searchLoading, setSearchLoading]       = useState(false)
 
   /* ── Attachments ── */
   const [attachments, setAttachments] = useState([]) // File[]
@@ -122,64 +117,57 @@ export default function ComplaintFormPage() {
     }).catch(() => {})
   }, [])
 
-  /* ── Pre-filled company name from URL (unregistered path) ── */
+  /* ── Pre-filled company name from URL — just seed the search box ── */
   useEffect(() => {
     const name = searchParams.get('company_name')
     if (!name || selectedCompany) return
     setCompanySearch(name)
-    setUnregName(name)
-    setShowUnregistered(true)
   }, [])
 
-  /* ── Company search ── */
+  /* ── Unified company search: local DB + ABN lookup ── */
   const searchTimeout = useRef(null)
   const handleCompanySearch = (q) => {
     setCompanySearch(q)
     setSelectedCompany(null)
-    setShowUnregistered(false)
-    setAbnResult(null)
-    setForm(f => ({ ...f, company_id: '' }))
+    setSelectedAbnResult(null)
+    setForm(f => ({ ...f, company_id: '', company_name: '', company_abn: '' }))
     clearTimeout(searchTimeout.current)
-    if (q.length < 2) { setCompanies([]); return }
+    if (q.length < 2) { setCompanies([]); setAbnResults([]); return }
     setSearchLoading(true)
     searchTimeout.current = setTimeout(async () => {
       try {
-        const res = await api.get('/complaints/company-search', { params: { q } })
-        setCompanies(res.data)
-      } catch { setCompanies([]) }
-      finally { setSearchLoading(false) }
-    }, 280)
+        const [dbRes, abnRes] = await Promise.allSettled([
+          api.get('/complaints/company-search', { params: { q } }),
+          api.get('/abn/search', { params: { q } }),
+        ])
+        setCompanies(dbRes.status === 'fulfilled' ? dbRes.value.data : [])
+        setAbnResults(abnRes.status === 'fulfilled' ? (abnRes.value.data.results ?? []) : [])
+      } finally { setSearchLoading(false) }
+    }, 300)
   }
 
   const selectCompany = (company) => {
     setSelectedCompany(company)
+    setSelectedAbnResult(null)
     setForm(f => ({ ...f, company_id: String(company.id), company_name: '', company_abn: '' }))
-    setCompanies([])
+    setCompanies([]); setAbnResults([])
     setCompanySearch(company.name)
-    setShowUnregistered(false)
-    setAbnResult(null)
   }
 
-  const openUnregistered = () => {
-    setShowUnregistered(true)
-    setUnregName(companySearch)
-    setCompanies([])
+  const selectAbnResult = (result) => {
+    setSelectedAbnResult(result)
     setSelectedCompany(null)
-    setForm(f => ({ ...f, company_id: '' }))
+    setForm(f => ({ ...f, company_id: '', company_name: result.name, company_abn: result.abn }))
+    setCompanies([]); setAbnResults([])
+    setCompanySearch(result.name)
   }
 
-  const checkAbn = async () => {
-    const abn = unregAbn.replace(/\s+/g, '')
-    if (abn.length < 11) { setAbnResult({ valid: false, error: 'ABN must be 11 digits.' }); return }
-    setAbnChecking(true); setAbnResult(null)
-    try {
-      const res = await api.get(`/abn/check/${abn}`)
-      setAbnResult(res.data)
-      if (res.data.valid) setForm(f => ({ ...f, company_id: '', company_name: unregName, company_abn: abn }))
-      else setForm(f => ({ ...f, company_name: '', company_abn: '' }))
-    } catch {
-      setAbnResult({ valid: false, error: 'ABN lookup unavailable. Please try again.' })
-    } finally { setAbnChecking(false) }
+  const clearSelection = () => {
+    setSelectedCompany(null)
+    setSelectedAbnResult(null)
+    setCompanySearch('')
+    setCompanies([]); setAbnResults([])
+    setForm(f => ({ ...f, company_id: '', company_name: '', company_abn: '' }))
   }
 
   /* ── File attachments ── */
@@ -192,7 +180,7 @@ export default function ComplaintFormPage() {
   const removeAttachment = (i) => setAttachments(prev => prev.filter((_, idx) => idx !== i))
 
   /* ── Step validation ── */
-  const step1Valid = form.company_id || (abnResult?.valid && unregName && unregAbn)
+  const step1Valid = form.company_id || selectedAbnResult
   const step2Valid = form.category && form.description.trim().length >= 20
 
   /* ── Navigation ── */
@@ -461,164 +449,155 @@ if (successMessage) {
             </p>
           </div>
 
-          {!showUnregistered ? (
-            <div className="space-y-4">
-              {/* Search input */}
-              <div className="relative">
-                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)]">
-                  {searchLoading
-                    ? <Spinner size={16} />
-                    : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                  }
-                </div>
-                <input
-                  autoFocus
-                  value={companySearch}
-                  onChange={e => handleCompanySearch(e.target.value)}
-                  placeholder="e.g. Telstra, Woolworths, ANZ…"
-                  className="input pl-10 text-base py-3"
-                />
-
-                {/* Dropdown results */}
-                {companies.length > 0 && (
-                  <ul className="absolute z-20 w-full mt-1 rounded-2xl shadow-2xl overflow-hidden"
-                    style={{ background: 'var(--color-card)', border: '1px solid var(--color-line)' }}>
-                    <li className="px-4 pt-3 pb-1">
-                      <span className="text-[11px] uppercase tracking-widest font-semibold text-[color:var(--color-muted)]">
-                        Results
-                      </span>
-                    </li>
-                    {companies.map((c) => (
-                      <li key={c.id} onClick={() => selectCompany(c)}
-                        className="flex items-center gap-3 px-4 py-3 cursor-pointer transition hover:bg-[color:var(--color-paper-2)]">
-                        <CompanyAvatar company={c} size={36} />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-[color:var(--color-ink)] truncate">{c.name}</p>
-                          {c.industry && <p className="text-xs text-[color:var(--color-muted)] truncate">{c.industry}</p>}
-                        </div>
-                        <svg className="w-4 h-4 text-[color:var(--color-muted)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </li>
-                    ))}
-                    <li onClick={openUnregistered}
-                      className="flex items-center gap-3 px-4 py-3 cursor-pointer transition border-t"
-                      style={{ borderColor: 'var(--color-line)', background: '#FDF6E8' }}>
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-base"
-                        style={{ background: '#F3E2C3' }}>🔍</div>
-                      <div>
-                        <p className="text-sm font-medium" style={{ color: 'var(--color-ochre)' }}>
-                          "{companySearch}" isn't listed — file anyway
-                        </p>
-                        <p className="text-xs text-[color:var(--color-muted)]">You'll need to provide their ABN</p>
-                      </div>
-                    </li>
-                  </ul>
-                )}
+          <div className="space-y-4">
+            {/* Search input */}
+            <div className="relative">
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-muted)]">
+                {searchLoading
+                  ? <Spinner size={16} />
+                  : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                }
               </div>
+              <input
+                autoFocus
+                value={companySearch}
+                onChange={e => handleCompanySearch(e.target.value)}
+                placeholder="Search by company name or ABN…"
+                className="input pl-10 text-base py-3"
+              />
 
-              {/* No results prompt */}
-              {companySearch.length >= 2 && companies.length === 0 && !selectedCompany && !searchLoading && (
-                <div className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
-                  style={{ background: '#FDF6E8', border: '1px solid var(--color-ochre)' }}>
-                  <p className="text-sm text-[color:var(--color-ink-2)]">
-                    <span className="font-semibold text-[color:var(--color-ink)]">"{companySearch}"</span> not found.
-                  </p>
-                  <button type="button" onClick={openUnregistered}
-                    className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-xl"
-                    style={{ background: 'var(--color-ochre)', color: '#fff' }}>
-                    File anyway
-                  </button>
-                </div>
+              {/* Dropdown — local DB + ABN lookup results */}
+              {(companies.length > 0 || abnResults.length > 0) && !selectedCompany && !selectedAbnResult && (
+                <ul className="absolute z-20 w-full mt-1 rounded-2xl shadow-2xl overflow-hidden max-h-80 overflow-y-auto"
+                  style={{ background: 'var(--color-card)', border: '1px solid var(--color-line)' }}>
+
+                  {/* Section: On Aus Fair Go */}
+                  {companies.length > 0 && (
+                    <>
+                      <li className="px-4 pt-3 pb-1">
+                        <span className="text-[10px] uppercase tracking-widest font-semibold text-[color:var(--color-muted)]">
+                          On Aus Fair Go
+                        </span>
+                      </li>
+                      {companies.map((c) => (
+                        <li key={c.id} onClick={() => selectCompany(c)}
+                          className="flex items-center gap-3 px-4 py-3 cursor-pointer transition hover:bg-[color:var(--color-paper-2)]">
+                          <CompanyAvatar company={c} size={36} />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-[color:var(--color-ink)] truncate">{c.name}</p>
+                            {c.industry && <p className="text-xs text-[color:var(--color-muted)] truncate">{c.industry}</p>}
+                          </div>
+                          <svg className="w-4 h-4 text-[color:var(--color-muted)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </li>
+                      ))}
+                    </>
+                  )}
+
+                  {/* Section: Australian Business Register */}
+                  {abnResults.length > 0 && (
+                    <>
+                      <li className={`px-4 pt-3 pb-1 ${companies.length > 0 ? 'border-t' : ''}`}
+                        style={{ borderColor: 'var(--color-line)' }}>
+                        <span className="text-[10px] uppercase tracking-widest font-semibold text-[color:var(--color-muted)]">
+                          Australian Business Register
+                        </span>
+                      </li>
+                      {abnResults.map((r) => (
+                        <li key={r.abn} onClick={() => selectAbnResult(r)}
+                          className="flex items-center gap-3 px-4 py-3 cursor-pointer transition hover:bg-[color:var(--color-paper-2)]">
+                          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-base font-bold"
+                            style={{ background: 'var(--color-eucalyptus-3)', color: 'var(--color-eucalyptus)' }}>
+                            {r.name.charAt(0)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-[color:var(--color-ink)] truncate">{r.name}</p>
+                            <p className="text-xs text-[color:var(--color-muted)]">
+                              ABN {r.abn.replace(/(\d{2})(\d{3})(\d{3})(\d{3})/, '$1 $2 $3 $4')}
+                              {r.state && ` · ${r.state}`}
+                            </p>
+                          </div>
+                          <svg className="w-4 h-4 text-[color:var(--color-muted)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </li>
+                      ))}
+                    </>
+                  )}
+                </ul>
               )}
+            </div>
 
-              {/* Selected company pill */}
-              {selectedCompany && (
-                <div className="flex items-center gap-3 rounded-2xl px-4 py-3"
-                  style={{ background: 'var(--color-eucalyptus-3)', border: '1px solid var(--color-eucalyptus)' }}>
-                  <CompanyAvatar company={selectedCompany} size={32} />
-                  <div className="flex-1">
+            {/* No results at all */}
+            {companySearch.length >= 2 && companies.length === 0 && abnResults.length === 0
+              && !selectedCompany && !selectedAbnResult && !searchLoading && (
+              <div className="rounded-2xl px-4 py-3 text-sm text-center"
+                style={{ background: 'var(--color-paper-2)', border: '1px solid var(--color-line)' }}>
+                <p className="font-medium text-[color:var(--color-ink)]">No results found for "{companySearch}"</p>
+                <p className="text-xs text-[color:var(--color-muted)] mt-1">
+                  Try searching by ABN number, or check the spelling.
+                </p>
+              </div>
+            )}
+
+            {/* Selected: existing DB company */}
+            {selectedCompany && (
+              <div className="flex items-center gap-3 rounded-2xl px-4 py-3"
+                style={{ background: 'var(--color-eucalyptus-3)', border: '1px solid var(--color-eucalyptus)' }}>
+                <CompanyAvatar company={selectedCompany} size={32} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm" style={{ color: 'var(--color-eucalyptus)' }}>{selectedCompany.name}</p>
+                  {selectedCompany.industry && (
+                    <p className="text-xs text-[color:var(--color-muted)]">{selectedCompany.industry}</p>
+                  )}
+                </div>
+                <button onClick={clearSelection}
+                  className="text-[color:var(--color-muted)] hover:text-[color:var(--color-clay)] transition">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* Selected: ABN lookup result — name locked from ABR */}
+            {selectedAbnResult && (
+              <div className="rounded-2xl px-4 py-4 space-y-1"
+                style={{ background: 'var(--color-eucalyptus-3)', border: '1px solid var(--color-eucalyptus)' }}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
                     <p className="font-semibold text-sm" style={{ color: 'var(--color-eucalyptus)' }}>
-                      {selectedCompany.name}
+                      ✓ {selectedAbnResult.name}
                     </p>
-                    {selectedCompany.industry && (
-                      <p className="text-xs text-[color:var(--color-muted)]">{selectedCompany.industry}</p>
-                    )}
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--color-ink-2)' }}>
+                      ABN {selectedAbnResult.abn.replace(/(\d{2})(\d{3})(\d{3})(\d{3})/, '$1 $2 $3 $4')}
+                      {selectedAbnResult.state && ` · ${selectedAbnResult.state}`}
+                      {selectedAbnResult.postcode && ` ${selectedAbnResult.postcode}`}
+                    </p>
+                    <p className="text-[11px] mt-1" style={{ color: 'var(--color-muted)' }}>
+                      Verified against the Australian Business Register
+                    </p>
                   </div>
-                  <button onClick={() => { setSelectedCompany(null); setCompanySearch(''); setForm(f => ({ ...f, company_id: '' })) }}
-                    className="text-[color:var(--color-muted)] hover:text-[color:var(--color-clay)] transition">
+                  <button onClick={clearSelection}
+                    className="text-[color:var(--color-muted)] hover:text-[color:var(--color-clay)] transition shrink-0">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
-              )}
-
-              {errors.company_id && <p className="text-[color:var(--color-clay)] text-xs">{errors.company_id[0]}</p>}
-            </div>
-          ) : (
-            /* ── Unregistered company panel ── */
-            <div className="rounded-2xl border p-5 space-y-4"
-              style={{ borderColor: 'var(--color-ochre)', background: '#FDF6E8' }}>
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-[color:var(--color-ink)]">🏢 Company not in our database</p>
-                <button type="button"
-                  onClick={() => { setShowUnregistered(false); setAbnResult(null); setForm(f => ({ ...f, company_id: '', company_name: '', company_abn: '' })) }}
-                  className="text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] transition">
-                  ← Back to search
-                </button>
-              </div>
-              <p className="text-xs text-[color:var(--color-ink-2)] leading-relaxed">
-                Provide the company's name and ABN so we can verify they're a registered Australian business.
-              </p>
-              <div>
-                <label className="block text-xs font-semibold text-[color:var(--color-ink)] mb-1">Company name *</label>
-                <input value={unregName}
-                  onChange={e => { setUnregName(e.target.value); setAbnResult(null) }}
-                  placeholder="e.g. Acme Pty Ltd" className="input text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-[color:var(--color-ink)] mb-1">ABN *</label>
-                <div className="flex gap-2">
-                  <input value={unregAbn}
-                    onChange={e => { setUnregAbn(e.target.value); setAbnResult(null) }}
-                    placeholder="e.g. 51 824 753 556" className="input text-sm flex-1" maxLength={14} />
-                  <button type="button" onClick={checkAbn}
-                    disabled={abnChecking || unregAbn.replace(/\s+/g, '').length < 11}
-                    className="btn-secondary shrink-0 text-sm">
-                    {abnChecking ? <Spinner size={14} /> : 'Verify ABN'}
-                  </button>
-                </div>
-                <p className="text-[11px] text-[color:var(--color-muted)] mt-1">
-                  Look up at <a href="https://abr.business.gov.au" target="_blank" rel="noopener noreferrer" className="underline">abr.business.gov.au</a>
+                <p className="text-[11px] rounded-lg px-2 py-1 inline-block"
+                  style={{ background: '#FDF6E8', color: '#8A5A1F' }}>
+                  🏢 This company will be added to Aus Fair Go after admin review
                 </p>
               </div>
-              {abnResult && (
-                <div className={`flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm ${abnResult.valid ? '' : ''}`}
-                  style={abnResult.valid
-                    ? { background: 'var(--color-eucalyptus-3)', color: 'var(--color-eucalyptus)' }
-                    : { background: 'var(--color-clay-soft)', color: 'var(--color-clay)' }}>
-                  <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {abnResult.valid
-                      ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />}
-                  </svg>
-                  <div>
-                    <p className="font-semibold">{abnResult.valid ? 'ABN verified.' : 'Invalid ABN.'}</p>
-                    {abnResult.valid && abnResult.entity_name && (
-                      <p className="text-xs mt-0.5 text-[color:var(--color-ink-2)]">Registered as: <strong>{abnResult.entity_name}</strong></p>
-                    )}
-                    {!abnResult.valid && (
-                      <p className="text-xs mt-0.5">{abnResult.error ?? 'Could not verify against the Australian Business Register.'}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-              {errors.company_abn && <p className="text-[color:var(--color-clay)] text-xs">{errors.company_abn[0]}</p>}
-            </div>
-          )}
+            )}
+
+            {errors.company_id && <p className="text-[color:var(--color-clay)] text-xs">{errors.company_id[0]}</p>}
+            {errors.company_abn && <p className="text-[color:var(--color-clay)] text-xs">{errors.company_abn[0]}</p>}
+          </div>
 
           {/* CTA */}
           <div className="mt-8">

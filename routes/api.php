@@ -43,7 +43,8 @@ Route::prefix('auth')->group(function () {
     });
 });
 
-// Public ABN verification (used by complaint form)
+// Public ABN endpoints (used by complaint form)
+Route::get('abn/search',      [\App\Http\Controllers\AbnSearchController::class, 'search']);
 Route::get('abn/check/{abn}', [\App\Http\Controllers\AbnCheckController::class, 'check']);
 
 // Search & leaderboard
