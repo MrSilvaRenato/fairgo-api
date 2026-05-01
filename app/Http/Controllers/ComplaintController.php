@@ -101,7 +101,7 @@ class ComplaintController extends Controller
             'description'       => $data['description'],
             'expected_resolution' => $data['expected_resolution'] ?? null,
             'category'          => $data['category'],
-            'is_public'         => $data['is_public'] ?? true,
+            'is_public'         => Company::find($data['company_id'])?->is_stub ? false : ($data['is_public'] ?? true),
             'status'            => 'open',
             'expires_at'        => now()->addDays(7),
             'moderation_status' => 'pending',
