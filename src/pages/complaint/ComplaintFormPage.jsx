@@ -163,7 +163,8 @@ export default function ComplaintFormPage() {
     setSelectedCompany(null)
     setForm(f => ({ ...f, company_id: '', company_name: result.name, company_abn: result.abn }))
     setCompanies([]); setAbnResults([])
-    setCompanySearch(result.name)
+    const formattedAbn = result.abn.replace(/(\d{2})(\d{3})(\d{3})(\d{3})/, '$1 $2 $3 $4')
+    setCompanySearch(result.name || `ABN ${formattedAbn}`)
   }
 
   const clearSelection = () => {
@@ -577,7 +578,7 @@ if (successMessage) {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-semibold text-sm" style={{ color: 'var(--color-eucalyptus)' }}>
-                      ✓ {selectedAbnResult.name}
+                      ✓ {selectedAbnResult.name || `ABN ${selectedAbnResult.abn.replace(/(\d{2})(\d{3})(\d{3})(\d{3})/, '$1 $2 $3 $4')}`}
                     </p>
                     <p className="text-xs mt-0.5" style={{ color: 'var(--color-ink-2)' }}>
                       ABN {selectedAbnResult.abn.replace(/(\d{2})(\d{3})(\d{3})(\d{3})/, '$1 $2 $3 $4')}
