@@ -97,6 +97,7 @@ export default function ComplaintFormPage() {
   const [loading, setLoading]     = useState(false)
   const [modAlert, setModAlert]   = useState(null)
   const [submittedId, setSubmittedId] = useState(null)
+  const [successMessage, setSuccessMessage] = useState(null)
   const [draftRestored, setDraftRestored] = useState(false)
 
   /* ── Restore draft ── */
@@ -245,12 +246,17 @@ export default function ComplaintFormPage() {
 
       const res = await api.post('/complaints/', payload, { headers })
       sessionStorage.removeItem(DRAFT_KEY)
-      const status = res.data.moderation_status
-      if (status === 'flagged' || status === 'edited') {
-        setModAlert(status); setSubmittedId(res.data.id)
-      } else {
-        navigate('/dashboard')
-      }
+   const status = res.data.moderation_status
+
+if (res.data.company_under_review) {
+  setSuccessMessage(res.data.message)
+  setSubmittedId(res.data.id)
+} else if (status === 'flagged' || status === 'edited') {
+  setModAlert(status)
+  setSubmittedId(res.data.id)
+} else {
+  navigate('/dashboard')
+}
     } catch (err) {
       if (err.response?.status === 429) {
         setErrors({ _limit: true })
