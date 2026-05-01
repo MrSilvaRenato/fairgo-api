@@ -142,8 +142,10 @@ export default function ComplaintFormPage() {
         ])
         setCompanies(dbRes.status === 'fulfilled' ? dbRes.value.data : [])
         const abnData = abnRes.status === 'fulfilled' ? abnRes.value.data : null
-        // Don't show stub/dev-mode ABR results — real results only with a valid GUID
-        setAbnResults(abnData && !abnData.stub ? (abnData.results ?? []) : [])
+        // Show ABN-lookup results even in stub/dev mode (ABN was checksum-verified)
+        // Suppress name-search stub results (they're always empty in dev mode anyway)
+        const showAbn = abnData && (abnData.source === 'abn' || !abnData.stub)
+        setAbnResults(showAbn ? (abnData.results ?? []) : [])
       } finally { setSearchLoading(false) }
     }, 300)
   }

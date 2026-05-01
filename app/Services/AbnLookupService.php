@@ -29,7 +29,7 @@ class AbnLookupService
             return [
                 'valid'       => $valid,
                 'abn'         => $abn,
-                'entity_name' => $valid ? 'ABN format valid (dev mode)' : null,
+                'entity_name' => null, // real name requires a valid GUID from abr.business.gov.au
                 'entity_type' => null,
                 'state'       => null,
                 'postcode'    => null,

@@ -20,10 +20,17 @@ class AbnSearchController extends Controller
         if (preg_match('/^\d{11}$/', $digits)) {
             $result = $abnService->lookup($digits);
             if ($result['valid'] ?? false) {
+                // Format ABN for display: XX XXX XXX XXX
+                $formatted = implode(' ', [
+                    substr($digits, 0, 2),
+                    substr($digits, 2, 3),
+                    substr($digits, 5, 3),
+                    substr($digits, 8, 3),
+                ]);
                 return response()->json([
                     'results' => [[
                         'abn'      => $digits,
-                        'name'     => $result['entity_name'],
+                        'name'     => $result['entity_name'] ?? 'ABN ' . $formatted,
                         'state'    => $result['state'] ?? null,
                         'postcode' => $result['postcode'] ?? null,
                     ]],
