@@ -146,13 +146,23 @@ class ComplaintController extends Controller
             $user->notify(new ComplaintFiledConsumer($complaint));
         }
 
-        return response()->json(
-            array_merge(
-                $complaint->load(['consumer:id,name', 'company:id,name,slug,logo_url,website'])->toArray(),
-                ['moderation_status' => $complaint->moderation_status]
-            ),
-            201
-        );
+$isCompanyUnderReview = $complaint->company?->is_stub === true;
+
+$message = $isCompanyUnderReview
+    ? 'Your complaint has been submitted. This company is not yet registered on Aus Fair Go, so your complaint will remain private until our team verifies the company details against ABN Lookup Australia.'
+    : 'Your complaint has been submitted successfully.';
+
+return response()->json(
+    array_merge(
+        $complaint->load(['consumer:id,name', 'company:id,name,slug,logo_url,website'])->toArray(),
+        [
+            'moderation_status' => $complaint->moderation_status,
+            'message' => $message,
+            'company_under_review' => $isCompanyUnderReview,
+        ]
+    ),
+    201
+);
     }
 
     public function show(Complaint $complaint)
