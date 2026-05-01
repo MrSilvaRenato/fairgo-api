@@ -353,6 +353,30 @@ if (res.data.company_under_review) {
     )
   }
 
+if (successMessage) {
+  return (
+    <div className="max-w-xl mx-auto">
+      <div className="card p-8 text-center space-y-5">
+        <div className="text-5xl">🏢</div>
+        <h2 className="font-display text-xl font-semibold">Company verification required</h2>
+        <p className="text-sm text-[color:var(--color-muted)]">Complaint #{submittedId}</p>
+
+        <div className="text-left px-4 py-4 rounded-2xl text-sm space-y-3"
+          style={{ background: '#FDF6E8', border: '1px solid var(--color-ochre)' }}>
+          <p className="font-semibold">Your complaint is saved but not public yet</p>
+          <p className="text-[color:var(--color-ink-2)] leading-relaxed">
+            {successMessage}
+          </p>
+        </div>
+
+        <button onClick={() => navigate('/dashboard')} className="btn-primary w-full justify-center flex">
+          View in my dashboard
+        </button>
+      </div>
+    </div>
+  )
+}
+    
   if (modAlert) {
     return (
       <div className="max-w-xl mx-auto">
