@@ -235,9 +235,10 @@ class AdminController extends Controller
     // GET /admin/stub-companies — companies auto-created from unregistered complaints
     public function stubCompanies(Request $request)
     {
-        $query = Company::where('is_stub', true)
-            ->withCount('complaints')
-            ->latest();
+      $query = Company::where('is_stub', true)
+    ->where('not_recommended', false)
+    ->withCount('complaints')
+    ->latest();
 
         if ($request->q) {
             $query->where('name', 'like', "%{$request->q}%");
