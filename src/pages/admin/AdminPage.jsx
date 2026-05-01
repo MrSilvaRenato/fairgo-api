@@ -847,18 +847,30 @@ const rejectStub = async (id) => {
                   </p>
                 </div>
               </div>
-              <div className="flex gap-2 mt-3">
-                <Link to={`/companies/${c.slug}`} target="_blank"
-                  className="flex-1 text-center text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] px-3 py-2 rounded-xl hover:bg-[color:var(--color-paper-2)] transition font-medium border border-[color:var(--color-border)]">
-                  View profile
-                </Link>
-                <button
-                  onClick={() => promoteStub(c.id)}
-                  className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl transition"
-                  style={{ background: 'var(--color-eucalyptus)', color: 'var(--color-paper)' }}>
-                  ✓ Mark registered
-                </button>
-              </div>
+             <div className="flex gap-2 mt-3">
+  <Link to={`/companies/${c.slug}`} target="_blank"
+    className="flex-1 text-center text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] px-3 py-2 rounded-xl hover:bg-[color:var(--color-paper-2)] transition font-medium border border-[color:var(--color-border)]">
+    View profile
+  </Link>
+
+  <button
+    onClick={() => promoteStub(c.id)}
+    className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl transition"
+    style={{ background: 'var(--color-eucalyptus)', color: 'var(--color-paper)' }}>
+    ✓ Mark registered
+  </button>
+
+  <button
+    onClick={() => rejectStub(c.id)}
+    className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl transition"
+    style={{
+      background: 'var(--color-clay-soft)',
+      color: 'var(--color-clay)',
+      border: '1px solid var(--color-clay)',
+    }}>
+    ✕ Reject
+  </button>
+</div>
             </div>
           ))}
         </div>
