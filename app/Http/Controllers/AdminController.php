@@ -26,7 +26,7 @@ class AdminController extends Controller
             'moderation_pending'   => Complaint::where('moderation_status', 'pending')->count(),
             'moderation_flagged'   => Complaint::where('moderation_status', 'flagged')->count(),
             'moderation_rejected'  => Complaint::where('moderation_status', 'rejected')->count(),
-            'stub_companies'          => Company::where('is_stub', true)->count(),
+            'stub_companies' => Company::where('is_stub', true)->where('not_recommended', false)->count(),
             'pending_claims'          => CompanyClaim::where('status', 'pending')->count(),
             'pending_id_verifications' => User::where('id_verification_status', 'pending')->count(),
         ]);
@@ -235,9 +235,10 @@ class AdminController extends Controller
     // GET /admin/stub-companies — companies auto-created from unregistered complaints
     public function stubCompanies(Request $request)
     {
-        $query = Company::where('is_stub', true)
-            ->withCount('complaints')
-            ->latest();
+      $query = Company::where('is_stub', true)
+    ->where('not_recommended', false)
+    ->withCount('complaints')
+    ->latest();
 
         if ($request->q) {
             $query->where('name', 'like', "%{$request->q}%");
@@ -247,16 +248,61 @@ class AdminController extends Controller
     }
 
     // POST /admin/stub-companies/{company}/promote — mark stub as a real registered company
-    public function promoteStub(Request $request, Company $company)
-    {
-        if (!$company->is_stub) {
-            return response()->json(['message' => 'Company is already registered.'], 422);
-        }
-
-        $company->update(['is_stub' => false]);
-
-        return response()->json($company->fresh());
+ public function promoteStub(Request $request, Company $company)
+{
+    if (!$company->is_stub) {
+        return response()->json(['message' => 'Company is already registered.'], 422);
     }
+
+    $company->update([
+        'is_stub' => false,
+        'abn_verified' => true,
+    ]);
+
+    Complaint::where('company_id', $company->id)
+    ->where('status', '!=', 'removed')
+    ->whereNotIn('moderation_status', ['flagged', 'rejected'])
+    ->update([
+        'is_public' => true,
+        'moderation_status' => 'approved',
+    ]);
+
+    \App\Jobs\CalculateCompanyScore::dispatch($company->id);
+
+    return response()->json($company->fresh()->loadCount('complaints'));
+}
+
+public function rejectStub(Request $request, Company $company)
+{
+    $data = $request->validate([
+        'note' => 'nullable|string|max:500',
+    ]);
+
+    if (!$company->is_stub) {
+        return response()->json(['message' => 'Only unregistered companies can be rejected.'], 422);
+    }
+
+    $note = $data['note'] ?? 'Company rejected by admin. Invalid or incorrect company/ABN submission.';
+
+    Complaint::where('company_id', $company->id)
+        ->update([
+            'is_public' => false,
+            'moderation_status' => 'rejected',
+            'status' => 'removed',
+            'moderation_note' => $note,
+        ]);
+
+    $company->update([
+        'not_recommended' => true,
+    ]);
+
+    \App\Jobs\CalculateCompanyScore::dispatch($company->id);
+
+    return response()->json([
+        'message' => 'Company rejected and related complaints removed.',
+        'company' => $company->fresh()->loadCount('complaints'),
+    ]);
+}
 
     // PUT /admin/users/{user}
     public function updateUser(Request $request, User $user)

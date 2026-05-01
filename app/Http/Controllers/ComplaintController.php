@@ -101,7 +101,7 @@ class ComplaintController extends Controller
             'description'       => $data['description'],
             'expected_resolution' => $data['expected_resolution'] ?? null,
             'category'          => $data['category'],
-            'is_public'         => $data['is_public'] ?? true,
+            'is_public'         => Company::find($data['company_id'])?->is_stub ? false : ($data['is_public'] ?? true),
             'status'            => 'open',
             'expires_at'        => now()->addDays(7),
             'moderation_status' => 'pending',
@@ -146,13 +146,23 @@ class ComplaintController extends Controller
             $user->notify(new ComplaintFiledConsumer($complaint));
         }
 
-        return response()->json(
-            array_merge(
-                $complaint->load(['consumer:id,name', 'company:id,name,slug,logo_url,website'])->toArray(),
-                ['moderation_status' => $complaint->moderation_status]
-            ),
-            201
-        );
+$isCompanyUnderReview = $complaint->company?->is_stub === true;
+
+$message = $isCompanyUnderReview
+    ? 'Your complaint has been submitted. This company is not yet registered on Aus Fair Go, so your complaint will remain private until our team verifies the company details against ABN Lookup Australia.'
+    : 'Your complaint has been submitted successfully.';
+
+return response()->json(
+    array_merge(
+        $complaint->load(['consumer:id,name', 'company:id,name,slug,logo_url,website'])->toArray(),
+        [
+            'moderation_status' => $complaint->moderation_status,
+            'message' => $message,
+            'company_under_review' => $isCompanyUnderReview,
+        ]
+    ),
+    201
+);
     }
 
     public function show(Complaint $complaint)
@@ -161,6 +171,9 @@ class ComplaintController extends Controller
         $isOwner   = $user && $user->id === $complaint->consumer_id;
         $isAdmin   = $user && $user->role === 'admin';
         $isCompany = $user && $user->role === 'company_admin' && $user->company?->id === $complaint->company_id;
+        if ($complaint->company?->is_stub && !$isOwner && !$isAdmin) {
+    abort(403);
+}
 
         $underReview = in_array($complaint->moderation_status, ['flagged', 'rejected']);
         if ($underReview && !$isOwner && !$isAdmin) {
