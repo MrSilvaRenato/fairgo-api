@@ -186,7 +186,19 @@ export default function AdminPage() {
     setStubs((p) => p.filter((c) => c.id !== id))
     api.get('/admin/stats').then((r) => setStats(r.data))
   }
+    
+const rejectStub = async (id) => {
+  const note = window.prompt(
+    'Reason for rejecting this company/complaint?',
+    'Invalid company or ABN mismatch.'
+  )
 
+  if (note === null) return
+
+  await api.post(`/admin/stub-companies/${id}/reject`, { note })
+  setStubs((p) => p.filter((c) => c.id !== id))
+  api.get('/admin/stats').then((r) => setStats(r.data))
+}
   /* Company actions */
   const updateCompany = async (id, data) => {
     const res = await api.put(`/admin/companies/${id}`, data)
