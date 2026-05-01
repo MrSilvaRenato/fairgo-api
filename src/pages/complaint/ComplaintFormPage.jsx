@@ -141,7 +141,9 @@ export default function ComplaintFormPage() {
           api.get('/abn/search', { params: { q } }),
         ])
         setCompanies(dbRes.status === 'fulfilled' ? dbRes.value.data : [])
-        setAbnResults(abnRes.status === 'fulfilled' ? (abnRes.value.data.results ?? []) : [])
+        const abnData = abnRes.status === 'fulfilled' ? abnRes.value.data : null
+        // Don't show stub/dev-mode ABR results — real results only with a valid GUID
+        setAbnResults(abnData && !abnData.stub ? (abnData.results ?? []) : [])
       } finally { setSearchLoading(false) }
     }, 300)
   }
@@ -208,11 +210,7 @@ export default function ComplaintFormPage() {
     setLoading(true)
     try {
       const fields = { ...form }
-      if (!fields.company_id && unregName && unregAbn) {
-        fields.company_name = unregName
-        fields.company_abn  = unregAbn.replace(/\s+/g, '')
-        delete fields.company_id
-      }
+      // company_name and company_abn are already set in form state by selectAbnResult()
 
       let payload, headers = {}
       if (attachments.length > 0) {
@@ -253,6 +251,8 @@ if (res.data.company_under_review) {
         const e = err.response.data.errors ?? {}
         if (e.company_id || e.company_abn) setStep(1)
         else if (e.category || e.description) setStep(2)
+      } else {
+        setErrors({ _general: err.response?.data?.message ?? 'Something went wrong. Please try again.' })
       }
     } finally { setLoading(false) }
   }
@@ -316,7 +316,7 @@ if (res.data.company_under_review) {
             <p className="text-[color:var(--color-ink-2)] leading-relaxed">
               Aus Fair Go uses AI moderation to verify complaints are genuine before they're published.
               To protect businesses from coordinated spam and ensure every complaint receives proper
-              attention, we limit submissions to <strong>3 complaints per day</strong> per account.
+              attention, we limit submissions to <strong>5 complaints per day</strong> per account.
             </p>
             <p className="text-[color:var(--color-ink-2)] leading-relaxed">
               Your limit resets automatically at midnight each day. If you have an urgent matter
@@ -798,7 +798,7 @@ if (successMessage) {
               <div>
                 <p className="text-[11px] uppercase tracking-widest font-semibold text-[color:var(--color-muted)]">Company</p>
                 <p className="font-semibold text-[color:var(--color-ink)]">
-                  {selectedCompany?.name ?? unregName}
+                  {selectedCompany?.name ?? selectedAbnResult?.name}
                 </p>
               </div>
             </div>
