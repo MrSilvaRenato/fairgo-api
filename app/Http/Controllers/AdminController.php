@@ -247,16 +247,60 @@ class AdminController extends Controller
     }
 
     // POST /admin/stub-companies/{company}/promote — mark stub as a real registered company
-    public function promoteStub(Request $request, Company $company)
-    {
-        if (!$company->is_stub) {
-            return response()->json(['message' => 'Company is already registered.'], 422);
-        }
-
-        $company->update(['is_stub' => false]);
-
-        return response()->json($company->fresh());
+ public function promoteStub(Request $request, Company $company)
+{
+    if (!$company->is_stub) {
+        return response()->json(['message' => 'Company is already registered.'], 422);
     }
+
+    $company->update([
+        'is_stub' => false,
+        'abn_verified' => true,
+    ]);
+
+    Complaint::where('company_id', $company->id)
+        ->where('moderation_status', 'pending')
+        ->update([
+            'is_public' => true,
+            'moderation_status' => 'approved',
+        ]);
+
+    \App\Jobs\CalculateCompanyScore::dispatch($company->id);
+
+    return response()->json($company->fresh()->loadCount('complaints'));
+}
+
+public function rejectStub(Request $request, Company $company)
+{
+    $data = $request->validate([
+        'note' => 'nullable|string|max:500',
+    ]);
+
+    if (!$company->is_stub) {
+        return response()->json(['message' => 'Only unregistered companies can be rejected.'], 422);
+    }
+
+    $note = $data['note'] ?? 'Company rejected by admin. Invalid or incorrect company/ABN submission.';
+
+    Complaint::where('company_id', $company->id)
+        ->update([
+            'is_public' => false,
+            'moderation_status' => 'rejected',
+            'status' => 'removed',
+            'moderation_note' => $note,
+        ]);
+
+    $company->update([
+        'not_recommended' => true,
+    ]);
+
+    \App\Jobs\CalculateCompanyScore::dispatch($company->id);
+
+    return response()->json([
+        'message' => 'Company rejected and related complaints removed.',
+        'company' => $company->fresh()->loadCount('complaints'),
+    ]);
+}
 
     // PUT /admin/users/{user}
     public function updateUser(Request $request, User $user)
