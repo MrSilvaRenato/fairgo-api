@@ -32,6 +32,7 @@ export default function ClaimPage() {
     proof_type:        '',
     message:           '',
   });
+  const [proofFile, setProofFile] = useState(null);
 
   useEffect(() => {
     api.get(`/companies/${slug}`)
@@ -62,7 +63,12 @@ export default function ClaimPage() {
     setError('');
     setFieldErr({});
     try {
-      await api.post(`/companies/${company.id}/claim`, form);
+      const payload = new FormData();
+      Object.entries(form).forEach(([k, v]) => payload.append(k, v));
+      if (proofFile) payload.append('proof_document', proofFile);
+      await api.post(`/companies/${company.id}/claim`, payload, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       setSuccess(true);
     } catch (err) {
       if (err.response?.status === 422) {
@@ -75,6 +81,17 @@ export default function ClaimPage() {
       setSaving(false);
     }
   };
+
+  // Live domain match check
+  const emailDomain = form.claimant_email.includes('@')
+    ? form.claimant_email.split('@')[1]?.toLowerCase().replace(/^www\./, '')
+    : null;
+  const siteDomain = company?.website
+    ? (() => { try { return new URL(company.website).hostname.replace(/^www\./, '').toLowerCase(); } catch { return company.website.replace(/^www\./, '').toLowerCase(); } })()
+    : null;
+  const domainMatchStatus = emailDomain && siteDomain
+    ? (emailDomain === siteDomain ? 'match' : 'mismatch')
+    : null;
 
   // ── Loading ──────────────────────────────────────────────
   if (loading) return (
@@ -261,6 +278,16 @@ export default function ClaimPage() {
               <Field label="Business email *" error={fieldErr.claimant_email?.[0]}>
                 <input type="email" value={form.claimant_email} onChange={set('claimant_email')}
                   placeholder="jane@company.com.au" required className="input" />
+                {domainMatchStatus === 'match' && (
+                  <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--color-eucalyptus)' }}>
+                    <span>✓</span> Email domain matches company website
+                  </p>
+                )}
+                {domainMatchStatus === 'mismatch' && (
+                  <p className="text-xs mt-1 flex items-center gap-1" style={{ color: '#92400e' }}>
+                    <span>⚠</span> Email domain doesn't match company website — that's OK, just ensure your proof is clear
+                  </p>
+                )}
               </Field>
             </div>
 
@@ -291,6 +318,30 @@ export default function ClaimPage() {
                   <option key={pt.value} value={pt.value}>{pt.label}</option>
                 ))}
               </select>
+            </Field>
+
+            <Field
+              label="Supporting document (optional)"
+              hint="Upload a PDF, image, or Word document to support your claim. Max 5 MB."
+              error={fieldErr.proof_document?.[0]}
+            >
+              <div className="relative">
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.docx"
+                  onChange={e => {
+                    setProofFile(e.target.files[0] ?? null);
+                    setFieldErr(fe => ({ ...fe, proof_document: null }));
+                  }}
+                  className="block w-full text-sm text-[color:var(--color-muted)] file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:cursor-pointer cursor-pointer rounded-xl border px-3 py-2"
+                  style={{ borderColor: 'var(--color-line)', background: 'var(--color-bg)' }}
+                />
+              </div>
+              {proofFile && (
+                <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--color-eucalyptus)' }}>
+                  <span>✓</span> {proofFile.name} ({(proofFile.size / 1024).toFixed(0)} KB)
+                </p>
+              )}
             </Field>
 
             <Field

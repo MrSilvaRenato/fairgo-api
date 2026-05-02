@@ -1201,7 +1201,22 @@ function ClaimCard({ claim, onApprove, onReject }) {
           </div>
           <div className="text-xs text-[color:var(--color-muted)] mb-3 space-y-0.5">
             <p><span className="font-medium text-[color:var(--color-ink-2)]">{claim.claimant_name}</span> · {claim.claimant_position}</p>
-            <p><a href={`mailto:${claim.claimant_email}`} className="hover:underline">{claim.claimant_email}</a> · {claim.claimant_phone}</p>
+            <p className="flex items-center gap-1.5 flex-wrap">
+              <a href={`mailto:${claim.claimant_email}`} className="hover:underline">{claim.claimant_email}</a>
+              {claim.domain_match === true && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                  style={{ background: 'var(--color-eucalyptus-3)', color: 'var(--color-eucalyptus)' }}>
+                  ✓ domain match
+                </span>
+              )}
+              {claim.domain_match === false && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                  style={{ background: '#fef3c7', color: '#92400e' }}>
+                  ⚠ domain mismatch
+                </span>
+              )}
+              <span>· {claim.claimant_phone}</span>
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mb-3">
@@ -1212,6 +1227,13 @@ function ClaimCard({ claim, onApprove, onReject }) {
             <div>
               <span className="text-[color:var(--color-muted)]">Proof: </span>
               <span className="font-medium text-[color:var(--color-ink-2)]">{PROOF_LABELS[claim.proof_type] ?? claim.proof_type ?? '—'}</span>
+              {claim.proof_document_url && (
+                <a href={claim.proof_document_url} target="_blank" rel="noopener noreferrer"
+                  className="ml-2 underline font-medium"
+                  style={{ color: 'var(--color-eucalyptus)' }}>
+                  View doc ↗
+                </a>
+              )}
             </div>
           </div>
 

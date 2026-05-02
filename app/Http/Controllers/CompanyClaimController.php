@@ -9,6 +9,7 @@ use App\Notifications\ClaimApproved;
 use App\Notifications\ClaimRejected;
 use App\Services\AbnLookupService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class CompanyClaimController extends Controller
@@ -46,6 +47,7 @@ class CompanyClaimController extends Controller
             'claimant_phone'    => 'required|string|max:30',
             'abn_confirmation'  => 'required|string',
             'proof_type'        => ['required', Rule::in(['asic_extract', 'business_card', 'employment_contract', 'director_certificate', 'other'])],
+            'proof_document'    => 'nullable|file|mimes:pdf,jpg,jpeg,png,docx|max:5120',
             'message'           => 'required|string|min:30|max:1000',
         ]);
 
@@ -88,10 +90,31 @@ class CompanyClaimController extends Controller
             $company->update(['abn' => $submittedAbn, 'abn_verified' => true]);
         }
 
-        $claim = CompanyClaim::create(array_merge($validated, [
-            'company_id' => $company->id,
-            'user_id'    => $user->id,
-            'status'     => 'pending',
+        // Store proof document if provided
+        $proofPath = null;
+        if ($request->hasFile('proof_document')) {
+            $proofPath = $request->file('proof_document')->store('claim-documents', 'public');
+        }
+
+        // Auto-detect domain match between claimant email and company website
+        $domainMatch = null;
+        if ($company->website) {
+            $emailParts  = explode('@', $validated['claimant_email']);
+            $emailDomain = isset($emailParts[1]) ? strtolower(preg_replace('/^www\./i', '', $emailParts[1])) : null;
+            $parsed      = parse_url($company->website);
+            $siteDomain  = strtolower(preg_replace('/^www\./i', '', $parsed['host'] ?? $company->website));
+            $domainMatch = ($emailDomain && $siteDomain && $emailDomain === $siteDomain);
+        }
+
+        $claimData = $validated;
+        unset($claimData['proof_document']);
+
+        $claim = CompanyClaim::create(array_merge($claimData, [
+            'company_id'     => $company->id,
+            'user_id'        => $user->id,
+            'status'         => 'pending',
+            'proof_document' => $proofPath,
+            'domain_match'   => $domainMatch,
         ]));
 
         return response()->json([
