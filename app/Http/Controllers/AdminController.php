@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\CompanyClaim;
 use App\Models\Complaint;
+use App\Models\ComplaintAttachment;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
 {
@@ -152,6 +154,28 @@ class AdminController extends Controller
         $company->update($data);
 
         return response()->json($company->fresh(['score', 'subscription']));
+    }
+
+    // DELETE /admin/companies/{company}
+    // delete_complaints=true  → delete company and all its complaints
+    // delete_complaints=false → null out company_id on complaints, then delete company
+    public function deleteCompany(Request $request, Company $company)
+    {
+        $deleteComplaints = filter_var($request->input('delete_complaints', false), FILTER_VALIDATE_BOOLEAN);
+
+        if ($deleteComplaints) {
+            $company->load('complaints.attachments');
+            foreach ($company->complaints as $complaint) {
+                foreach ($complaint->attachments as $att) {
+                    Storage::disk('public')->delete($att->path);
+                }
+            }
+            $company->complaints()->delete();
+        }
+        // nullOnDelete FK will set company_id = null on any remaining complaints
+        $company->delete();
+
+        return response()->json(['message' => 'Company deleted.']);
     }
 
     // GET /admin/users
