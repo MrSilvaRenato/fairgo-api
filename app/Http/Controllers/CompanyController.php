@@ -108,7 +108,6 @@ class CompanyController extends Controller
             'industry'    => 'nullable|string|max:100',
             'description' => 'nullable|string|max:1000',
             'website'     => 'nullable|string|max:255',
-            'logo_url'    => 'nullable|url|max:500',
         ]);
 
         // Strip protocol so logo fetcher gets a clean domain

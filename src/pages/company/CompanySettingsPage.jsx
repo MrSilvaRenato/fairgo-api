@@ -75,7 +75,8 @@ export default function CompanySettingsPage() {
     e.preventDefault()
     setErrors({}); setSaving(true); setSaved(false)
     try {
-      const res = await api.patch('/company/settings', form)
+      const { logo_url: _logo, ...settingsData } = form
+      const res = await api.patch('/company/settings', settingsData)
       setCompany(res.data)
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
