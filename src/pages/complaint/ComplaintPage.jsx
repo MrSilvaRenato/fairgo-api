@@ -244,38 +244,58 @@ export default function ComplaintPage() {
         {/* Company + status row */}
         <div className="flex items-start justify-between gap-3 mb-5">
           <div className="flex items-center gap-3 min-w-0">
-            <CompanyLogo company={complaint.company} size="md" />
-            <div className="min-w-0">
-              <Link to={`/companies/${complaint.company?.slug}`}
-                className="font-semibold text-sm hover:underline transition truncate block"
-                style={{ color: 'var(--color-eucalyptus)' }}>
-                {complaint.company?.name}
-              </Link>
-              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full capitalize"
-                  style={{ background: 'var(--color-paper-2)', color: 'var(--color-ink-2)', border: '1px solid var(--color-line)' }}>
-                  {CATEGORY_ICONS[complaint.category]} {complaint.category?.replace('_', ' ')}
-                </span>
-                {complaint.company?.abn_verified && complaint.company?.claimed && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                    style={{ color: '#3B4B7A', background: '#DAE0EE' }}>
-                    <Icon name="verified" size={10} /> ABN Verified
+            {complaint.company ? (
+              <>
+                <CompanyLogo company={complaint.company} size="md" />
+                <div className="min-w-0">
+                  <Link to={`/companies/${complaint.company?.slug}`}
+                    className="font-semibold text-sm hover:underline transition truncate block"
+                    style={{ color: 'var(--color-eucalyptus)' }}>
+                    {complaint.company?.name}
+                  </Link>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full capitalize"
+                      style={{ background: 'var(--color-paper-2)', color: 'var(--color-ink-2)', border: '1px solid var(--color-line)' }}>
+                      {CATEGORY_ICONS[complaint.category]} {complaint.category?.replace('_', ' ')}
+                    </span>
+                    {complaint.company?.abn_verified && complaint.company?.claimed && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                        style={{ color: '#3B4B7A', background: '#DAE0EE' }}>
+                        <Icon name="verified" size={10} /> ABN Verified
+                      </span>
+                    )}
+                    {complaint.company?.claimed && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                        style={{ color: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
+                        ✅ Actively Managed
+                      </span>
+                    )}
+                    {complaint.company?.verified_badge && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                        style={{ color: '#6B3FA0', background: '#EDE7F6' }}>
+                        <Icon name="verified" size={10} /> Verified
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-base"
+                  style={{ background: 'var(--color-paper-2)', color: 'var(--color-muted)', border: '1px solid var(--color-line)' }}>
+                  🗑
+                </div>
+                <div className="min-w-0">
+                  <span className="font-semibold text-sm block" style={{ color: 'var(--color-muted)' }}>
+                    Company removed
                   </span>
-                )}
-                {complaint.company?.claimed && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                    style={{ color: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
-                    ✅ Actively Managed
+                  <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full capitalize mt-1.5"
+                    style={{ background: 'var(--color-paper-2)', color: 'var(--color-ink-2)', border: '1px solid var(--color-line)' }}>
+                    {CATEGORY_ICONS[complaint.category]} {complaint.category?.replace('_', ' ')}
                   </span>
-                )}
-                {complaint.company?.verified_badge && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                    style={{ color: '#6B3FA0', background: '#EDE7F6' }}>
-                    <Icon name="verified" size={10} /> Verified
-                  </span>
-                )}
-              </div>
-            </div>
+                </div>
+              </>
+            )}
           </div>
           <span className={`badge ${status.badge} shrink-0`}>{status.label}</span>
         </div>
