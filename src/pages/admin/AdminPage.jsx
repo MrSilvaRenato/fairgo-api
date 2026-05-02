@@ -1,8 +1,78 @@
 import { useEffect, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import api from '../../lib/axios'
 import CompanyLogo from '../../components/CompanyLogo'
 import Icon from '../../components/Icon'
+
+/* ─── Delete company modal ───────────────────────────────── */
+function DeleteCompanyModal({ company, onClose, onConfirm }) {
+  return createPortal(
+    <div
+      className="fixed inset-0 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.5)', zIndex: 9999 }}
+      onClick={onClose}>
+      <div
+        className="card p-6 w-full max-w-md shadow-2xl"
+        onClick={(e) => e.stopPropagation()}>
+
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-lg"
+            style={{ background: 'var(--color-clay-soft)', color: 'var(--color-clay)' }}>
+            🗑
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-[color:var(--color-ink)]">
+              Delete "{company.name}"?
+            </h3>
+            <p className="text-sm text-[color:var(--color-muted)] mt-0.5">
+              This company has <strong>{company.complaintsCount}</strong> complaint{company.complaintsCount !== 1 ? 's' : ''}.
+              Choose what happens to them:
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-2 mb-5">
+          <button
+            onClick={() => onConfirm(false)}
+            className="w-full text-left px-4 py-3 rounded-xl border transition-all group"
+            style={{ borderColor: 'var(--color-line)', background: 'var(--color-paper-2)' }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = '#f59e0b'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--color-line)'}>
+            <p className="text-sm font-semibold text-[color:var(--color-ink)]">Delete company only</p>
+            <p className="text-xs text-[color:var(--color-muted)] mt-0.5">
+              Complaints stay in the database, detached from this company.
+            </p>
+          </button>
+
+          <button
+            onClick={() => onConfirm(true)}
+            className="w-full text-left px-4 py-3 rounded-xl border transition-all"
+            style={{ borderColor: 'var(--color-line)', background: 'var(--color-paper-2)' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-clay)'; e.currentTarget.style.background = 'var(--color-clay-soft)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-line)'; e.currentTarget.style.background = 'var(--color-paper-2)' }}>
+            <p className="text-sm font-semibold" style={{ color: 'var(--color-clay)' }}>
+              Delete company + all complaints
+            </p>
+            <p className="text-xs text-[color:var(--color-muted)] mt-0.5">
+              Permanently removes the company and every complaint, attachment, and response.
+            </p>
+          </button>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full py-2 text-sm rounded-xl transition"
+          style={{ color: 'var(--color-muted)' }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-paper-2)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+          Cancel
+        </button>
+      </div>
+    </div>,
+    document.body
+  )
+}
 
 /* ─── Status map ─────────────────────────────────────────── */
 const STATUS = {
@@ -53,8 +123,9 @@ export default function AdminPage() {
   const [idVerifications, setIdVerifications] = useState([])
   const [idFilter, setIdFilter]               = useState('pending')
   const [expandedMod, setExpandedMod]     = useState(null)
-  const [renamingStub, setRenamingStub]   = useState(null) // id of stub being renamed
+  const [renamingStub, setRenamingStub]   = useState(null)
   const [renameValue, setRenameValue]     = useState('')
+  const [deleteTarget, setDeleteTarget]   = useState(null) // { id, name, complaintsCount }
 
   // Complaints-tab filters
   const [cStatus,   setCStatus]   = useState('')
@@ -212,17 +283,11 @@ const rejectStub = async (id) => {
   }
 
   /* Delete company */
-  const deleteCompany = async (id, name, complaintsCount) => {
-    const confirmed = window.confirm(
-      `Delete "${name}"?\n\nThis company has ${complaintsCount} complaint${complaintsCount !== 1 ? 's' : ''}. Click OK to continue choosing what to delete.`
-    )
-    if (!confirmed) return
-
-    const deleteAll = window.confirm(
-      `Also delete all ${complaintsCount} complaint${complaintsCount !== 1 ? 's' : ''}?\n\nOK → Delete company AND all complaints (permanent)\nCancel → Delete company only, keep complaints`
-    )
-
-    await api.delete(`/admin/companies/${id}`, { params: { delete_complaints: deleteAll } })
+  const handleDeleteConfirm = async (deleteComplaints) => {
+    if (!deleteTarget) return
+    const { id } = deleteTarget
+    setDeleteTarget(null)
+    await api.delete(`/admin/companies/${id}`, { params: { delete_complaints: deleteComplaints } })
     setCompanies((p) => p.filter((c) => c.id !== id))
     api.get('/admin/stats').then((r) => setStats(r.data))
   }
@@ -827,7 +892,7 @@ const rejectStub = async (id) => {
                       ⚠
                     </button>
                     <button
-                      onClick={() => deleteCompany(c.id, c.name, c.complaints_count ?? 0)}
+                      onClick={() => setDeleteTarget({ id: c.id, name: c.name, complaintsCount: c.complaints_count ?? 0 })}
                       title="Delete company"
                       className="p-1.5 rounded-lg transition text-[color:var(--color-muted)] hover:bg-red-50 hover:text-red-600">
                       🗑
@@ -1273,6 +1338,14 @@ function ClaimCard({ claim, onApprove, onReject }) {
             </button>
           </div>
         </div>
+      )}
+
+      {deleteTarget && (
+        <DeleteCompanyModal
+          company={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleDeleteConfirm}
+        />
       )}
 
     </div>
