@@ -56,6 +56,8 @@ export default function AdminPage() {
   const [renamingStub, setRenamingStub]   = useState(null)
   const [renameValue, setRenameValue]     = useState('')
   const [deleteTarget, setDeleteTarget]   = useState(null) // { id, name, complaintsCount }
+  const [editTarget,  setEditTarget]     = useState(null) // company id being edited
+  const [editForm,    setEditForm]       = useState({ website: '', industry: '', description: '' })
 
   // Complaints-tab filters
   const [cStatus,   setCStatus]   = useState('')
@@ -220,6 +222,19 @@ const rejectStub = async (id) => {
     await api.delete(`/admin/companies/${id}`, { params: { delete_complaints: deleteComplaints } })
     setCompanies((p) => p.filter((c) => c.id !== id))
     api.get('/admin/stats').then((r) => setStats(r.data))
+  }
+
+  /* Inline edit company */
+  const openEdit = (c) => {
+    setEditTarget(c.id)
+    setDeleteTarget(null)
+    setEditForm({ website: c.website ?? '', industry: c.industry ?? '', description: c.description ?? '' })
+  }
+  const saveEdit = async () => {
+    if (!editTarget) return
+    const res = await api.put(`/admin/companies/${editTarget}`, editForm)
+    setCompanies((p) => p.map((c) => c.id === editTarget ? { ...c, ...res.data } : c))
+    setEditTarget(null)
   }
 
   /* Company actions */
@@ -804,6 +819,16 @@ const rejectStub = async (id) => {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <button
+                      onClick={() => editTarget === c.id ? setEditTarget(null) : openEdit(c)}
+                      title="Edit company details"
+                      className={`p-1.5 rounded-lg transition text-sm leading-none ${
+                        editTarget === c.id
+                          ? 'bg-blue-100 text-blue-600'
+                          : 'text-[color:var(--color-muted)] hover:bg-[color:var(--color-paper-2)]'
+                      }`}>
+                      ✏️
+                    </button>
+                    <button
                       onClick={() => updateCompany(c.id, { verified_badge: !c.verified_badge })}
                       title={c.verified_badge ? 'Remove verified badge' : 'Grant verified badge'}
                       className={`p-1.5 rounded-lg transition ${
@@ -824,7 +849,7 @@ const rejectStub = async (id) => {
                       ⚠
                     </button>
                     <button
-                      onClick={() => setDeleteTarget(isDeleting ? null : { id: c.id, name: c.name, complaintsCount: c.complaints_count ?? 0 })}
+                      onClick={() => { setEditTarget(null); setDeleteTarget(isDeleting ? null : { id: c.id, name: c.name, complaintsCount: c.complaints_count ?? 0 }) }}
                       title="Delete company"
                       className={`p-1.5 rounded-lg transition text-sm leading-none ${isDeleting ? 'bg-red-100 text-red-600' : 'text-[color:var(--color-muted)] hover:bg-red-50 hover:text-red-600'}`}>
                       🗑
@@ -853,6 +878,59 @@ const rejectStub = async (id) => {
                       className="text-xs px-3 py-1.5 rounded-xl transition text-[color:var(--color-muted)] hover:bg-[color:var(--color-paper-2)]">
                       Cancel
                     </button>
+                  </div>
+                )}
+
+                {/* Inline edit form — expands inside the row */}
+                {editTarget === c.id && (
+                  <div className="px-4 pb-4 border-t mt-2 pt-3 space-y-3" style={{ borderColor: 'var(--color-line)' }}>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-muted)]">Edit company details</p>
+                    <div>
+                      <label className="block text-xs font-medium text-[color:var(--color-ink-2)] mb-1">Website</label>
+                      <input
+                        type="url"
+                        value={editForm.website}
+                        onChange={e => setEditForm(f => ({ ...f, website: e.target.value }))}
+                        placeholder="https://example.com.au"
+                        className="input text-sm w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[color:var(--color-ink-2)] mb-1">Industry</label>
+                      <select
+                        value={editForm.industry}
+                        onChange={e => setEditForm(f => ({ ...f, industry: e.target.value }))}
+                        className="input text-sm w-full">
+                        <option value="">— Select —</option>
+                        {['Automotive','Banking & Finance','Education','Energy & Utilities','Food & Beverage',
+                          'Government','Health & Medical','Insurance','Internet & Technology','Real Estate',
+                          'Retail','Telecommunications','Transport & Logistics','Travel & Tourism','Other'
+                        ].map(i => <option key={i} value={i}>{i}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[color:var(--color-ink-2)] mb-1">Description</label>
+                      <textarea
+                        value={editForm.description}
+                        onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                        placeholder="Short description of this business…"
+                        rows={2}
+                        className="input text-sm w-full resize-none"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={saveEdit}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-xl transition"
+                        style={{ background: 'var(--color-eucalyptus)', color: 'white' }}>
+                        Save changes
+                      </button>
+                      <button
+                        onClick={() => setEditTarget(null)}
+                        className="text-xs px-3 py-1.5 rounded-xl transition text-[color:var(--color-muted)] hover:bg-[color:var(--color-paper-2)]">
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 )}
               </li>

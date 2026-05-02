@@ -144,6 +144,9 @@ class AdminController extends Controller
             'not_recommended'  => 'sometimes|boolean',
             'name'             => 'sometimes|string|max:255',
             'abn_entity_name'  => 'sometimes|nullable|string|max:255',
+            'website'          => 'sometimes|nullable|url|max:500',
+            'industry'         => 'sometimes|nullable|string|max:100',
+            'description'      => 'sometimes|nullable|string|max:1000',
         ]);
 
         // Regenerate slug when admin renames a stub company
