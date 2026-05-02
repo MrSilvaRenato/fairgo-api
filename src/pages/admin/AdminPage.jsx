@@ -55,7 +55,6 @@ export default function AdminPage() {
   const [expandedMod, setExpandedMod]     = useState(null)
   const [renamingStub, setRenamingStub]   = useState(null) // id of stub being renamed
   const [renameValue, setRenameValue]     = useState('')
-  const [deleteModal, setDeleteModal]     = useState(null) // { id, name, complaintsCount }
 
   // Complaints-tab filters
   const [cStatus,   setCStatus]   = useState('')
@@ -213,11 +212,18 @@ const rejectStub = async (id) => {
   }
 
   /* Delete company */
-  const confirmDeleteCompany = async (deleteComplaints) => {
-    if (!deleteModal) return
-    await api.delete(`/admin/companies/${deleteModal.id}`, { params: { delete_complaints: deleteComplaints } })
-    setCompanies((p) => p.filter((c) => c.id !== deleteModal.id))
-    setDeleteModal(null)
+  const deleteCompany = async (id, name, complaintsCount) => {
+    const confirmed = window.confirm(
+      `Delete "${name}"?\n\nThis company has ${complaintsCount} complaint${complaintsCount !== 1 ? 's' : ''}. Click OK to continue choosing what to delete.`
+    )
+    if (!confirmed) return
+
+    const deleteAll = window.confirm(
+      `Also delete all ${complaintsCount} complaint${complaintsCount !== 1 ? 's' : ''}?\n\nOK → Delete company AND all complaints (permanent)\nCancel → Delete company only, keep complaints`
+    )
+
+    await api.delete(`/admin/companies/${id}`, { params: { delete_complaints: deleteAll } })
+    setCompanies((p) => p.filter((c) => c.id !== id))
     api.get('/admin/stats').then((r) => setStats(r.data))
   }
 
@@ -821,7 +827,7 @@ const rejectStub = async (id) => {
                       ⚠
                     </button>
                     <button
-                      onClick={() => setDeleteModal({ id: c.id, name: c.name, complaintsCount: c.complaints_count ?? 0 })}
+                      onClick={() => deleteCompany(c.id, c.name, c.complaints_count ?? 0)}
                       title="Delete company"
                       className="p-1.5 rounded-lg transition text-[color:var(--color-muted)] hover:bg-red-50 hover:text-red-600">
                       🗑
@@ -1269,50 +1275,6 @@ function ClaimCard({ claim, onApprove, onReject }) {
         </div>
       )}
 
-      {/* ── Delete company modal ── */}
-      {deleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.45)' }}
-          onClick={() => setDeleteModal(null)}>
-          <div className="card p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-semibold text-[color:var(--color-ink)] mb-1">
-              Delete "{deleteModal.name}"?
-            </h3>
-            <p className="text-sm text-[color:var(--color-muted)] mb-5">
-              This company has <strong>{deleteModal.complaintsCount}</strong> complaint{deleteModal.complaintsCount !== 1 ? 's' : ''}.
-              Choose what happens to them:
-            </p>
-
-            <div className="space-y-3 mb-5">
-              <button
-                onClick={() => confirmDeleteCompany(false)}
-                className="w-full text-left px-4 py-3 rounded-xl border-2 transition hover:border-amber-400"
-                style={{ borderColor: 'var(--color-line)', background: 'var(--color-paper-2)' }}>
-                <p className="text-sm font-semibold text-[color:var(--color-ink)]">Delete company only</p>
-                <p className="text-xs text-[color:var(--color-muted)] mt-0.5">
-                  Complaints remain in the database but are detached from this company.
-                </p>
-              </button>
-
-              <button
-                onClick={() => confirmDeleteCompany(true)}
-                className="w-full text-left px-4 py-3 rounded-xl border-2 transition hover:border-red-400"
-                style={{ borderColor: 'var(--color-line)', background: 'var(--color-paper-2)' }}>
-                <p className="text-sm font-semibold" style={{ color: 'var(--color-clay)' }}>Delete company + all complaints</p>
-                <p className="text-xs text-[color:var(--color-muted)] mt-0.5">
-                  Permanently removes the company and every complaint, attachment, and response associated with it.
-                </p>
-              </button>
-            </div>
-
-            <button
-              onClick={() => setDeleteModal(null)}
-              className="w-full text-sm text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)] py-2 transition">
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
