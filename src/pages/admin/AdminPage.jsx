@@ -1,78 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
-import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import api from '../../lib/axios'
 import CompanyLogo from '../../components/CompanyLogo'
 import Icon from '../../components/Icon'
-
-/* ─── Delete company modal ───────────────────────────────── */
-function DeleteCompanyModal({ company, onClose, onConfirm }) {
-  return createPortal(
-    <div
-      className="fixed inset-0 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.5)', zIndex: 9999 }}
-      onClick={onClose}>
-      <div
-        className="card p-6 w-full max-w-md shadow-2xl"
-        onClick={(e) => e.stopPropagation()}>
-
-        <div className="flex items-start gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-lg"
-            style={{ background: 'var(--color-clay-soft)', color: 'var(--color-clay)' }}>
-            🗑
-          </div>
-          <div>
-            <h3 className="text-base font-semibold text-[color:var(--color-ink)]">
-              Delete "{company.name}"?
-            </h3>
-            <p className="text-sm text-[color:var(--color-muted)] mt-0.5">
-              This company has <strong>{company.complaintsCount}</strong> complaint{company.complaintsCount !== 1 ? 's' : ''}.
-              Choose what happens to them:
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-2 mb-5">
-          <button
-            onClick={() => onConfirm(false)}
-            className="w-full text-left px-4 py-3 rounded-xl border transition-all group"
-            style={{ borderColor: 'var(--color-line)', background: 'var(--color-paper-2)' }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = '#f59e0b'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--color-line)'}>
-            <p className="text-sm font-semibold text-[color:var(--color-ink)]">Delete company only</p>
-            <p className="text-xs text-[color:var(--color-muted)] mt-0.5">
-              Complaints stay in the database, detached from this company.
-            </p>
-          </button>
-
-          <button
-            onClick={() => onConfirm(true)}
-            className="w-full text-left px-4 py-3 rounded-xl border transition-all"
-            style={{ borderColor: 'var(--color-line)', background: 'var(--color-paper-2)' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-clay)'; e.currentTarget.style.background = 'var(--color-clay-soft)' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-line)'; e.currentTarget.style.background = 'var(--color-paper-2)' }}>
-            <p className="text-sm font-semibold" style={{ color: 'var(--color-clay)' }}>
-              Delete company + all complaints
-            </p>
-            <p className="text-xs text-[color:var(--color-muted)] mt-0.5">
-              Permanently removes the company and every complaint, attachment, and response.
-            </p>
-          </button>
-        </div>
-
-        <button
-          onClick={onClose}
-          className="w-full py-2 text-sm rounded-xl transition"
-          style={{ color: 'var(--color-muted)' }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-paper-2)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-          Cancel
-        </button>
-      </div>
-    </div>,
-    document.body
-  )
-}
 
 /* ─── Status map ─────────────────────────────────────────── */
 const STATUS = {
@@ -841,9 +771,11 @@ const rejectStub = async (id) => {
             <p className="p-10 text-sm text-[color:var(--color-muted)] text-center">No companies found.</p>
           )}
           <ul className="divide-y divide-[color:var(--color-border)]">
-            {companies.map((c) => (
-              <li key={c.id} className="p-3 sm:p-4 hover:bg-[color:var(--color-paper-2)] transition">
-                <div className="flex items-center gap-3">
+            {companies.map((c) => {
+              const isDeleting = deleteTarget?.id === c.id
+              return (
+              <li key={c.id} className="transition" style={{ background: isDeleting ? 'var(--color-clay-soft)' : undefined }}>
+                <div className="flex items-center gap-3 p-3 sm:p-4">
                   <CompanyLogo company={c} size="sm" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
@@ -892,15 +824,40 @@ const rejectStub = async (id) => {
                       ⚠
                     </button>
                     <button
-                      onClick={() => setDeleteTarget({ id: c.id, name: c.name, complaintsCount: c.complaints_count ?? 0 })}
+                      onClick={() => setDeleteTarget(isDeleting ? null : { id: c.id, name: c.name, complaintsCount: c.complaints_count ?? 0 })}
                       title="Delete company"
-                      className="p-1.5 rounded-lg transition text-[color:var(--color-muted)] hover:bg-red-50 hover:text-red-600">
+                      className={`p-1.5 rounded-lg transition text-sm leading-none ${isDeleting ? 'bg-red-100 text-red-600' : 'text-[color:var(--color-muted)] hover:bg-red-50 hover:text-red-600'}`}>
                       🗑
                     </button>
                   </div>
                 </div>
+
+                {/* Inline delete confirmation — expands inside the row */}
+                {isDeleting && (
+                  <div className="px-4 pb-4 flex flex-wrap gap-2 items-center">
+                    <span className="text-xs text-[color:var(--color-muted)] mr-1">Delete:</span>
+                    <button
+                      onClick={() => handleDeleteConfirm(false)}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-xl border transition"
+                      style={{ borderColor: '#f59e0b', color: '#92400e', background: '#fef3c7' }}>
+                      Company only
+                    </button>
+                    <button
+                      onClick={() => handleDeleteConfirm(true)}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-xl transition"
+                      style={{ background: 'var(--color-clay)', color: 'white' }}>
+                      Company + all complaints
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget(null)}
+                      className="text-xs px-3 py-1.5 rounded-xl transition text-[color:var(--color-muted)] hover:bg-[color:var(--color-paper-2)]">
+                      Cancel
+                    </button>
+                  </div>
+                )}
               </li>
-            ))}
+              )
+            })}
           </ul>
         </div>
         {companiesMeta && companiesMeta.last_page > 1 && (
@@ -1338,14 +1295,6 @@ function ClaimCard({ claim, onApprove, onReject }) {
             </button>
           </div>
         </div>
-      )}
-
-      {deleteTarget && (
-        <DeleteCompanyModal
-          company={deleteTarget}
-          onClose={() => setDeleteTarget(null)}
-          onConfirm={handleDeleteConfirm}
-        />
       )}
 
     </div>
