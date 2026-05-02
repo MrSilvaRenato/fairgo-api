@@ -390,6 +390,28 @@ export default function ComplaintPage() {
         )}
       </div>
 
+      {/* ── Public attachment notice (non-private viewers only) ── */}
+      {attachments.length > 0 && !showPrivate && (
+        <div className="rounded-2xl px-5 py-4 flex items-start gap-3"
+          style={{ background: 'var(--color-paper-2)', border: '1px solid var(--color-line)' }}>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: 'var(--color-card)', border: '1px solid var(--color-line)' }}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              style={{ color: 'var(--color-muted)' }}>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-[color:var(--color-ink)]">
+              {attachments.length} supporting {attachments.length === 1 ? 'document' : 'documents'} submitted
+            </p>
+            <p className="text-xs text-[color:var(--color-muted)] mt-0.5 leading-relaxed">
+              The complainant has provided {attachments.length === 1 ? 'a file' : 'files'} as proof. Attachments are only visible to the company responsible and Aus Fair Go moderators.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── Company response ── */}
       {hasResponse && (
