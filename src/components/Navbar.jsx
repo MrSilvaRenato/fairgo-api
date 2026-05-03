@@ -195,13 +195,23 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <Link to="/login"
-                className="text-sm px-3 py-1.5 rounded-lg transition-colors"
-                style={{ color: 'var(--color-ink-2)' }}
-                onMouseEnter={e => e.currentTarget.style.color = 'var(--color-ink)'}
-                onMouseLeave={e => e.currentTarget.style.color = 'var(--color-ink-2)'}>
-                Sign in
-              </Link>
+              <div className="flex items-center gap-0.5 text-sm">
+                <Link to="/login"
+                  className="px-3 py-1.5 rounded-lg transition-colors"
+                  style={{ color: 'var(--color-ink-2)' }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--color-ink)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--color-ink-2)'}>
+                  Sign in
+                </Link>
+                <span style={{ color: 'var(--color-line)' }}>·</span>
+                <Link to="/register"
+                  className="px-3 py-1.5 rounded-lg transition-colors font-medium"
+                  style={{ color: 'var(--color-ink-2)' }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--color-ink)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--color-ink-2)'}>
+                  Register
+                </Link>
+              </div>
 
               <Link to="/register?role=business"
                 className="text-sm px-3 py-1.5 rounded-lg font-medium transition-colors border"
@@ -211,7 +221,7 @@ export default function Navbar() {
                 For Business
               </Link>
 
-              <Link to="/register" className="btn btn-primary text-xs px-4 py-2 flex items-center gap-1.5">
+              <Link to="/complaints/new" className="btn btn-primary text-xs px-4 py-2 flex items-center gap-1.5">
                 Submit complaint <Icon name="arrow-r" size={13} />
               </Link>
             </>
@@ -272,10 +282,11 @@ export default function Navbar() {
           ) : (
             <>
               <MobileLink to="/login">Sign in</MobileLink>
-              <MobileLink to="/register">
+              <MobileLink to="/register">Register as a consumer</MobileLink>
+              <MobileLink to="/register?role=business">For Business</MobileLink>
+              <MobileLink to="/complaints/new">
                 <span className="font-semibold" style={{ color: 'var(--color-eucalyptus)' }}>Submit a complaint</span>
               </MobileLink>
-              <MobileLink to="/register?role=business">For Business</MobileLink>
             </>
           )}
 
