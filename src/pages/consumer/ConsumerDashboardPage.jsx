@@ -60,9 +60,10 @@ export default function ConsumerDashboardPage() {
     })
   }
 
-  const complaints = data?.complaints ?? []
-  const stats      = data?.stats ?? {}
-  const claims     = data?.claims ?? []
+  const complaints       = data?.complaints ?? []
+  const stats            = data?.stats ?? {}
+  const claims           = data?.claims ?? []
+  const phoneVerified    = !!data?.phone_verified_at
 
   // Cross-filtered counts — must be before any early returns (Rules of Hooks)
   const statusCounts = useMemo(() => {
@@ -155,6 +156,29 @@ export default function ConsumerDashboardPage() {
             </p>
           </div>
         </div>
+      )}
+
+      {/* Phone verification nudge */}
+      {!phoneVerified && (
+        <Link to="/profile" className="block rounded-2xl p-4 flex items-center gap-4 transition hover:opacity-90"
+          style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', border: '1px solid var(--color-eucalyptus)' }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xl"
+            style={{ background: 'var(--color-eucalyptus-3)' }}>
+            📱
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-[color:var(--color-ink)]">
+              Verify your phone — get the Consumer Verified badge
+            </p>
+            <p className="text-xs text-[color:var(--color-ink-2)] mt-0.5">
+              Takes 30 seconds. Your complaints will show a verified badge, making them more credible to companies and other consumers.
+            </p>
+          </div>
+          <span className="text-xs font-semibold shrink-0 px-3 py-1.5 rounded-xl"
+            style={{ background: 'var(--color-eucalyptus)', color: 'white' }}>
+            Verify →
+          </span>
+        </Link>
       )}
 
       {/* Claim notifications */}

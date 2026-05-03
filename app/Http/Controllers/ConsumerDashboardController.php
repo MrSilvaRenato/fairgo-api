@@ -47,9 +47,10 @@ class ConsumerDashboardController extends Controller
             ]);
 
         return response()->json([
-            'stats'      => $stats,
-            'complaints' => $complaints,
-            'claims'     => $claims,
+            'stats'             => $stats,
+            'complaints'        => $complaints,
+            'claims'            => $claims,
+            'phone_verified_at' => $user->phone_verified_at,
         ]);
     }
 }

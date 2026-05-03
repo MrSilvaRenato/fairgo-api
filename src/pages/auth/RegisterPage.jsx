@@ -57,7 +57,7 @@ export default function RegisterPage() {
   const isBusiness  = searchParams.get('role') === 'business'
 
   const [form, setForm] = useState({
-    name: '', email: '', password: '', password_confirmation: '',
+    name: '', email: '', phone: '', password: '', password_confirmation: '',
     role: isBusiness ? 'company_admin' : 'consumer',
   })
   const [errors, setErrors] = useState({})
@@ -169,6 +169,11 @@ export default function RegisterPage() {
             <Field label="Email address" error={errors.email?.[0]}>
               <input name="email" type="email" value={form.email} onChange={handle} required
                 className="input" placeholder="you@example.com" autoComplete="email" />
+            </Field>
+
+            <Field label="Mobile number" hint="Optional — verify later to earn the Consumer Verified badge" error={errors.phone?.[0]}>
+              <input name="phone" type="tel" value={form.phone} onChange={handle}
+                className="input" placeholder="+61 4xx xxx xxx" autoComplete="tel" />
             </Field>
 
             <Field label="Password" error={errors.password?.[0]}>
