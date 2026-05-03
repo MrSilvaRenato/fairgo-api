@@ -101,6 +101,10 @@ class AdminController extends Controller
 
         $complaint->update($data);
 
+        if (isset($data['status'])) {
+            \App\Jobs\CalculateCompanyScore::dispatch($complaint->company_id);
+        }
+
         return response()->json($complaint->fresh());
     }
 

@@ -54,9 +54,11 @@ class ScoreService
 
     public function calculate(Company $company): CompanyScore
     {
-        // Only look at the last 6 months
+        // Only look at the last 6 months; exclude removed/rejected complaints
         $complaints = Complaint::where('company_id', $company->id)
             ->where('created_at', '>=', now()->subMonths(self::WINDOW_MONTHS))
+            ->where('status', '!=', 'removed')
+            ->whereNotIn('moderation_status', ['flagged', 'rejected'])
             ->with(['response', 'feedback'])
             ->get();
 
@@ -189,9 +191,10 @@ class ScoreService
         $responseRate = $score->response_rate;
         $resolution   = $score->resolution_rate;
 
-        // Re-fetch rated feedbacks for avg_rating and deal_again checks
+        // Re-fetch rated feedbacks for avg_rating and deal_again checks (exclude removed/rejected)
         $feedbacks      = $company->complaints()
-            ->whereNotNull('id')
+            ->where('status', '!=', 'removed')
+            ->whereNotIn('moderation_status', ['flagged', 'rejected'])
             ->with('feedback')
             ->get()
             ->map(fn($c) => $c->feedback)
