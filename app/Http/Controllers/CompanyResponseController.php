@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\CalculateCompanyScore;
+use App\Models\AppNotification;
 use App\Models\Complaint;
 use App\Models\CompanyResponse;
 use App\Notifications\CompanyRepliedConsumer;
@@ -40,6 +41,15 @@ class CompanyResponseController extends Controller
         // Notify consumer via queued notification (logs locally, SMTP in production)
         $complaint->load(['consumer', 'company']);
         $complaint->consumer?->notify(new CompanyRepliedConsumer($complaint));
+        if ($complaint->consumer_id) {
+            AppNotification::notify(
+                $complaint->consumer_id,
+                'company_response',
+                ($company->name ?? 'Company') . ' responded to your complaint',
+                \Str::limit($data['content'], 100),
+                "/complaints/{$complaint->id}"
+            );
+        }
 
         return response()->json($response, 201);
     }

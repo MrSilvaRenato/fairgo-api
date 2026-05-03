@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import Icon from './Icon'
+import NotificationPanel from './NotificationPanel'
+import api from '../lib/axios'
 
 function useScrollTo() {
   const navigate = useNavigate()
@@ -35,11 +37,60 @@ export default function Navbar() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
-  const [menuOpen, setMenuOpen]       = useState(false)
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [scrolled, setScrolled]       = useState(false)
+  const [menuOpen, setMenuOpen]             = useState(false)
+  const [userMenuOpen, setUserMenuOpen]     = useState(false)
+  const [notifOpen, setNotifOpen]           = useState(false)
+  const [notifications, setNotifications]   = useState([])
+  const [unreadCount, setUnreadCount]       = useState(0)
+  const [scrolled, setScrolled]             = useState(false)
   const scrollTo  = useScrollTo()
   const userMenuRef = useRef(null)
+  const pollRef = useRef(null)
+
+  // Load notifications when panel opens
+  const loadNotifications = useCallback(async () => {
+    if (!user) return
+    try {
+      const res = await api.get('/notifications')
+      setNotifications(res.data.notifications)
+      setUnreadCount(res.data.unread_count)
+    } catch {}
+  }, [user])
+
+  // Poll unread count every 60s when logged in
+  useEffect(() => {
+    if (!user) { setUnreadCount(0); return }
+    const fetchCount = async () => {
+      try {
+        const res = await api.get('/notifications/unread-count')
+        setUnreadCount(res.data.count)
+      } catch {}
+    }
+    fetchCount()
+    pollRef.current = setInterval(fetchCount, 60_000)
+    return () => clearInterval(pollRef.current)
+  }, [user])
+
+  // Load full list when panel opens
+  useEffect(() => {
+    if (notifOpen) loadNotifications()
+  }, [notifOpen, loadNotifications])
+
+  const handleMarkRead = useCallback(async (id) => {
+    try {
+      await api.patch(`/notifications/${id}/read`)
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n))
+      setUnreadCount(prev => Math.max(0, prev - 1))
+    } catch {}
+  }, [])
+
+  const handleMarkAllRead = useCallback(async () => {
+    try {
+      await api.post('/notifications/read-all')
+      setNotifications(prev => prev.map(n => ({ ...n, read_at: n.read_at ?? new Date().toISOString() })))
+      setUnreadCount(0)
+    } catch {}
+  }, [])
 
   // Close user dropdown on outside click
   useEffect(() => {
@@ -115,10 +166,30 @@ export default function Navbar() {
                 </Link>
               )}
 
+              {/* Bell icon */}
+              <div className="relative">
+                <button
+                  onClick={() => { setNotifOpen(v => !v); setUserMenuOpen(false) }}
+                  aria-label="Notifications"
+                  className={`relative p-2 rounded-xl transition-colors ${
+                    notifOpen
+                      ? 'bg-[color:var(--color-eucalyptus-3)] text-[color:var(--color-eucalyptus)]'
+                      : 'text-[color:var(--color-ink-2)] hover:bg-[color:var(--color-paper-2)] hover:text-[color:var(--color-ink)]'
+                  }`}>
+                  <Icon name="bell" size={18} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full text-[10px] font-bold flex items-center justify-center"
+                      style={{ background: 'var(--color-clay)', color: 'var(--color-paper)' }}>
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+
               {/* User dropdown */}
               <div className="relative" ref={userMenuRef}>
                 <button
-                  onClick={() => setUserMenuOpen((v) => !v)}
+                  onClick={() => { setUserMenuOpen((v) => !v); setNotifOpen(false) }}
                   className={`flex items-center gap-2 text-sm pl-3 pr-2.5 py-1.5 rounded-xl border transition-colors ${
                     userMenuOpen
                       ? 'border-[color:var(--color-eucalyptus)] bg-[color:var(--color-eucalyptus-3)]'
@@ -228,15 +299,42 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile hamburger */}
-        <button
-          className="md:hidden p-2 rounded-xl transition-colors"
-          style={{ color: 'var(--color-ink-2)' }}
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Toggle menu">
-          <Icon name={menuOpen ? 'x' : 'menu'} size={20} />
-        </button>
+        {/* Mobile: bell + hamburger */}
+        <div className="md:hidden flex items-center gap-1">
+          {user && (
+            <button
+              onClick={() => { setNotifOpen(v => !v); setMenuOpen(false) }}
+              aria-label="Notifications"
+              className="relative p-2 rounded-xl transition-colors"
+              style={{ color: 'var(--color-ink-2)' }}>
+              <Icon name="bell" size={20} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 min-w-[14px] h-3.5 px-0.5 rounded-full text-[9px] font-bold flex items-center justify-center"
+                  style={{ background: 'var(--color-clay)', color: 'var(--color-paper)' }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+          )}
+          <button
+            className="p-2 rounded-xl transition-colors"
+            style={{ color: 'var(--color-ink-2)' }}
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle menu">
+            <Icon name={menuOpen ? 'x' : 'menu'} size={20} />
+          </button>
+        </div>
       </div>
+
+      {/* Notification panel */}
+      <NotificationPanel
+        open={notifOpen}
+        onClose={() => setNotifOpen(false)}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onMarkRead={handleMarkRead}
+        onMarkAllRead={handleMarkAllRead}
+      />
 
       {/* Mobile menu */}
       {menuOpen && (

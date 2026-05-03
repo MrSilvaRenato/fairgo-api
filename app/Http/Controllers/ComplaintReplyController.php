@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AppNotification;
 use App\Models\Complaint;
 use App\Models\ComplaintReply;
 use App\Notifications\CompanyRepliedConsumer;
@@ -116,6 +117,23 @@ class ComplaintReplyController extends Controller
         if ($isCompany) {
             $complaint->load('consumer');
             $complaint->consumer?->notify(new CompanyRepliedConsumer($complaint));
+            if ($complaint->consumer_id) {
+                AppNotification::notify(
+                    $complaint->consumer_id,
+                    'complaint_reply',
+                    $complaint->company->name ?? 'Company' . ' replied to your complaint',
+                    \Str::limit($content, 100),
+                    "/complaints/{$complaint->id}"
+                );
+            }
+        } elseif ($isConsumer && $complaint->company?->user_id) {
+            AppNotification::notify(
+                $complaint->company->user_id,
+                'complaint_reply',
+                ($user->name ?? 'Consumer') . ' replied to a complaint',
+                \Str::limit($content, 100),
+                "/complaints/{$complaint->id}"
+            );
         }
 
         return response()->json($reply->load('user:id,name,role'), 201);

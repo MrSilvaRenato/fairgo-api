@@ -17,6 +17,7 @@ use App\Http\Controllers\CompanyDashboardController;
 use App\Http\Controllers\ConsumerDashboardController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\AbnVerificationController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CompanyClaimController;
 use Illuminate\Support\Facades\Route;
 
@@ -93,6 +94,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('company/settings',  [CompanyController::class, 'updateSettings']);
     Route::post('company/logo',       [CompanyController::class, 'uploadLogo']);
     Route::post('company/abn/verify', [AbnVerificationController::class, 'verify']);
+});
+
+// Notifications
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('notifications',                          [NotificationController::class, 'index']);
+    Route::get('notifications/unread-count',             [NotificationController::class, 'unreadCount']);
+    Route::patch('notifications/{notification}/read',    [NotificationController::class, 'markRead']);
+    Route::post('notifications/read-all',                [NotificationController::class, 'markAllRead']);
 });
 
 // User profile

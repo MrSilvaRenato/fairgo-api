@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\CalculateCompanyScore;
+use App\Models\AppNotification;
 use App\Models\Complaint;
 use App\Models\ResolutionFeedback;
 use App\Notifications\ComplaintResolvedCompany;
@@ -63,6 +64,15 @@ class ResolutionFeedbackController extends Controller
         $companyUser = $complaint->company->user;
         if ($companyUser) {
             $companyUser->notify(new ComplaintResolvedCompany($complaint));
+            $verdict  = $data['resolved'] ? 'resolved' : 'marked as unresolved';
+            $consumer = $request->user()->name ?? 'A consumer';
+            AppNotification::notify(
+                $companyUser->id,
+                'verdict',
+                "{$consumer} {$verdict} a complaint",
+                $data['comment'] ? \Str::limit($data['comment'], 100) : null,
+                "/complaints/{$complaint->id}"
+            );
         }
 
         return response()->json($feedback, 201);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AppNotification;
 use App\Models\Company;
 use App\Models\CompanyClaim;
 use App\Models\Subscription;
@@ -192,11 +193,18 @@ class CompanyClaimController extends Controller
             ]);
         }
 
-        // Notify claimant by email
+        // Notify claimant by email + in-app
         try {
             $notifyUser = $targetUser ?? \App\Models\User::where('email', $claim->claimant_email)->first();
             if ($notifyUser) {
                 $notifyUser->notify(new ClaimApproved($claim->load('company')));
+                AppNotification::notify(
+                    $notifyUser->id,
+                    'claim_approved',
+                    'Your claim has been approved',
+                    "You now have access to the {$company->name} dashboard.",
+                    '/company/dashboard'
+                );
             }
         } catch (\Throwable) {}
 
@@ -226,11 +234,18 @@ class CompanyClaimController extends Controller
             'rejection_reason' => $request->input('rejection_reason'),
         ]);
 
-        // Notify claimant by email
+        // Notify claimant by email + in-app
         try {
             $notifyUser = \App\Models\User::where('email', $claim->claimant_email)->first();
             if ($notifyUser) {
                 $notifyUser->notify(new ClaimRejected($claim->load('company')));
+                AppNotification::notify(
+                    $notifyUser->id,
+                    'claim_rejected',
+                    'Your company claim was not approved',
+                    $request->input('rejection_reason'),
+                    null
+                );
             }
         } catch (\Throwable) {}
 

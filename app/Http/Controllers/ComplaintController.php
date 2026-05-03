@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\CalculateCompanyScore;
 use App\Jobs\ModerateComplaint;
+use App\Models\AppNotification;
 use App\Models\Company;
 use App\Models\Complaint;
 use App\Models\ComplaintAttachment;
@@ -161,6 +162,13 @@ class ComplaintController extends Controller
             $user->notify(new ComplaintFiledConsumer($complaint));
             if ($companyUser) {
                 $companyUser->notify(new ComplaintFiledCompany($complaint));
+                AppNotification::notify(
+                    $companyUser->id,
+                    'new_complaint',
+                    'New complaint filed against your company',
+                    \Str::limit($complaint->title, 100),
+                    "/complaints/{$complaint->id}"
+                );
             }
         } else {
             $user->notify(new ComplaintFiledConsumer($complaint));
