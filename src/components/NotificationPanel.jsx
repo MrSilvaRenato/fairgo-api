@@ -20,7 +20,7 @@ function timeAgo(dateStr) {
   return `${Math.floor(diff / 86400)}d ago`
 }
 
-export default function NotificationPanel({ open, onClose, notifications, unreadCount, onMarkRead, onMarkAllRead }) {
+export default function NotificationPanel({ open, onClose, notifications, unreadCount, onMarkRead, onMarkAllRead, onClearAll }) {
   const panelRef = useRef(null)
   const navigate = useNavigate()
 
@@ -106,6 +106,16 @@ export default function NotificationPanel({ open, onClose, notifications, unread
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--color-eucalyptus-3)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                 Mark all read
+              </button>
+            )}
+            {notifications.length > 0 && (
+              <button
+                onClick={onClearAll}
+                className="text-xs px-2.5 py-1 rounded-lg transition-colors font-medium"
+                style={{ color: 'var(--color-muted)' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--color-paper-2)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                Clear all
               </button>
             )}
             <button

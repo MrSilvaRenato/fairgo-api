@@ -102,6 +102,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('notifications/unread-count',             [NotificationController::class, 'unreadCount']);
     Route::patch('notifications/{notification}/read',    [NotificationController::class, 'markRead']);
     Route::post('notifications/read-all',                [NotificationController::class, 'markAllRead']);
+    Route::delete('notifications',                       [NotificationController::class, 'clearAll']);
 });
 
 // User profile

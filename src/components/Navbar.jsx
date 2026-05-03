@@ -92,6 +92,14 @@ export default function Navbar() {
     } catch {}
   }, [])
 
+  const handleClearAll = useCallback(async () => {
+    try {
+      await api.delete('/notifications')
+      setNotifications([])
+      setUnreadCount(0)
+    } catch {}
+  }, [])
+
   // Close user dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
@@ -334,6 +342,7 @@ export default function Navbar() {
         unreadCount={unreadCount}
         onMarkRead={handleMarkRead}
         onMarkAllRead={handleMarkAllRead}
+        onClearAll={handleClearAll}
       />
 
       {/* Mobile menu */}

@@ -35,7 +35,8 @@ class NotificationController extends Controller
             return response()->json(['message' => 'Not found.'], 404);
         }
 
-        $notification->update(['read_at' => now()]);
+        $notification->read_at = now();
+        $notification->save();
 
         return response()->json($notification);
     }
@@ -47,5 +48,12 @@ class NotificationController extends Controller
             ->update(['read_at' => now()]);
 
         return response()->json(['message' => 'All marked as read.']);
+    }
+
+    public function clearAll(Request $request)
+    {
+        AppNotification::where('user_id', $request->user()->id)->delete();
+
+        return response()->json(['message' => 'All notifications cleared.']);
     }
 }
