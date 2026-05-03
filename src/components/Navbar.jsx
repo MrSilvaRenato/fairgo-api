@@ -127,7 +127,7 @@ export default function Navbar() {
 
   const isActive = (path) => location.pathname.startsWith(path)
   const linkCls = (path) =>
-    `px-2.5 py-1.5 rounded-lg text-sm transition-colors ${
+    `px-2.5 py-1.5 rounded-lg text-xs font-medium uppercase tracking-wide transition-colors ${
       isActive(path)
         ? 'text-[color:var(--color-eucalyptus)] font-semibold'
         : 'text-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)] hover:bg-[color:var(--color-paper-2)]'
@@ -423,7 +423,7 @@ function DropdownLink({ to, onClick, children }) {
 function NavBtn({ onClick, children }) {
   return (
     <button onClick={onClick}
-      className="px-2.5 py-1.5 rounded-lg text-sm transition-colors text-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)] hover:bg-[color:var(--color-paper-2)]">
+      className="px-2.5 py-1.5 rounded-lg text-xs font-medium uppercase tracking-wide transition-colors text-[color:var(--color-ink-2)] hover:text-[color:var(--color-ink)] hover:bg-[color:var(--color-paper-2)]">
       {children}
     </button>
   )
