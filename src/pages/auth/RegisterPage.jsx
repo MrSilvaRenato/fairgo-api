@@ -171,7 +171,18 @@ export default function RegisterPage() {
                 className="input" placeholder="you@example.com" autoComplete="email" />
             </Field>
 
-            <Field label="Mobile number" hint="Optional" error={errors.phone?.[0]}>
+            <Field label="Mobile number" hint={
+              <span className="relative group cursor-help">
+                <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
+                  style={{ background: '#fef3c7', color: '#92400e' }}>Optional !</span>
+                <span className="absolute right-0 top-6 z-10 hidden group-hover:block w-56 text-xs rounded-xl shadow-lg px-3 py-2 leading-relaxed"
+                  style={{ background: 'var(--color-ink)', color: 'white' }}>
+                  Verify your mobile after signing up to earn the <strong>Consumer Verified</strong> badge on your complaints.
+                  <span className="absolute -top-1.5 right-3 w-3 h-3 rotate-45"
+                    style={{ background: 'var(--color-ink)' }} />
+                </span>
+              </span>
+            } error={errors.phone?.[0]}>
               <input name="phone" type="tel" value={form.phone} onChange={handle}
                 className="input" placeholder="+61 4xx xxx xxx" autoComplete="tel" />
             </Field>
