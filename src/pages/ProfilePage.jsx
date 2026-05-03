@@ -1,16 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import api from '../lib/axios'
 import useAuthStore from '../store/authStore'
 import useSeoMeta from '../hooks/useSeoMeta'
 import Icon from '../components/Icon'
-
-/* ── Verification status config ──────────────────────────────── */
-const ID_STATUS = {
-  pending:  { label: 'Under review',   color: '#8A5A1F', bg: '#F3E2C3',                      icon: '🕐' },
-  approved: { label: 'ID Verified',    color: 'var(--color-eucalyptus)', bg: 'var(--color-eucalyptus-3)', icon: '✅' },
-  rejected: { label: 'Not verified',   color: 'var(--color-clay)',       bg: 'var(--color-clay-soft)',    icon: '❌' },
-}
 
 export default function ProfilePage() {
   const { user: authUser, fetchUser } = useAuthStore()
@@ -25,10 +18,12 @@ export default function ProfilePage() {
   const [errors,    setErrors]    = useState({})
   const [form,      setForm]      = useState({ name: '', phone: '', address: '' })
 
-  const [uploading,    setUploading]    = useState(false)
-  const [uploadError,  setUploadError]  = useState('')
-  const [uploadDone,   setUploadDone]   = useState(false)
-  const fileRef = useRef(null)
+  const [otpSent,    setOtpSent]    = useState(false)
+  const [otpCode,    setOtpCode]    = useState('')
+  const [otpSending, setOtpSending] = useState(false)
+  const [otpVerifying, setOtpVerifying] = useState(false)
+  const [otpError,   setOtpError]   = useState('')
+  const [otpPhone,   setOtpPhone]   = useState('')
 
   useEffect(() => {
     fetchUser().finally(() => setAuthChecked(true))
@@ -64,22 +59,31 @@ export default function ProfilePage() {
     } finally { setSaving(false) }
   }
 
-  const uploadId = async e => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploadError(''); setUploading(true); setUploadDone(false)
-    const fd = new FormData()
-    fd.append('document', file)
+  const sendOtp = async () => {
+    const phone = form.phone.trim()
+    if (!phone) { setOtpError('Enter your phone number first.'); return }
+    setOtpError(''); setOtpSending(true)
     try {
-      const r = await api.post('/profile/id-verification', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      setProfile(r.data)
-      setUploadDone(true)
+      await api.post('/auth/phone/send', { phone })
+      setOtpPhone(phone)
+      setOtpSent(true)
+      setOtpCode('')
     } catch (err) {
-      setUploadError(err.response?.data?.message ?? 'Upload failed. Try again.')
-    } finally { setUploading(false) }
-    e.target.value = ''
+      setOtpError(err.response?.data?.message ?? 'Could not send code. Try again.')
+    } finally { setOtpSending(false) }
+  }
+
+  const verifyOtp = async () => {
+    setOtpError(''); setOtpVerifying(true)
+    try {
+      const r = await api.post('/auth/phone/verify', { phone: otpPhone, code: otpCode })
+      setProfile(p => ({ ...p, phone_verified_at: r.data.phone_verified_at, phone: otpPhone }))
+      setOtpSent(false)
+      setOtpCode('')
+      fetchUser()
+    } catch (err) {
+      setOtpError(err.response?.data?.message ?? 'Invalid or expired code.')
+    } finally { setOtpVerifying(false) }
   }
 
   if (loading) return (
@@ -91,9 +95,7 @@ export default function ProfilePage() {
     </div>
   )
 
-  const idStatus  = profile?.id_verification_status
-  const idBadge   = idStatus ? ID_STATUS[idStatus] : null
-  const isVerified = idStatus === 'approved'
+  const isVerified = !!profile?.phone_verified_at
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
@@ -171,17 +173,54 @@ export default function ProfilePage() {
           <div>
             <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5"
               style={{ color: 'var(--color-muted)' }}>Phone number</label>
-            <div className="relative">
+            <div className="flex gap-2">
               <input name="phone" value={form.phone} onChange={handle}
-                className="input w-full pr-28" placeholder="+61 4xx xxx xxx" />
-              {profile?.phone_verified && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                className="input flex-1" placeholder="+61 4xx xxx xxx"
+                disabled={!!profile?.phone_verified_at} />
+              {!profile?.phone_verified_at && (
+                <button type="button" onClick={sendOtp} disabled={otpSending || otpSent}
+                  className="btn btn-secondary text-xs shrink-0 px-3">
+                  {otpSending ? 'Sending…' : otpSent ? 'Code sent' : 'Send code'}
+                </button>
+              )}
+              {profile?.phone_verified_at && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-3 py-2 rounded-xl shrink-0"
                   style={{ background: 'var(--color-eucalyptus-3)', color: 'var(--color-eucalyptus)' }}>
                   ✓ Verified
                 </span>
               )}
             </div>
             {errors.phone && <p className="text-xs mt-1" style={{ color: 'var(--color-clay)' }}>{errors.phone[0]}</p>}
+
+            {/* OTP input */}
+            {otpSent && !profile?.phone_verified_at && (
+              <div className="mt-3 p-4 rounded-xl space-y-3" style={{ background: 'var(--color-paper-2)', border: '1px solid var(--color-line)' }}>
+                <p className="text-xs text-[color:var(--color-ink-2)]">
+                  A 6-digit code was sent to <strong>{otpPhone}</strong>. Enter it below to verify your number.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    value={otpCode}
+                    onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="input flex-1 font-mono text-center text-lg tracking-widest"
+                    placeholder="000000"
+                    maxLength={6}
+                  />
+                  <button type="button" onClick={verifyOtp}
+                    disabled={otpCode.length !== 6 || otpVerifying}
+                    className="btn btn-primary text-xs shrink-0 px-4 disabled:opacity-50">
+                    {otpVerifying ? 'Verifying…' : 'Verify'}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  {otpError && <p className="text-xs" style={{ color: 'var(--color-clay)' }}>{otpError}</p>}
+                  <button type="button" onClick={sendOtp} disabled={otpSending}
+                    className="text-xs underline ml-auto" style={{ color: 'var(--color-muted)' }}>
+                    Resend code
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Address */}
@@ -213,102 +252,45 @@ export default function ProfilePage() {
         </form>
       </div>
 
-      {/* ── Identity verification ── */}
+      {/* ── Phone verification ── */}
       <div className="card p-6 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-semibold text-base" style={{ color: 'var(--color-ink)' }}>Identity verification</h2>
+            <h2 className="font-semibold text-base" style={{ color: 'var(--color-ink)' }}>Phone verification</h2>
             <p className="text-sm mt-0.5" style={{ color: 'var(--color-muted)' }}>
-              Verify your identity to receive a verified badge on your profile and complaints.
+              Verify your mobile number to receive a <strong>Phone Verified</strong> badge on your complaints. One number per account.
             </p>
           </div>
-          {idBadge && (
+          {profile?.phone_verified_at && (
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
-              style={{ background: idBadge.bg, color: idBadge.color }}>
-              {idBadge.icon} {idBadge.label}
+              style={{ background: 'var(--color-eucalyptus-3)', color: 'var(--color-eucalyptus)' }}>
+              ✅ Verified
             </span>
           )}
         </div>
 
-        {/* Status messages */}
-        {idStatus === 'pending' && (
-          <div className="rounded-xl px-4 py-3 text-sm flex items-start gap-2.5"
-            style={{ background: '#FEF9C3', border: '1px solid #FDE047', color: '#713F12' }}>
-            <span className="text-base shrink-0">🕐</span>
-            <div>
-              <strong>Document submitted — under review</strong>
-              <p className="text-xs mt-0.5 opacity-80">Our team will review your document within 1–2 business days.</p>
-            </div>
-          </div>
-        )}
-        {idStatus === 'approved' && (
+        {profile?.phone_verified_at ? (
           <div className="rounded-xl px-4 py-3 text-sm flex items-start gap-2.5"
             style={{ background: 'var(--color-eucalyptus-3)', border: '1px solid var(--color-eucalyptus)', color: 'var(--color-eucalyptus)' }}>
             <span className="text-base shrink-0">✅</span>
             <div>
-              <strong>Identity verified</strong>
-              <p className="text-xs mt-0.5 opacity-80">Your ID was verified on {new Date(profile.id_verified_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>
-            </div>
-          </div>
-        )}
-        {idStatus === 'rejected' && (
-          <div className="rounded-xl px-4 py-3 text-sm flex items-start gap-2.5"
-            style={{ background: 'var(--color-clay-soft)', border: '1px solid var(--color-clay)', color: 'var(--color-clay)' }}>
-            <span className="text-base shrink-0">❌</span>
-            <div>
-              <strong>Verification unsuccessful</strong>
-              {profile.id_rejection_note && <p className="text-xs mt-0.5 opacity-80">{profile.id_rejection_note}</p>}
-              <p className="text-xs mt-1 opacity-80">Please upload a clearer document and try again.</p>
-            </div>
-          </div>
-        )}
-
-        {/* Upload area — hidden once approved */}
-        {idStatus !== 'approved' && (
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--color-muted)' }}>
-              {idStatus === 'pending' ? 'Replace document' : 'Upload a document'}
-            </p>
-            <div
-              onClick={() => !uploading && fileRef.current?.click()}
-              className="rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition hover:border-[color:var(--color-eucalyptus)]"
-              style={{ borderColor: 'var(--color-line)', background: 'var(--color-paper-2)' }}
-            >
-              <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.pdf" className="hidden" onChange={uploadId} />
-              {uploading ? (
-                <div className="flex flex-col items-center gap-2">
-                  <svg className="w-8 h-8 animate-spin" style={{ color: 'var(--color-eucalyptus)' }} fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                  </svg>
-                  <p className="text-sm text-[color:var(--color-muted)]">Uploading…</p>
-                </div>
-              ) : (
-                <>
-                  <div className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center"
-                    style={{ background: 'var(--color-eucalyptus-3)' }}>
-                    <svg className="w-6 h-6" style={{ color: 'var(--color-eucalyptus)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                    </svg>
-                  </div>
-                  <p className="text-sm font-semibold" style={{ color: 'var(--color-ink)' }}>
-                    Click to upload your ID document
-                  </p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
-                    Driver's licence, passport or Medicare card · JPG, PNG or PDF · Max 10MB
-                  </p>
-                </>
-              )}
-            </div>
-            {uploadError && <p className="text-xs mt-2" style={{ color: 'var(--color-clay)' }}>{uploadError}</p>}
-            {uploadDone && !uploadError && (
-              <p className="text-xs mt-2 font-medium" style={{ color: 'var(--color-eucalyptus)' }}>
-                ✓ Document submitted — we'll review it within 1–2 business days.
+              <strong>Phone number verified</strong>
+              <p className="text-xs mt-0.5 opacity-80">
+                Verified on {new Date(profile.phone_verified_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}.
+                Your complaints now show the Phone Verified badge.
               </p>
-            )}
-            <p className="text-[11px] mt-3" style={{ color: 'var(--color-muted)' }}>
-              🔒 Your document is stored securely and never shown publicly. Used for identity verification only.
-            </p>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-xl px-4 py-3 text-sm flex items-start gap-2.5"
+            style={{ background: 'var(--color-paper-2)', border: '1px solid var(--color-line)', color: 'var(--color-ink-2)' }}>
+            <span className="text-base shrink-0">📱</span>
+            <div>
+              <strong>Not yet verified</strong>
+              <p className="text-xs mt-0.5 opacity-80">
+                Enter your mobile number above and tap <em>Send code</em> to receive a one-time SMS code.
+              </p>
+            </div>
           </div>
         )}
       </div>

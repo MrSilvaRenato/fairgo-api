@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Services\OtpService;
 use App\Services\SmsService;
 use Illuminate\Http\Request;
@@ -62,8 +63,21 @@ class PhoneVerificationController extends Controller
             ], 422);
         }
 
-        // Save phone + verified timestamp on the authenticated user
+        // Enforce one verified phone per account
         $user = $request->user();
+        $taken = User::where('phone', $phone)
+            ->whereNotNull('phone_verified_at')
+            ->where('id', '!=', $user->id)
+            ->exists();
+
+        if ($taken) {
+            return response()->json([
+                'message' => 'This phone number is already linked to another account.',
+                'errors'  => ['phone' => ['Phone number already in use.']],
+            ], 422);
+        }
+
+        // Save phone + verified timestamp on the authenticated user
         $user->update([
             'phone'             => $phone,
             'phone_verified_at' => now(),

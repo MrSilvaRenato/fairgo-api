@@ -205,7 +205,7 @@ return response()->json(
         }
 
         // Base relations for everyone
-        $relations = ['consumer:id,name,id_verification_status', 'company:id,name,slug,logo_url,website,claimed,abn_verified,verified_badge', 'response', 'feedback.consumer:id,name', 'replies.user:id,name,role', 'attachments'];
+        $relations = ['consumer:id,name,phone_verified_at', 'company:id,name,slug,logo_url,website,claimed,abn_verified,verified_badge', 'response', 'feedback.consumer:id,name', 'replies.user:id,name,role', 'attachments'];
         $complaint->load($relations);
 
         $data = $complaint->toArray();
@@ -248,7 +248,7 @@ return response()->json(
 
     public function index(Request $request)
     {
-        $query = Complaint::with(['consumer:id,name,id_verification_status', 'company:id,name,slug,logo_url,website', 'feedback:id,complaint_id,rating,would_deal_again'])
+        $query = Complaint::with(['consumer:id,name,phone_verified_at', 'company:id,name,slug,logo_url,website', 'feedback:id,complaint_id,rating,would_deal_again'])
             ->where('is_public', true)
             ->where('status', '!=', 'removed')
             ->whereNotIn('moderation_status', ['flagged', 'rejected'])
