@@ -171,7 +171,7 @@ export default function RegisterPage() {
                 className="input" placeholder="you@example.com" autoComplete="email" />
             </Field>
 
-            <Field label="Mobile number" hint="Optional — verify later to earn the Consumer Verified badge" error={errors.phone?.[0]}>
+            <Field label="Mobile number" hint="Optional" error={errors.phone?.[0]}>
               <input name="phone" type="tel" value={form.phone} onChange={handle}
                 className="input" placeholder="+61 4xx xxx xxx" autoComplete="tel" />
             </Field>
