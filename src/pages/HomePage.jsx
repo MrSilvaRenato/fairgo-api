@@ -440,39 +440,6 @@ export default function HomePage() {
       </div>
 
       {/* ══════════════════════════════════════════
-          HOW IT WORKS  (moved up — explain before showing content)
-      ══════════════════════════════════════════ */}
-      <section id="how-it-works" className="mb-12">
-        <div className="text-center mb-8">
-          <div className="caps mb-2">How it works</div>
-          <h2 className="font-display text-[28px] sm:text-[36px] font-semibold tracking-tight">
-            Three steps to accountability
-          </h2>
-        </div>
-        <div className="grid sm:grid-cols-3 gap-4">
-          {[
-            { n: '01', title: 'Submit your complaint',
-              desc: 'Tell your story publicly. The company is notified and has 7 days to respond on the record.' },
-            { n: '02', title: 'Company responds publicly',
-              desc: "Their reply is visible to everyone — permanent proof of how they handle real customer issues." },
-            { n: '03', title: 'You rate and close',
-              desc: 'Only you can mark it resolved. Your rating moves the company score — fairly, either way.' },
-          ].map(s => (
-            <div key={s.n} className="card p-6 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="font-display italic-display text-[40px] leading-none" style={{ color: 'var(--color-ochre)' }}>
-                  {s.n}
-                </span>
-                <span className="w-10 h-[1px]" style={{ background: 'var(--color-line)' }} />
-              </div>
-              <h3 className="font-display text-[18px] font-semibold">{s.title}</h3>
-              <p className="text-sm text-[color:var(--color-ink-2)] leading-relaxed">{s.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════
           CATEGORY QUICK PICKS  (new — entry points into the feed)
       ══════════════════════════════════════════ */}
       <section className="mb-12">
@@ -1051,6 +1018,39 @@ export default function HomePage() {
             </div>
             <p className="text-[11px]" style={{ color: 'var(--color-muted)' }}>Free forever · No credit card · 2 minutes</p>
           </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════
+          HOW IT WORKS
+      ══════════════════════════════════════════ */}
+      <section id="how-it-works" className="mb-16">
+        <div className="text-center mb-8">
+          <div className="caps mb-2">How it works</div>
+          <h2 className="font-display text-[28px] sm:text-[36px] font-semibold tracking-tight">
+            Three steps to accountability
+          </h2>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-4">
+          {[
+            { n: '01', title: 'Submit your complaint',
+              desc: 'Tell your story publicly. The company is notified and has 7 days to respond on the record.' },
+            { n: '02', title: 'Company responds publicly',
+              desc: "Their reply is visible to everyone — permanent proof of how they handle real customer issues." },
+            { n: '03', title: 'You rate and close',
+              desc: 'Only you can mark it resolved. Your rating moves the company score — fairly, either way.' },
+          ].map(s => (
+            <div key={s.n} className="card p-6 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="font-display italic-display text-[40px] leading-none" style={{ color: 'var(--color-ochre)' }}>
+                  {s.n}
+                </span>
+                <span className="w-10 h-[1px]" style={{ background: 'var(--color-line)' }} />
+              </div>
+              <h3 className="font-display text-[18px] font-semibold">{s.title}</h3>
+              <p className="text-sm text-[color:var(--color-ink-2)] leading-relaxed">{s.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
