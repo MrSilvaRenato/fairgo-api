@@ -219,10 +219,13 @@ export default function RegisterPage() {
   )
 }
 
-function Field({ label, error, children }) {
+function Field({ label, hint, error, children }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
+      <div className="flex items-baseline justify-between mb-1.5">
+        <label className="block text-sm font-medium text-gray-700">{label}</label>
+        {hint && <span className="text-xs text-gray-400">{hint}</span>}
+      </div>
       {children}
       {error && (
         <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
