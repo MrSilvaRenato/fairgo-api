@@ -56,10 +56,8 @@ export default function NotificationPanel({ open, onClose, notifications, unread
 
   const handleClick = useCallback((notif) => {
     if (!notif.read_at) onMarkRead(notif.id)
-    if (notif.url) {
-      onClose()
-      navigate(notif.url)
-    }
+    onClose()
+    if (notif.url) navigate(notif.url)
   }, [onMarkRead, onClose, navigate])
 
   if (!open) return null
