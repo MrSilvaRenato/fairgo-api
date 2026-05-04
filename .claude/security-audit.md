@@ -44,12 +44,12 @@ Performed: 2026-05-04
 
 ## LOW
 
-- [ ] **[LOW-1]** `app/Http/Controllers/CompanyController.php:81` — Clearbit logo URL built from unvalidated `website` field. Fix: validate `website` with `url` rule in `store()`.
-- [ ] **[LOW-2]** `app/Http/Controllers/AuthController.php:15–21` — Registration accepts `"role":"company_admin"` in body. Users self-promote without going through claim flow → can abuse AI draft endpoint. Fix: remove `role` from registration, always create as `consumer`.
-- [ ] **[LOW-3]** `routes/api.php:26` — Register throttle `throttle:10,1` too permissive. Fix: reduce to `throttle:3,1`.
-- [ ] **[LOW-4]** `app/Http/Controllers/EmailVerificationController.php` — Verification link expiry not enforced (related to CRIT-2). Fix together with CRIT-2.
-- [ ] **[LOW-5]** `reference_number` in public responses enables consumer impersonation with the company. Fix together with MED-4.
-- [ ] **[LOW-6]** `routes/api.php:128` — Stripe webhook has no rate limit → HMAC computation flood. Fix: `throttle:60,1`.
-- [ ] **[LOW-7]** `database/seeders/AdminSeeder.php` — Personal email committed to repo. Fix together with CRIT-1.
-- [ ] **[LOW-8]** `app/Http/Controllers/ComplaintController.php:227` — Internal `moderation_flags`, `moderation_note`, `moderation_edited` in public response. Fix: add to `$hidden` on Complaint model.
-- [ ] **[LOW-9]** `nginx.conf` — No `X-Content-Type-Options: nosniff`. Fix together with MED-9.
+- [x] **[LOW-1]** `app/Http/Controllers/CompanyController.php:81` — Clearbit logo URL built from unvalidated `website` field. Fix: validate `website` with `url` rule in `store()`.
+- [x] **[LOW-2]** `app/Http/Controllers/AuthController.php:15–21` — Registration accepts `"role":"company_admin"` in body. Users self-promote without going through claim flow → can abuse AI draft endpoint. Fix: remove `role` from registration, always create as `consumer`.
+- [x] **[LOW-3]** `routes/api.php:26` — Register throttle `throttle:10,1` too permissive. Fix: reduce to `throttle:3,1`.
+- [x] **[LOW-4]** `app/Http/Controllers/EmailVerificationController.php` — Verification link expiry not enforced (related to CRIT-2). Fix together with CRIT-2.
+- [x] **[LOW-5]** `reference_number` in public responses enables consumer impersonation with the company. Fix together with MED-4.
+- [x] **[LOW-6]** `routes/api.php:128` — Stripe webhook has no rate limit → HMAC computation flood. Fix: `throttle:60,1`.
+- [x] **[LOW-7]** `database/seeders/AdminSeeder.php` — Personal email committed to repo. Fix together with CRIT-1.
+- [x] **[LOW-8]** `app/Http/Controllers/ComplaintController.php:227` — Internal `moderation_flags`, `moderation_note`, `moderation_edited` in public response. Fix: add to `$hidden` on Complaint model.
+- [x] **[LOW-9]** `nginx.conf` — No `X-Content-Type-Options: nosniff`. Fix together with MED-9.
