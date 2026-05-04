@@ -55,16 +55,18 @@ class AbnLookupService
                 return ['valid' => false, 'abn' => $abn, 'error' => $data['Message'] ?? 'Lookup failed'];
             }
 
-            $active = ($data['EntityStatusCode'] ?? '') === 'Active';
+            // ABR uses both text ("Active") and numeric ("0000000001") status codes depending on entity type
+            $statusCode = $data['EntityStatusCode'] ?? $data['AbnStatus'] ?? '';
+            $active = in_array($statusCode, ['Active', '0000000001'], true);
 
             return [
                 'valid'       => $active,
                 'abn'         => $abn,
                 'entity_name' => $data['EntityName'] ?? null,
                 'entity_type' => $data['EntityTypeName'] ?? null,
-                'state'       => $data['StateCode'] ?? null,
-                'postcode'    => $data['Postcode'] ?? null,
-                'status'      => $data['EntityStatusCode'] ?? null,
+                'state'       => $data['StateCode'] ?? ($data['AddressState'] ?? null),
+                'postcode'    => $data['Postcode'] ?? ($data['AddressPostcode'] ?? null),
+                'status'      => $statusCode ?: null,
             ];
         } catch (\Throwable $e) {
             Log::warning('ABN lookup failed: ' . $e->getMessage());
@@ -94,8 +96,9 @@ class AbnLookupService
             $body = rtrim($body, ')');
             $data = json_decode($body, true);
 
+            // ABR uses numeric status codes: 0000000001 = Active, 0000000002 = Cancelled
             $results = collect($data['Names'] ?? [])
-                ->filter(fn($n) => ($n['AbnStatus'] ?? '') === 'Active')
+                ->filter(fn($n) => ($n['AbnStatus'] ?? '') === '0000000001')
                 ->map(fn($n) => [
                     'abn'      => $n['Abn'],
                     'name'     => $n['Name'],
