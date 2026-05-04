@@ -9,10 +9,10 @@ Performed: 2026-05-04
 
 ## CRITICAL
 
-- [ ] **[CRIT-1]** `database/seeders/AdminSeeder.php` — Hardcoded admin email + plaintext password committed to repo. Move to env vars (`ADMIN_EMAIL`, `ADMIN_PASSWORD`), rotate password immediately.
-- [ ] **[CRIT-2]** `app/Http/Controllers/EmailVerificationController.php:9–25` — Email verification only checks `sha1(email)` (computable by anyone). Signed URL `signature` and `expires` are never validated. Fix: use `URL::hasValidSignature($request)`.
-- [ ] **[CRIT-3]** `app/Http/Controllers/CompanyController.php:158` — SVG accepted for logo uploads, stored on public disk. SVGs can contain `<script>` tags → stored XSS. Fix: remove `svg` from allowed MIME list or sanitise with `enshrined/svg-sanitize`.
-- [ ] **[CRIT-4]** `app/Http/Controllers/CompanyClaimController.php:97` + `CompanyController.php:90` — Claim proof documents (ASIC extracts, employment contracts, director certs) stored on `public` disk. Fix: store on `private` disk, serve via authenticated admin-only route.
+- [x] **[CRIT-1]** `database/seeders/AdminSeeder.php` — Hardcoded admin email + plaintext password committed to repo. Move to env vars (`ADMIN_EMAIL`, `ADMIN_PASSWORD`), rotate password immediately.
+- [x] **[CRIT-2]** `app/Http/Controllers/EmailVerificationController.php:9–25` — Email verification only checks `sha1(email)` (computable by anyone). Signed URL `signature` and `expires` are never validated. Fix: use `URL::hasValidSignature($request)`.
+- [x] **[CRIT-3]** `app/Http/Controllers/CompanyController.php:158` — SVG accepted for logo uploads, stored on public disk. SVGs can contain `<script>` tags → stored XSS. Fix: remove `svg` from allowed MIME list or sanitise with `enshrined/svg-sanitize`.
+- [x] **[CRIT-4]** `app/Http/Controllers/CompanyClaimController.php:97` + `CompanyController.php:90` — Claim proof documents (ASIC extracts, employment contracts, director certs) stored on `public` disk. Fix: store on `private` disk, serve via authenticated admin-only route.
 
 ---
 
