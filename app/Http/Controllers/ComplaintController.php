@@ -224,6 +224,11 @@ return response()->json(
         $relations = ['consumer:id,name,phone_verified_at', 'company:id,name,slug,logo_url,website,claimed,abn_verified,verified_badge', 'response', 'feedback.consumer:id,name', 'replies.user:id,name,role', 'attachments'];
         $complaint->load($relations);
 
+        // Expose sensitive fields to owner, company, and admins before serialising
+        if ($isOwner || $isCompany || $isAdmin) {
+            $complaint->makeVisible(['reference_number', 'amount_involved']);
+        }
+
         $data = $complaint->toArray();
 
         // Private consumer contact details — for the consumer owner, the owning company, and admins
@@ -241,6 +246,11 @@ return response()->json(
 
     public function categoryCounts(Request $request)
     {
+        $request->validate([
+            'status'   => 'nullable|in:open,awaiting_response,responded,resolved,unresolved,removed',
+            'category' => 'nullable|in:billing,delivery,service,refund,fraud,other',
+        ]);
+
         $base = Complaint::where('is_public', true)
             ->where('status', '!=', 'removed')
             ->whereNotIn('moderation_status', ['flagged', 'rejected']);
@@ -264,6 +274,11 @@ return response()->json(
 
     public function index(Request $request)
     {
+        $request->validate([
+            'status'   => 'nullable|in:open,awaiting_response,responded,resolved,unresolved,removed',
+            'category' => 'nullable|in:billing,delivery,service,refund,fraud,other',
+        ]);
+
         $query = Complaint::with(['consumer:id,name,phone_verified_at', 'company:id,name,slug,logo_url,website', 'feedback:id,complaint_id,rating,would_deal_again'])
             ->where('is_public', true)
             ->where('status', '!=', 'removed')

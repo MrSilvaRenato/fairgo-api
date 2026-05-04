@@ -38,6 +38,12 @@ class AdminController extends Controller
     // GET /admin/complaints
     public function complaintCategoryCounts(Request $request)
     {
+        $request->validate([
+            'status'            => 'nullable|in:open,awaiting_response,responded,resolved,unresolved,removed',
+            'category'          => 'nullable|in:billing,delivery,service,refund,fraud,other',
+            'moderation_status' => 'nullable|in:pending,approved,edited,flagged,rejected',
+        ]);
+
         $base = Complaint::query();
         if ($request->moderation_status) $base->where('moderation_status', $request->moderation_status);
 
@@ -60,6 +66,12 @@ class AdminController extends Controller
 
     public function complaints(Request $request)
     {
+        $request->validate([
+            'status'            => 'nullable|in:open,awaiting_response,responded,resolved,unresolved,removed',
+            'category'          => 'nullable|in:billing,delivery,service,refund,fraud,other',
+            'moderation_status' => 'nullable|in:pending,approved,edited,flagged,rejected',
+        ]);
+
         $query = Complaint::with(['consumer:id,name,email', 'company:id,name,slug,logo_url,website', 'feedback:id,complaint_id,rating,would_deal_again']);
 
         if ($request->status) {
@@ -228,6 +240,10 @@ class AdminController extends Controller
     // GET /admin/users
     public function users(Request $request)
     {
+        $request->validate([
+            'role' => 'nullable|in:consumer,company_admin,admin',
+        ]);
+
         $query = User::with('company:id,name,slug,logo_url,website')
             ->withCount('complaints')
             ->latest();
@@ -249,6 +265,10 @@ class AdminController extends Controller
     // GET /admin/moderation — complaints pending/flagged moderation review
     public function moderationQueue(Request $request)
     {
+        $request->validate([
+            'status' => 'nullable|in:pending,approved,edited,flagged,rejected',
+        ]);
+
         $status = $request->get('status', 'flagged'); // flagged | pending | rejected | edited
 
         $query = Complaint::with(['consumer:id,name,email', 'company:id,name,slug,logo_url,website'])

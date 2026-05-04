@@ -123,6 +123,10 @@ class CompanyController extends Controller
 
     public function updateSettings(Request $request)
     {
+        if ($request->user()->role !== 'company_admin') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
         $company = $request->user()->company;
 
         if (!$company) {
@@ -148,6 +152,10 @@ class CompanyController extends Controller
 
     public function uploadLogo(Request $request)
     {
+        if ($request->user()->role !== 'company_admin') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
         $company = $request->user()->company;
 
         if (!$company) {
@@ -164,8 +172,9 @@ class CompanyController extends Controller
             Storage::disk('public')->delete($oldPath);
         }
 
-        $file     = $request->file('logo');;
-        $ext      = $file->getClientOriginalExtension();
+        $file     = $request->file('logo');
+        $mimeMap  = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp'];
+        $ext      = $mimeMap[$file->getMimeType()] ?? 'jpg';
         $filename = 'logo-' . Str::random(12) . '.' . $ext;
         $path     = $file->storeAs("company-logos/{$company->id}", $filename, 'public');
 

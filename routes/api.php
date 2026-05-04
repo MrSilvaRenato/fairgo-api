@@ -49,8 +49,8 @@ Route::prefix('auth')->group(function () {
 });
 
 // Public ABN endpoints (used by complaint form)
-Route::get('abn/search',      [\App\Http\Controllers\AbnSearchController::class, 'search']);
-Route::get('abn/check/{abn}', [\App\Http\Controllers\AbnCheckController::class, 'check']);
+Route::get('abn/search',      [\App\Http\Controllers\AbnSearchController::class, 'search'])->middleware('throttle:30,1');
+Route::get('abn/check/{abn}', [\App\Http\Controllers\AbnCheckController::class, 'check'])->middleware('throttle:30,1');
 
 // Search & leaderboard
 Route::get('search',      SearchController::class);
@@ -69,7 +69,7 @@ Route::prefix('companies')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [CompanyController::class, 'store']);
-        Route::post('{company}/claim', [CompanyClaimController::class, 'store']);
+        Route::post('{company}/claim', [CompanyClaimController::class, 'store'])->middleware('throttle:3,60');
     });
 });
 
@@ -85,7 +85,7 @@ Route::prefix('complaints')->group(function () {
         Route::post('/',                              [ComplaintController::class, 'store']);
         Route::post('{complaint}/response',           [CompanyResponseController::class, 'store']);
         Route::post('{complaint}/feedback',           [ResolutionFeedbackController::class, 'store']);
-        Route::post('{complaint}/replies',            [ComplaintReplyController::class, 'store']);
+        Route::post('{complaint}/replies',            [ComplaintReplyController::class, 'store'])->middleware('throttle:10,1');
         Route::post('{complaint}/reopen',             ComplaintReopenController::class);
         Route::post('{complaint}/mark-read',          [ComplaintReplyController::class, 'markRead']);
     });
@@ -96,7 +96,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('dashboard/consumer',  ConsumerDashboardController::class);
     Route::get('dashboard/company',   CompanyDashboardController::class);
     Route::patch('company/settings',  [CompanyController::class, 'updateSettings']);
-    Route::post('company/logo',       [CompanyController::class, 'uploadLogo']);
+    Route::post('company/logo',       [CompanyController::class, 'uploadLogo'])->middleware('throttle:5,1');
     Route::post('company/abn/verify', [AbnVerificationController::class, 'verify']);
 });
 
@@ -113,7 +113,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('profile',                    [\App\Http\Controllers\ProfileController::class, 'show']);
     Route::patch('profile',                  [\App\Http\Controllers\ProfileController::class, 'update']);
-    Route::post('profile/id-verification',   [\App\Http\Controllers\ProfileController::class, 'uploadId']);
+    Route::post('profile/id-verification',   [\App\Http\Controllers\ProfileController::class, 'uploadId'])->middleware('throttle:3,60');
 });
 
 // Analytics — Standard or Pro plan required

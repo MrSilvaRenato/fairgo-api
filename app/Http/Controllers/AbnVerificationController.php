@@ -10,6 +10,10 @@ class AbnVerificationController extends Controller
     // POST /company/abn/verify
     public function verify(Request $request, AbnLookupService $abn)
     {
+        if ($request->user()->role !== 'company_admin') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
         $company = $request->user()->company;
 
         if (!$company) {

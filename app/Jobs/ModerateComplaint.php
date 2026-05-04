@@ -95,10 +95,10 @@ class ModerateComplaint implements ShouldQueue
     {
         Log::error('[ModerateComplaint] Job failed for complaint #' . $this->complaintId . ': ' . $e->getMessage());
 
-        // Mark as approved on failure — never silently block
+        // Hold for manual admin review rather than auto-approving — prevents bypass via service outage
         Complaint::where('id', $this->complaintId)->update([
-            'moderation_status' => 'approved',
-            'moderation_note'   => 'Moderation job failed — auto-approved.',
+            'moderation_status' => 'pending',
+            'moderation_note'   => 'Moderation job failed — held for manual review.',
         ]);
     }
 }
