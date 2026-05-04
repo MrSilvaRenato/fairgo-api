@@ -3,17 +3,18 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 
 class EmailVerificationController extends Controller
 {
     public function verify(Request $request)
     {
-        $user = \App\Models\User::findOrFail($request->query('id'));
-
-        // Validate the hash
-        if (!hash_equals(sha1($user->getEmailForVerification()), $request->query('hash', ''))) {
-            return response()->json(['message' => 'Invalid verification link.'], 403);
+        // Validate the HMAC signature and expiry that were embedded in the link
+        if (!URL::hasValidSignature($request)) {
+            return response()->json(['message' => 'Invalid or expired verification link.'], 403);
         }
+
+        $user = \App\Models\User::findOrFail($request->query('id'));
 
         if ($user->hasVerifiedEmail()) {
             return response()->json(['message' => 'Email already verified.']);

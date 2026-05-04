@@ -91,10 +91,10 @@ class CompanyClaimController extends Controller
             $company->update(['abn' => $submittedAbn, 'abn_verified' => true]);
         }
 
-        // Store proof document if provided
+        // Store proof document on the private disk — served only to admins via authenticated route
         $proofPath = null;
         if ($request->hasFile('proof_document')) {
-            $proofPath = $request->file('proof_document')->store('claim-documents', 'public');
+            $proofPath = $request->file('proof_document')->store('claim-documents', 'local');
         }
 
         // Auto-detect domain match between claimant email and company website
@@ -122,6 +122,18 @@ class CompanyClaimController extends Controller
             'message' => 'Your claim has been submitted. Our team will review it and you will be notified in your dashboard within 2 business days.',
             'claim'   => ['id' => $claim->id, 'status' => $claim->status],
         ], 201);
+    }
+
+    /**
+     * Stream a proof document — admin only, served from private disk.
+     */
+    public function document(CompanyClaim $claim)
+    {
+        if (!$claim->proof_document || !Storage::disk('local')->exists($claim->proof_document)) {
+            abort(404);
+        }
+
+        return Storage::disk('local')->download($claim->proof_document);
     }
 
     /**

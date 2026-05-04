@@ -10,10 +10,18 @@ class AdminSeeder extends Seeder
 {
     public function run(): void
     {
-        User::updateOrCreate(['email' => 'renatoleite.log@gmail.com'], [
-            'name'              => 'Renato Leite',
-            'email'             => 'renatoleite.log@gmail.com',
-            'password'          => Hash::make('Re58219094$'),
+        $email    = env('ADMIN_EMAIL');
+        $password = env('ADMIN_PASSWORD');
+
+        if (!$email || !$password) {
+            $this->command->warn('AdminSeeder skipped — ADMIN_EMAIL or ADMIN_PASSWORD not set in .env');
+            return;
+        }
+
+        User::updateOrCreate(['email' => $email], [
+            'name'              => env('ADMIN_NAME', 'Admin'),
+            'email'             => $email,
+            'password'          => Hash::make($password),
             'role'              => 'admin',
             'email_verified_at' => now(),
         ]);

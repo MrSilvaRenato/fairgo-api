@@ -153,6 +153,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::post('stub-companies/{company}/promote',  [AdminController::class, 'promoteStub']);
     Route::post('stub-companies/{company}/reject',   [AdminController::class, 'rejectStub']);
     Route::get('claims',                             [CompanyClaimController::class, 'index']);
+    Route::get('claims/{claim}/document',            [CompanyClaimController::class, 'document']);
     Route::post('claims/{claim}/approve',            [CompanyClaimController::class, 'approve']);
     Route::post('claims/{claim}/reject',             [CompanyClaimController::class, 'reject']);
 });

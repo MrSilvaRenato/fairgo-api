@@ -3,8 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
-
 class CompanyClaim extends Model
 {
     protected $appends = ['proof_document_url'];
@@ -26,7 +24,7 @@ class CompanyClaim extends Model
     public function getProofDocumentUrlAttribute(): ?string
     {
         return $this->proof_document
-            ? Storage::disk('public')->url($this->proof_document)
+            ? url("/api/admin/claims/{$this->id}/document")
             : null;
     }
 

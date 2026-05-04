@@ -84,10 +84,10 @@ class CompanyController extends Controller
             ]);
         }
 
-        // Store proof document if provided
+        // Store proof document on the private disk — served only to admins via authenticated route
         $proofPath = null;
         if ($request->hasFile('proof_document')) {
-            $proofPath = $request->file('proof_document')->store('claim-documents', 'public');
+            $proofPath = $request->file('proof_document')->store('claim-documents', 'local');
         }
 
         // Auto-detect domain match between claimant email and company website
@@ -163,7 +163,7 @@ class CompanyController extends Controller
         }
 
         $request->validate([
-            'logo' => 'required|file|mimes:jpeg,jpg,png,gif,webp,svg|max:2048',
+            'logo' => 'required|file|mimes:jpeg,jpg,png,gif,webp|max:2048',
         ]);
 
         // Delete old uploaded logo if it was stored locally
