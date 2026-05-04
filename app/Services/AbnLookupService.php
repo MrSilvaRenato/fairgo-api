@@ -50,7 +50,8 @@ class AbnLookupService
             $body = rtrim($body, ')');
             $data = json_decode($body, true);
 
-            if (!$data || isset($data['Message'])) {
+            // ABR always includes "Message": "" on success — only treat non-empty Message as an error
+            if (!$data || !empty($data['Message'])) {
                 return ['valid' => false, 'abn' => $abn, 'error' => $data['Message'] ?? 'Lookup failed'];
             }
 
