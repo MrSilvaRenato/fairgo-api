@@ -135,8 +135,9 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::get('complaints/category-counts',    [AdminController::class, 'complaintCategoryCounts']);
     Route::put('complaints/{complaint}',        [AdminController::class, 'updateComplaint']);
     Route::get('companies',                     [AdminController::class, 'companies']);
-    Route::put('companies/{company}',           [AdminController::class, 'updateCompany']);
-    Route::delete('companies/{company}',        [AdminController::class, 'deleteCompany']);
+    Route::put('companies/{company}',            [AdminController::class, 'updateCompany']);
+    Route::post('companies/{company}/refresh-abn', [AdminController::class, 'refreshAbn']);
+    Route::delete('companies/{company}',         [AdminController::class, 'deleteCompany']);
     Route::get('users',                         [AdminController::class, 'users']);
     Route::put('users/{user}',                  [AdminController::class, 'updateUser']);
     Route::get('moderation',                    [AdminController::class, 'moderationQueue']);

@@ -7,6 +7,7 @@ use App\Models\CompanyClaim;
 use App\Models\Complaint;
 use App\Models\ComplaintAttachment;
 use App\Models\User;
+use App\Services\AbnLookupService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -161,6 +162,45 @@ class AdminController extends Controller
         $company->update($data);
 
         return response()->json($company->fresh(['score', 'subscription']));
+    }
+
+    // POST /admin/companies/{company}/refresh-abn
+    public function refreshAbn(Company $company, AbnLookupService $abnService)
+    {
+        if (!$company->abn) {
+            return response()->json(['message' => 'Company has no ABN on record.'], 422);
+        }
+
+        $result = $abnService->lookup($company->abn);
+
+        if (!empty($result['stub'])) {
+            return response()->json(['message' => 'ABN_LOOKUP_GUID is not configured — set it in .env first.'], 503);
+        }
+
+        if (!$result['valid']) {
+            return response()->json(['message' => $result['error'] ?? 'ABN lookup failed or ABN is not active.'], 422);
+        }
+
+        $updates = ['abn_verified' => true];
+
+        if (!empty($result['entity_name'])) {
+            $updates['name']            = $result['entity_name'];
+            $updates['abn_entity_name'] = $result['entity_name'];
+
+            // Regenerate slug from new name
+            $updates['slug'] = \Illuminate\Support\Str::slug($result['entity_name'])
+                . '-' . substr($company->abn, -4);
+        }
+
+        $company->update($updates);
+
+        return response()->json([
+            'message'     => 'ABN refreshed successfully.',
+            'entity_name' => $result['entity_name'],
+            'entity_type' => $result['entity_type'],
+            'state'       => $result['state'],
+            'company'     => $company->fresh(['score', 'subscription']),
+        ]);
     }
 
     // DELETE /admin/companies/{company}
