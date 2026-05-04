@@ -165,59 +165,65 @@ export default function CompanyDashboardPage() {
     <div className="max-w-4xl mx-auto space-y-5">
 
       {/* Company header card */}
-      <div className="card p-5 sm:p-6">
-        <div className="flex items-start gap-4 flex-wrap">
+      <div className="card p-4 sm:p-6">
+        {/* Row 1: logo + name + score */}
+        <div className="flex items-start gap-3">
           <CompanyLogo company={company} size="lg" />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <h1 className="font-display text-2xl font-semibold tracking-tight">{company.name}</h1>
-              <span className="chip capitalize">{company.subscription?.plan ?? 'free'}</span>
-              {company.abn_verified && (
-                <span className="chip font-semibold"
-                  style={{ color: '#1d4ed8', borderColor: '#93c5fd', background: '#eff6ff' }}>
-                  <Icon name="verified" size={12} /> ABN Verified
-                </span>
-              )}
-              {company.claimed && (
-                <span className="chip font-semibold"
-                  style={{ color: '#166534', borderColor: '#86efac', background: '#f0fdf4' }}>
-                  ✅ Actively Managed
-                </span>
-              )}
-              {company.verified_badge && (
-                <span className="chip font-semibold"
-                  style={{ color: 'var(--color-eucalyptus)', borderColor: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
-                  <Icon name="verified" size={12} /> Aus Fair Go Verified
-                </span>
-              )}
-              {company.not_recommended && (
-                <span className="chip font-semibold"
-                  style={{ color: 'var(--color-clay)', borderColor: 'var(--color-clay)', background: 'var(--color-clay-soft)' }}>
-                  <Icon name="flag" size={12} /> Not Recommended
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-3 text-sm">
-              <Link to={`/companies/${company.slug}`}
-                className="flex items-center gap-1 text-[color:var(--color-eucalyptus)] hover:underline">
-                <Icon name="arrow-ul" size={13} /> Public profile
-              </Link>
-              <Link to="/company/analytics" className="text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]">Analytics</Link>
-              <Link to="/company/billing"   className="text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]">Billing</Link>
-              <Link to="/company/settings"  className="text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]">Settings</Link>
-            </div>
+            <h1 className="font-display text-lg sm:text-2xl font-semibold tracking-tight leading-tight">
+              {company.name}
+            </h1>
           </div>
-
-          {/* Score pill */}
           {score && (
-            <div className="card px-5 py-3 text-center shrink-0 bg-[color:var(--color-paper-2)]">
-              <p className="font-display text-[40px] font-semibold leading-none" style={{ color: b.text }}>
+            <div className="card px-3 sm:px-5 py-2 sm:py-3 text-center shrink-0 bg-[color:var(--color-paper-2)]">
+              <p className="font-display text-[28px] sm:text-[40px] font-semibold leading-none" style={{ color: b.text }}>
                 {band === 'not_rated' ? '—' : Math.round(score.score)}
               </p>
-              <p className="caps mt-1" style={{ color: b.text }}>{b.label}</p>
-              <p className="text-[10px] text-[color:var(--color-muted)] mt-0.5">Aus Fair Go score</p>
+              <p className="caps mt-0.5 text-[10px] sm:text-xs" style={{ color: b.text }}>{b.label}</p>
+              <p className="hidden sm:block text-[10px] text-[color:var(--color-muted)] mt-0.5">Aus Fair Go score</p>
             </div>
           )}
+        </div>
+
+        {/* Row 2: badges */}
+        <div className="flex flex-wrap items-center gap-1.5 mt-3">
+          <span className="chip capitalize">{company.subscription?.plan ?? 'free'}</span>
+          {company.abn_verified && (
+            <span className="chip font-semibold"
+              style={{ color: '#1d4ed8', borderColor: '#93c5fd', background: '#eff6ff' }}>
+              <Icon name="verified" size={12} /> ABN Verified
+            </span>
+          )}
+          {company.claimed && (
+            <span className="chip font-semibold"
+              style={{ color: '#166534', borderColor: '#86efac', background: '#f0fdf4' }}>
+              ✅ Actively Managed
+            </span>
+          )}
+          {company.verified_badge && (
+            <span className="chip font-semibold"
+              style={{ color: 'var(--color-eucalyptus)', borderColor: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
+              <Icon name="verified" size={12} /> Aus Fair Go Verified
+            </span>
+          )}
+          {company.not_recommended && (
+            <span className="chip font-semibold"
+              style={{ color: 'var(--color-clay)', borderColor: 'var(--color-clay)', background: 'var(--color-clay-soft)' }}>
+              <Icon name="flag" size={12} /> Not Recommended
+            </span>
+          )}
+        </div>
+
+        {/* Row 3: nav links */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm mt-3">
+          <Link to={`/companies/${company.slug}`}
+            className="flex items-center gap-1 text-[color:var(--color-eucalyptus)] hover:underline">
+            <Icon name="arrow-ul" size={13} /> Public profile
+          </Link>
+          <span className="text-[color:var(--color-muted)]">·</span>
+          <Link to="/company/analytics" className="text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]">Analytics</Link>
+          <Link to="/company/billing"   className="text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]">Billing</Link>
+          <Link to="/company/settings"  className="text-[color:var(--color-muted)] hover:text-[color:var(--color-ink)]">Settings</Link>
         </div>
       </div>
 
@@ -260,14 +266,14 @@ export default function CompanyDashboardPage() {
       )}
 
       {/* Stats strip */}
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-5 gap-2 sm:gap-3">
         {statItems.map((s) => (
           <button key={s.key} onClick={() => setFilter(s.key)}
-            className={`card p-4 text-left transition cursor-pointer hover:shadow-md ${
+            className={`card p-2 sm:p-4 text-left transition cursor-pointer hover:shadow-md ${
               filter === s.key ? 'ring-2 ring-[color:var(--color-eucalyptus)] ring-offset-1' : ''
             }`}>
-            <p className="font-display text-[28px] font-semibold leading-none text-[color:var(--color-ink)]">{s.value}</p>
-            <p className="text-xs text-[color:var(--color-muted)] mt-1">{s.label}</p>
+            <p className="font-display text-[20px] sm:text-[28px] font-semibold leading-none text-[color:var(--color-ink)]">{s.value}</p>
+            <p className="text-[10px] sm:text-xs text-[color:var(--color-muted)] mt-1">{s.label}</p>
           </button>
         ))}
       </div>
