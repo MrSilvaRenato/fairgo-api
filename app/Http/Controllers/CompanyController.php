@@ -90,6 +90,16 @@ class CompanyController extends Controller
             $proofPath = $request->file('proof_document')->store('claim-documents', 'public');
         }
 
+        // Auto-detect domain match between claimant email and company website
+        $domainMatch = null;
+        if ($company->website) {
+            $emailParts  = explode('@', $data['claimant_email']);
+            $emailDomain = isset($emailParts[1]) ? strtolower(preg_replace('/^www\./i', '', $emailParts[1])) : null;
+            $parsed      = parse_url($company->website);
+            $siteDomain  = strtolower(preg_replace('/^www\./i', '', $parsed['host'] ?? $company->website));
+            $domainMatch = ($emailDomain && $siteDomain && $emailDomain === $siteDomain);
+        }
+
         $claim = CompanyClaim::create([
             'company_id'        => $company->id,
             'user_id'           => $user->id,
@@ -102,6 +112,7 @@ class CompanyController extends Controller
             'proof_document'    => $proofPath,
             'message'           => $data['message'],
             'status'            => 'pending',
+            'domain_match'      => $domainMatch,
         ]);
 
         return response()->json([
