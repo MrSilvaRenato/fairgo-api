@@ -32,6 +32,8 @@ class Complaint extends Model
         'anonymous_hash',
     ];
 
+    protected $hidden = ['phone'];
+
     protected function casts(): array
     {
         return [

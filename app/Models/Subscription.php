@@ -18,6 +18,8 @@ class Subscription extends Model
         'current_period_end',
     ];
 
+    protected $hidden = ['stripe_customer_id', 'stripe_subscription_id'];
+
     protected function casts(): array
     {
         return [

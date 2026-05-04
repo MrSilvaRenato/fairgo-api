@@ -42,7 +42,7 @@ Route::prefix('auth')->group(function () {
         Route::post('logout',          [AuthController::class, 'logout']);
         Route::get('me',               [AuthController::class, 'me']);
         Route::delete('account',       \App\Http\Controllers\DeleteAccountController::class);
-        Route::post('phone/send',    [PhoneVerificationController::class, 'send']);
+        Route::post('phone/send',    [PhoneVerificationController::class, 'send'])->middleware('throttle:3,60');
         Route::post('phone/verify',  [PhoneVerificationController::class, 'verify']);
         Route::post('email/resend',  [\App\Http\Controllers\EmailVerificationController::class, 'resend'])->middleware('throttle:3,60');
     });
@@ -122,7 +122,7 @@ Route::middleware(['auth:sanctum', 'requires.plan:standard,pro'])->group(functio
 });
 
 // AI draft response (company admins only)
-Route::middleware('auth:sanctum')->post('ai/draft-response', [App\Http\Controllers\AiDraftController::class, 'draft']);
+Route::middleware(['auth:sanctum', 'throttle:20,1'])->post('ai/draft-response', [App\Http\Controllers\AiDraftController::class, 'draft']);
 
 // Billing
 Route::post('billing/webhook', [BillingController::class, 'webhook']);

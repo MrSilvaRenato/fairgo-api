@@ -28,13 +28,17 @@ class TrustBadgeController extends Controller
     // GET /badge/{slug}/embed.js — paste on any website
     public function embedScript(string $slug)
     {
+        // Look up the company first so we use the sanitised DB slug, not the raw URL param
+        $company = Company::where('slug', $slug)->firstOrFail();
+        $safeSlug = $company->slug;
+
         $apiBase    = config('app.url') . '/api';
         $frontendUrl = config('app.frontend_url', 'https://ausfairgo.com.au');
 
         $js = <<<JS
 (function () {
   'use strict';
-  var SLUG    = "{$slug}";
+  var SLUG    = "{$safeSlug}";
   var API     = "{$apiBase}/badge/" + SLUG;
   var SITE    = "{$frontendUrl}";
 
