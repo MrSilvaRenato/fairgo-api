@@ -138,10 +138,12 @@ export default function CompanyRegisterPage() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-semibold text-green-800 text-sm">{abnData.name}</p>
+                  <p className="font-semibold text-green-800 text-sm">
+                    {abnData.name ?? 'ABN verified'} · <span className="font-normal">Status: {abnData.status}</span>
+                  </p>
                   <p className="text-green-700 text-xs mt-0.5">
-                    {[abnData.type, abnData.state, abnData.postcode].filter(Boolean).join(' · ')}
-                    {abnData.status && <span className="ml-1">· Status: {abnData.status}</span>}
+                    {[abnData.type, abnData.state && abnData.postcode ? `${abnData.state} ${abnData.postcode}` : (abnData.state || abnData.postcode)].filter(Boolean).join(' · ')}
+                    {' · '}Verified against the Australian Business Register
                   </p>
                 </div>
               </div>

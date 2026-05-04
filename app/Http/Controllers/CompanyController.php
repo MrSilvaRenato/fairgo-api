@@ -152,11 +152,19 @@ class CompanyController extends Controller
     {
         $result = $this->abn->lookup($abn);
 
-        if (!$result) {
+        if (!$result['valid']) {
             return response()->json(['message' => 'ABN not found or invalid.'], 404);
         }
 
-        return response()->json($result);
+        return response()->json([
+            'valid'    => true,
+            'abn'      => $result['abn'],
+            'name'     => $result['entity_name'],
+            'type'     => $result['entity_type'],
+            'state'    => $result['state'],
+            'postcode' => $result['postcode'],
+            'status'   => 'Active',
+        ]);
     }
 
     public function search(Request $request)
