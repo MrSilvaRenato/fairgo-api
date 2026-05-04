@@ -173,7 +173,7 @@ function Hero({ company, score, band }) {
                 <Icon name="building" size={13} /> {company.industry}
               </span>
             )}
-            {company.claimed && company.abn_verified && (
+            {company.abn_verified && (
               <span className="chip font-semibold"
                 style={{ color: '#1d4ed8', borderColor: '#93c5fd', background: '#eff6ff' }}>
                 <Icon name="verified" size={13} /> ABN Verified
