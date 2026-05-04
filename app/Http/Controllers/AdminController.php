@@ -101,7 +101,9 @@ class AdminController extends Controller
 
         $perPage = min((int) ($request->per_page ?? 25), 100);
 
-        return response()->json($query->paginate($perPage));
+        $paginated = $query->paginate($perPage);
+        $paginated->getCollection()->each->makeVisible(['moderation_flags', 'moderation_note', 'moderation_edited']);
+        return response()->json($paginated);
     }
 
     // PUT /admin/complaints/{complaint}
@@ -118,7 +120,7 @@ class AdminController extends Controller
             \App\Jobs\CalculateCompanyScore::dispatch($complaint->company_id);
         }
 
-        return response()->json($complaint->fresh());
+        return response()->json($complaint->fresh()->makeVisible(['moderation_flags', 'moderation_note', 'moderation_edited']));
     }
 
     // GET /admin/companies
@@ -282,7 +284,9 @@ class AdminController extends Controller
             });
         }
 
-        return response()->json($query->paginate(25));
+        $paginated = $query->paginate(25);
+        $paginated->getCollection()->each->makeVisible(['moderation_flags', 'moderation_note', 'moderation_edited']);
+        return response()->json($paginated);
     }
 
     // PUT /admin/moderation/{complaint} — admin approves/rejects a flagged complaint
@@ -327,7 +331,8 @@ class AdminController extends Controller
             }
         }
 
-        return response()->json($complaint->fresh(['consumer:id,name,email', 'company:id,name,slug,logo_url,website']));
+        return response()->json($complaint->fresh(['consumer:id,name,email', 'company:id,name,slug,logo_url,website'])
+            ->makeVisible(['moderation_flags', 'moderation_note', 'moderation_edited']));
     }
 
     // GET /admin/stub-companies — companies auto-created from unregistered complaints

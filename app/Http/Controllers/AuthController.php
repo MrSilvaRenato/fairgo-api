@@ -17,15 +17,15 @@ class AuthController extends Controller
             'email'    => ['required', 'email', 'unique:users,email', new NotDisposableEmail],
             'phone'    => 'nullable|string|max:30',
             'password' => 'required|string|min:8|confirmed',
-            'role'     => 'sometimes|in:consumer,company_admin',
         ]);
 
+        // Role is always consumer on registration — company_admin is granted only via admin-approved claim
         $user = User::create([
             'name'     => $data['name'],
             'email'    => $data['email'],
             'phone'    => $data['phone'] ?? null,
             'password' => $data['password'],
-            'role'     => $data['role'] ?? 'consumer',
+            'role'     => 'consumer',
         ]);
 
         // Send verification email — wrapped so a mail config issue never breaks registration

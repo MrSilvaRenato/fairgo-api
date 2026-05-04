@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Route;
 
 // Auth routes
 Route::prefix('auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register'])->middleware('throttle:10,1');
+    Route::post('register', [AuthController::class, 'register'])->middleware('throttle:3,1');
     Route::post('login',    [AuthController::class, 'login'])->middleware('throttle:5,1');
 
     // Password reset (public)
@@ -125,7 +125,7 @@ Route::middleware(['auth:sanctum', 'requires.plan:standard,pro'])->group(functio
 Route::middleware(['auth:sanctum', 'throttle:20,1'])->post('ai/draft-response', [App\Http\Controllers\AiDraftController::class, 'draft']);
 
 // Billing
-Route::post('billing/webhook', [BillingController::class, 'webhook']);
+Route::post('billing/webhook', [BillingController::class, 'webhook'])->middleware('throttle:60,1');
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('billing/plans',      [BillingController::class, 'plans']);
     Route::post('billing/checkout',  [BillingController::class, 'checkout']);

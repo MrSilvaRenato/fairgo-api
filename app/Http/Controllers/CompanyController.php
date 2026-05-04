@@ -30,7 +30,7 @@ class CompanyController extends Controller
             'proof_document'    => 'nullable|file|mimes:pdf,jpg,jpeg,png,docx|max:5120',
             'message'           => 'required|string|min:30|max:1000',
             'industry'          => 'nullable|string|max:100',
-            'website'           => 'nullable|string|max:255',
+            'website'           => ['nullable', 'string', 'max:255', 'regex:/^(https?:\/\/)?([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(\/[^\s]*)?$/'],
         ]);
 
         $abn = preg_replace('/\s+/', '', $data['abn']);

@@ -228,6 +228,9 @@ return response()->json(
         if ($isOwner || $isCompany || $isAdmin) {
             $complaint->makeVisible(['reference_number', 'amount_involved']);
         }
+        if ($isAdmin) {
+            $complaint->makeVisible(['moderation_flags', 'moderation_note', 'moderation_edited']);
+        }
 
         $data = $complaint->toArray();
 
