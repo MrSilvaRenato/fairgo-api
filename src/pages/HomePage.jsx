@@ -423,18 +423,18 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           TRUST BAR  (moved up — build credibility early)
       ══════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
+      <div className="grid grid-cols-4 gap-2 sm:gap-3 mb-12">
         {[
           { value: complaintsTotal > 0 ? complaintsTotal.toLocaleString('en-AU') : '…', label: 'Complaints on record' },
           { value: claimedList.length > 0 ? `${claimedList.length}+` : '…',             label: 'Businesses monitored' },
-          { value: '7 days',                                                              label: 'Company response window' },
-          { value: 'Always free',                                                         label: 'For consumers' },
+          { value: '7 days',                                                              label: 'Response window' },
+          { value: 'Free',                                                                label: 'For consumers' },
         ].map(s => (
-          <div key={s.label} className="card p-5 text-center">
-            <p className="font-display text-[22px] sm:text-[26px] font-semibold leading-none text-[color:var(--color-ink)] mb-1.5">
+          <div key={s.label} className="card p-2 sm:p-5 text-center">
+            <p className="font-display text-[18px] sm:text-[26px] font-semibold leading-none text-[color:var(--color-ink)] mb-1">
               {s.value}
             </p>
-            <p className="text-xs text-[color:var(--color-muted)] leading-snug">{s.label}</p>
+            <p className="text-[10px] sm:text-xs text-[color:var(--color-muted)] leading-snug">{s.label}</p>
           </div>
         ))}
       </div>
@@ -534,7 +534,7 @@ export default function HomePage() {
           </div>
 
           {/* Status pills */}
-          <div className="flex gap-1.5 flex-wrap">
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none flex-nowrap">
             {FEED_STATUS_OPTS.map(opt => {
               const count  = opt.value
                 ? (feedCounts.status[opt.value] ?? 0)
@@ -733,7 +733,7 @@ export default function HomePage() {
         </div>
 
         {/* Industry filter pills */}
-        <div className="flex gap-2 flex-wrap items-center mb-5">
+        <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-none flex-nowrap items-center mb-5">
           {['all', ...industries.slice(0, VISIBLE_PILLS)].map(ind => (
             <button key={ind} onClick={() => { setActiveIndustry(ind); setMoreOpen(false) }}
               className={`chip capitalize ${activeIndustry === ind ? 'chip-active' : ''}`}>
