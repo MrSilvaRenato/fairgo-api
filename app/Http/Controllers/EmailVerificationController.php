@@ -36,4 +36,18 @@ class EmailVerificationController extends Controller
 
         return response()->json(['message' => 'Verification email sent.']);
     }
+
+    public function resendByEmail(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        // Silently succeed even when email not found — avoids user enumeration
+        $user = \App\Models\User::where('email', $request->email)->first();
+
+        if ($user && !$user->hasVerifiedEmail()) {
+            $user->sendEmailVerificationNotification();
+        }
+
+        return response()->json(['message' => 'If that address is registered and unverified, a new verification email has been sent.']);
+    }
 }

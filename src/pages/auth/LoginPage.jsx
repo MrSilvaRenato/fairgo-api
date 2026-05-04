@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import useAuthStore from '../../store/authStore'
+import api from '../../lib/axios'
 
 function LogoMark({ size = 48 }) {
   return (
@@ -26,9 +27,12 @@ export default function LoginPage() {
   const reset   = searchParams.get('reset') === '1'
   const hasDraft = !!sessionStorage.getItem(DRAFT_KEY)
 
-  const [form, setForm]         = useState({ email: '', password: '' })
-  const [errors, setErrors]     = useState({})
-  const [attempts, setAttempts] = useState(0)
+  const [form, setForm]               = useState({ email: '', password: '' })
+  const [errors, setErrors]           = useState({})
+  const [attempts, setAttempts]       = useState(0)
+  const [unverified, setUnverified]   = useState(null) // email string when blocked
+  const [resendSent, setResendSent]   = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
 
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
@@ -38,14 +42,33 @@ export default function LoginPage() {
   const submit = async (e) => {
     e.preventDefault()
     setErrors({})
+    setUnverified(null)
+    setResendSent(false)
     try {
       await login(form)
       navigate(next)
     } catch (err) {
+      if (err.response?.status === 403 && err.response.data?.error_code === 'email_unverified') {
+        setUnverified(err.response.data.email ?? form.email)
+        return
+      }
       const newAttempts = attempts + 1
       setAttempts(newAttempts)
       if (err.response?.status === 422) setErrors(err.response.data.errors ?? {})
       else setErrors({ email: ['Invalid email or password.'] })
+    }
+  }
+
+  const resendVerification = async () => {
+    setResendLoading(true)
+    try {
+      await api.post('/email/resend-public', { email: unverified })
+      setResendSent(true)
+    } catch {
+      // silently fail — backend always returns 200
+      setResendSent(true)
+    } finally {
+      setResendLoading(false)
     }
   }
 
@@ -79,6 +102,31 @@ export default function LoginPage() {
                 <a href="mailto:support@ausfairgo.com.au" className="underline">support@ausfairgo.com.au</a>{' '}
                 if you believe this is an error.
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Unverified email banner */}
+        {unverified && (
+          <div className="mb-6 flex items-start gap-3 rounded-2xl px-4 py-4"
+            style={{ background: '#eff6ff', border: '1px solid #93c5fd' }}>
+            <span className="text-lg shrink-0">📧</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-blue-900">Please verify your email first</p>
+              <p className="text-xs mt-0.5 text-blue-700">
+                We sent a verification link to <strong>{unverified}</strong>. Click the link in that email to activate your account.
+              </p>
+              {resendSent ? (
+                <p className="text-xs mt-2 font-medium text-green-700">Verification email resent — check your inbox.</p>
+              ) : (
+                <button
+                  onClick={resendVerification}
+                  disabled={resendLoading}
+                  className="mt-2 text-xs font-semibold text-blue-700 underline underline-offset-2 hover:text-blue-900 disabled:opacity-50"
+                >
+                  {resendLoading ? 'Sending…' : 'Resend verification email'}
+                </button>
+              )}
             </div>
           </div>
         )}

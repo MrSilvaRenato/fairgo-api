@@ -34,6 +34,10 @@ Route::prefix('auth')->group(function () {
     Route::get('email/verify', [\App\Http\Controllers\EmailVerificationController::class, 'verify'])
         ->name('verification.verify');
 
+    // Public resend — used on login when the user has no token yet
+    Route::post('email/resend-public', [\App\Http\Controllers\EmailVerificationController::class, 'resendByEmail'])
+        ->middleware('throttle:3,60');
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout',          [AuthController::class, 'logout']);
         Route::get('me',               [AuthController::class, 'me']);

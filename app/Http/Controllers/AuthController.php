@@ -72,6 +72,15 @@ class AuthController extends Controller
             ]);
         }
 
+        if (!$user->hasVerifiedEmail()) {
+            Auth::logout();
+            return response()->json([
+                'message'    => 'Please verify your email address before signing in.',
+                'error_code' => 'email_unverified',
+                'email'      => $user->email,
+            ], 403);
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         $user->load('company:id');
