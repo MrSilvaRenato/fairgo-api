@@ -448,7 +448,7 @@ if (successMessage) {
               Which company are you complaining about?
             </h1>
             <p className="text-sm text-[color:var(--color-muted)] mt-2">
-              Search by name — we'll find them instantly.
+              Search by company name or ABN — results pulled live from the Australian Business Register.
             </p>
           </div>
 

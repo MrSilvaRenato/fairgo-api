@@ -95,7 +95,7 @@ class AbnLookupService
             $data = json_decode($body, true);
 
             $results = collect($data['Names'] ?? [])
-                ->filter(fn($n) => ($n['AbnStatus'] ?? '') === 'Active' && ($n['IsCurrent'] ?? false))
+                ->filter(fn($n) => ($n['AbnStatus'] ?? '') === 'Active')
                 ->map(fn($n) => [
                     'abn'      => $n['Abn'],
                     'name'     => $n['Name'],
