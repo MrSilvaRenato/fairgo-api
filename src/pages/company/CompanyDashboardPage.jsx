@@ -172,10 +172,28 @@ export default function CompanyDashboardPage() {
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <h1 className="font-display text-2xl font-semibold tracking-tight">{company.name}</h1>
               <span className="chip capitalize">{company.subscription?.plan ?? 'free'}</span>
+              {company.abn_verified && (
+                <span className="chip font-semibold"
+                  style={{ color: '#1d4ed8', borderColor: '#93c5fd', background: '#eff6ff' }}>
+                  <Icon name="verified" size={12} /> ABN Verified
+                </span>
+              )}
+              {company.claimed && (
+                <span className="chip font-semibold"
+                  style={{ color: '#166534', borderColor: '#86efac', background: '#f0fdf4' }}>
+                  ✅ Actively Managed
+                </span>
+              )}
               {company.verified_badge && (
-                <span className="chip font-semibold text-[color:var(--color-eucalyptus)]"
-                  style={{ borderColor: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
-                  <Icon name="verified" size={12} /> Verified
+                <span className="chip font-semibold"
+                  style={{ color: 'var(--color-eucalyptus)', borderColor: 'var(--color-eucalyptus)', background: 'var(--color-eucalyptus-3)' }}>
+                  <Icon name="verified" size={12} /> Aus Fair Go Verified
+                </span>
+              )}
+              {company.not_recommended && (
+                <span className="chip font-semibold"
+                  style={{ color: 'var(--color-clay)', borderColor: 'var(--color-clay)', background: 'var(--color-clay-soft)' }}>
+                  <Icon name="flag" size={12} /> Not Recommended
                 </span>
               )}
             </div>
