@@ -29,16 +29,16 @@ Performed: 2026-05-04
 
 ## MEDIUM
 
-- [ ] **[MED-1]** `routes/api.php:52–53` — No throttle on `GET /api/abn/search` and `GET /api/abn/check/{abn}` → ABR quota exhaustion / scraping. Fix: `throttle:30,1`.
-- [ ] **[MED-2]** `routes/api.php:88,99,72,116` — No throttle on complaint replies, logo upload, company claim submission, ID verification upload. Fix: add appropriate throttle limits.
-- [ ] **[MED-3]** `routes/api.php` — `PATCH /api/company/settings`, `POST /api/company/logo`, `POST /api/company/abn/verify` only gate on `auth:sanctum`, no role check. Fix: add explicit `role=company_admin` check.
-- [ ] **[MED-4]** `app/Http/Controllers/ComplaintController.php:227` — `reference_number` and `amount_involved` (financial PII) in public `toArray()`. Fix: add to `$hidden` on Complaint model.
-- [ ] **[MED-5]** `app/Jobs/ModerateComplaint.php:94–103` — `failed()` handler auto-approves content on moderation job crash. Fix: set `moderation_status = 'pending'` on failure, not `approved`.
-- [ ] **[MED-6]** `app/Http/Controllers/CompanyController.php:168–170` — Logo filename uses `getClientOriginalExtension()` (client-controlled). Fix: derive extension from validated MIME type map.
-- [ ] **[MED-7]** Company dashboard endpoint returns 404 to consumers instead of 403 — no role enforcement. Fix: add `role:company_admin` middleware.
-- [ ] **[MED-8]** `config/cors.php` — `allowed_headers: ['*']` with `supports_credentials: true`. Fix: enumerate required headers explicitly.
-- [ ] **[MED-9]** `nginx.conf` — No `X-Frame-Options`, `X-Content-Type-Options`, `HSTS`, `CSP`, `Referrer-Policy`. Fix: add standard security headers.
-- [ ] **[MED-10]** `app/Http/Controllers/ComplaintController.php:276–278` — `status`, `category`, `moderation_status`, `role` filter params passed to queries without allowlist validation.
+- [x] **[MED-1]** `routes/api.php:52–53` — No throttle on `GET /api/abn/search` and `GET /api/abn/check/{abn}` → ABR quota exhaustion / scraping. Fix: `throttle:30,1`.
+- [x] **[MED-2]** `routes/api.php:88,99,72,116` — No throttle on complaint replies, logo upload, company claim submission, ID verification upload. Fix: add appropriate throttle limits.
+- [x] **[MED-3]** `routes/api.php` — `PATCH /api/company/settings`, `POST /api/company/logo`, `POST /api/company/abn/verify` only gate on `auth:sanctum`, no role check. Fix: add explicit `role=company_admin` check.
+- [x] **[MED-4]** `app/Http/Controllers/ComplaintController.php:227` — `reference_number` and `amount_involved` (financial PII) in public `toArray()`. Fix: add to `$hidden` on Complaint model.
+- [x] **[MED-5]** `app/Jobs/ModerateComplaint.php:94–103` — `failed()` handler auto-approves content on moderation job crash. Fix: set `moderation_status = 'pending'` on failure, not `approved`.
+- [x] **[MED-6]** `app/Http/Controllers/CompanyController.php:168–170` — Logo filename uses `getClientOriginalExtension()` (client-controlled). Fix: derive extension from validated MIME type map.
+- [x] **[MED-7]** Company dashboard endpoint returns 404 to consumers instead of 403 — no role enforcement. Fix: add `role:company_admin` middleware.
+- [x] **[MED-8]** `config/cors.php` — `allowed_headers: ['*']` with `supports_credentials: true`. Fix: enumerate required headers explicitly.
+- [x] **[MED-9]** `nginx.conf` — No `X-Frame-Options`, `X-Content-Type-Options`, `HSTS`, `CSP`, `Referrer-Policy`. Fix: add standard security headers.
+- [x] **[MED-10]** `app/Http/Controllers/ComplaintController.php:276–278` — `status`, `category`, `moderation_status`, `role` filter params passed to queries without allowlist validation.
 
 ---
 
