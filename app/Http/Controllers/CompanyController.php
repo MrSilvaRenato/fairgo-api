@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
+use App\Models\CompanyClaim;
 use App\Models\Complaint;
 use App\Models\Subscription;
 use App\Services\AbnLookupService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class CompanyController extends Controller
 {
@@ -16,83 +18,96 @@ class CompanyController extends Controller
 
     public function store(Request $request)
     {
-        if ($request->user()->company) {
-            return response()->json(['message' => 'You have already registered a company.'], 422);
-        }
+        $user = $request->user();
 
         $data = $request->validate([
-            'name'        => 'required|string|max:255',
-            'abn'         => 'required|string',
-            'industry'    => 'nullable|string|max:100',
-            'description' => 'nullable|string|max:1000',
-            'website'     => 'nullable|string|max:255',
+            'abn'               => 'required|string',
+            'claimant_name'     => 'required|string|max:120',
+            'claimant_email'    => 'required|email|max:200',
+            'claimant_position' => 'required|string|max:120',
+            'claimant_phone'    => 'required|string|max:30',
+            'proof_type'        => ['required', Rule::in(['asic_extract', 'business_card', 'employment_contract', 'director_certificate', 'other'])],
+            'proof_document'    => 'nullable|file|mimes:pdf,jpg,jpeg,png,docx|max:5120',
+            'message'           => 'required|string|min:30|max:1000',
+            'industry'          => 'nullable|string|max:100',
+            'website'           => 'nullable|string|max:255',
         ]);
 
         $abn = preg_replace('/\s+/', '', $data['abn']);
 
         if (!$this->abn->validateChecksum($abn)) {
-            return response()->json(['errors' => ['abn' => ['Invalid ABN.']]], 422);
+            return response()->json(['errors' => ['abn' => ['Invalid ABN format.']]], 422);
         }
 
-        // Strip protocol/trailing slashes so Clearbit gets a clean domain
-        $website = isset($data['website']) ? preg_replace('#^https?://#', '', rtrim($data['website'], '/')) : null;
+        // Verify ABN is active against ABR
+        $abnResult = $this->abn->lookup($abn);
+        if (!$abnResult['valid']) {
+            return response()->json(['errors' => ['abn' => ['This ABN could not be verified with the Australian Business Register.']]], 422);
+        }
 
-        // If an unclaimed company with this ABN already exists, claim it instead of creating a duplicate
-        $existing = Company::where('abn', $abn)->where('claimed', false)->first();
+        // Block if already claimed by another user
+        if (Company::where('abn', $abn)->where('claimed', true)->exists()) {
+            return response()->json(['errors' => ['abn' => ['This ABN is already registered and managed on Aus Fair Go.']]], 422);
+        }
 
-        if ($existing) {
-            $existing->update([
-                'user_id'     => $request->user()->id,
-                'name'        => $data['name'],
-                'abn_verified'=> true,
-                'industry'    => $data['industry'] ?? $existing->industry,
-                'description' => $data['description'] ?? $existing->description,
-                'website'     => $website ?? $existing->website,
-                'logo_url'    => $website ? "https://logo.clearbit.com/{$website}" : $existing->logo_url,
-                'claimed'     => true,
-                'is_stub'     => false,
-            ]);
-            $company = $existing->fresh();
-        } else {
-            // Brand new company — check ABN not already claimed by someone else
-            $claimed = Company::where('abn', $abn)->where('claimed', true)->first();
-            if ($claimed) {
-                return response()->json(['errors' => ['abn' => ['This ABN is already registered on Aus Fair Go.']]], 422);
-            }
+        // Block duplicate pending claims from same user
+        $existingClaim = CompanyClaim::whereHas('company', fn($q) => $q->where('abn', $abn))
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['pending', 'approved'])
+            ->first();
 
-            $slug = Str::slug($data['name']);
+        if ($existingClaim) {
+            return response()->json(['message' => 'You already have a pending application for this ABN.'], 409);
+        }
+
+        // Find or create stub company for this ABN
+        $entityName = $abnResult['entity_name'] ?? null;
+        $website    = isset($data['website']) ? preg_replace('#^https?://#', '', rtrim($data['website'], '/')) : null;
+
+        $company = Company::where('abn', $abn)->first();
+        if (!$company) {
+            $slug = Str::slug($entityName ?? $abn);
             $base = $slug; $i = 1;
             while (Company::where('slug', $slug)->exists()) { $slug = "{$base}-{$i}"; $i++; }
 
             $company = Company::create([
-                'user_id'     => $request->user()->id,
-                'name'        => $data['name'],
-                'slug'        => $slug,
-                'abn'         => $abn,
-                'abn_verified'=> true,
-                'industry'    => $data['industry'] ?? null,
-                'description' => $data['description'] ?? null,
-                'website'     => $website,
-                'logo_url'    => $website ? "https://logo.clearbit.com/{$website}" : null,
-                'claimed'     => true,
+                'name'         => $entityName ?? $abn,
+                'slug'         => $slug,
+                'abn'          => $abn,
+                'abn_verified' => true,
+                'abn_entity_name' => $entityName,
+                'industry'     => $data['industry'] ?? null,
+                'website'      => $website,
+                'logo_url'     => $website ? "https://logo.clearbit.com/{$website}" : null,
+                'is_stub'      => true,
+                'claimed'      => false,
             ]);
         }
 
-        // Seed free subscription if none exists
-        if (!$company->subscription) {
-            Subscription::create([
-                'company_id' => $company->id,
-                'plan'       => 'free',
-                'status'     => 'active',
-            ]);
+        // Store proof document if provided
+        $proofPath = null;
+        if ($request->hasFile('proof_document')) {
+            $proofPath = $request->file('proof_document')->store('claim-documents', 'public');
         }
 
-        // Only update role if not already admin
-        if ($request->user()->role !== 'admin') {
-            $request->user()->update(['role' => 'company_admin']);
-        }
+        $claim = CompanyClaim::create([
+            'company_id'        => $company->id,
+            'user_id'           => $user->id,
+            'claimant_name'     => $data['claimant_name'],
+            'claimant_email'    => $data['claimant_email'],
+            'claimant_position' => $data['claimant_position'],
+            'claimant_phone'    => $data['claimant_phone'],
+            'abn_confirmation'  => $abn,
+            'proof_type'        => $data['proof_type'],
+            'proof_document'    => $proofPath,
+            'message'           => $data['message'],
+            'status'            => 'pending',
+        ]);
 
-        return response()->json($company->load('subscription'), 201);
+        return response()->json([
+            'message' => 'Your application has been submitted. Our team will review it within 2 business days and notify you by email.',
+            'claim'   => ['id' => $claim->id, 'status' => 'pending'],
+        ], 201);
     }
 
     public function updateSettings(Request $request)
