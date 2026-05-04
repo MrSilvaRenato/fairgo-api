@@ -45,8 +45,22 @@ class AbnSearchController extends Controller
         // Name search
         $result = $abnService->searchByName($q);
 
+        // Remove ABNs already registered on the platform (non-stub) —
+        // those appear in the "On Aus Fair Go" section and don't need to be duplicated.
+        $abns = collect($result['results'] ?? [])->pluck('abn');
+        $existingAbns = \App\Models\Company::whereIn('abn', $abns)
+            ->where('is_stub', false)
+            ->pluck('abn')
+            ->flip()
+            ->toArray();
+
+        $filtered = collect($result['results'] ?? [])
+            ->reject(fn($r) => isset($existingAbns[$r['abn']]))
+            ->values()
+            ->toArray();
+
         return response()->json([
-            'results' => $result['results'] ?? [],
+            'results' => $filtered,
             'source'  => 'name',
             'stub'    => $result['stub'] ?? false,
         ]);

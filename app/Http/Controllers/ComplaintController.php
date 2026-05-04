@@ -88,31 +88,39 @@ class ComplaintController extends Controller
                 ], 422);
             }
 
-            // Use ABR authoritative name when available; fall back to user-supplied
-            // name; if still nothing, use the formatted ABN as a readable placeholder.
-            $entityName = $result['entity_name'] ?? $data['company_name'] ?? null;
-            if (!$entityName) {
-                $entityName = implode(' ', [
-                    substr($abn, 0, 2),
-                    substr($abn, 2, 3),
-                    substr($abn, 5, 3),
-                    substr($abn, 8, 3),
-                ]);
+            // If an existing (non-stub) company already has this ABN, use it directly
+            // — prevents duplicate stubs when user picks an ABR result for a company
+            // that's already registered on the platform.
+            $existing = Company::where('abn', $abn)->where('is_stub', false)->first();
+            if ($existing) {
+                $data['company_id'] = $existing->id;
+            } else {
+                // Use ABR authoritative name when available; fall back to user-supplied
+                // name; if still nothing, use the formatted ABN as a readable placeholder.
+                $entityName = $result['entity_name'] ?? $data['company_name'] ?? null;
+                if (!$entityName) {
+                    $entityName = implode(' ', [
+                        substr($abn, 0, 2),
+                        substr($abn, 2, 3),
+                        substr($abn, 5, 3),
+                        substr($abn, 8, 3),
+                    ]);
+                }
+
+                $company = Company::firstOrCreate(
+                    ['abn' => $abn, 'is_stub' => true],
+                    [
+                        'name'            => $entityName,
+                        'slug'            => Str::slug($entityName) . '-' . substr($abn, -4),
+                        'abn_entity_name' => $result['entity_name'] ?? null,
+                        'abn_verified'    => true,
+                        'is_stub'         => true,
+                        'claimed'         => false,
+                    ]
+                );
+
+                $data['company_id'] = $company->id;
             }
-
-            $company = Company::firstOrCreate(
-                ['abn' => $abn, 'is_stub' => true],
-                [
-                    'name'            => $entityName,
-                    'slug'            => Str::slug($entityName) . '-' . substr($abn, -4),
-                    'abn_entity_name' => $result['entity_name'] ?? null,
-                    'abn_verified'    => true,
-                    'is_stub'         => true,
-                    'claimed'         => false,
-                ]
-            );
-
-            $data['company_id'] = $company->id;
         }
 
         $complaint = Complaint::create([
