@@ -175,52 +175,13 @@ export default function ProfilePage() {
               style={{ color: 'var(--color-muted)' }}>Phone number</label>
             <div className="flex gap-2">
               <input name="phone" value={form.phone} onChange={handle}
-                className="input flex-1" placeholder="+61 4xx xxx xxx"
-                disabled={!!profile?.phone_verified_at} />
-              {!profile?.phone_verified_at && (
-                <button type="button" onClick={sendOtp} disabled={otpSending || otpSent}
-                  className="btn btn-secondary text-xs shrink-0 px-3">
-                  {otpSending ? 'Sending…' : otpSent ? 'Code sent' : 'Send code'}
-                </button>
-              )}
-              {profile?.phone_verified_at && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-3 py-2 rounded-xl shrink-0"
-                  style={{ background: 'var(--color-eucalyptus-3)', color: 'var(--color-eucalyptus)' }}>
-                  ✓ Verified
-                </span>
-              )}
+                className="input flex-1 opacity-50 cursor-not-allowed" placeholder="+61 4xx xxx xxx"
+                disabled />
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-2 rounded-xl shrink-0"
+                style={{ background: 'var(--color-paper-2)', color: 'var(--color-muted)', border: '1px solid var(--color-line)' }}>
+                Coming soon
+              </span>
             </div>
-            {errors.phone && <p className="text-xs mt-1" style={{ color: 'var(--color-clay)' }}>{errors.phone[0]}</p>}
-
-            {/* OTP input */}
-            {otpSent && !profile?.phone_verified_at && (
-              <div className="mt-3 p-4 rounded-xl space-y-3" style={{ background: 'var(--color-paper-2)', border: '1px solid var(--color-line)' }}>
-                <p className="text-xs text-[color:var(--color-ink-2)]">
-                  A 6-digit code was sent to <strong>{otpPhone}</strong>. Enter it below to verify your number.
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    value={otpCode}
-                    onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="input flex-1 font-mono text-center text-lg tracking-widest"
-                    placeholder="000000"
-                    maxLength={6}
-                  />
-                  <button type="button" onClick={verifyOtp}
-                    disabled={otpCode.length !== 6 || otpVerifying}
-                    className="btn btn-primary text-xs shrink-0 px-4 disabled:opacity-50">
-                    {otpVerifying ? 'Verifying…' : 'Verify'}
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  {otpError && <p className="text-xs" style={{ color: 'var(--color-clay)' }}>{otpError}</p>}
-                  <button type="button" onClick={sendOtp} disabled={otpSending}
-                    className="text-xs underline ml-auto" style={{ color: 'var(--color-muted)' }}>
-                    Resend code
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Address */}
@@ -252,47 +213,25 @@ export default function ProfilePage() {
         </form>
       </div>
 
-      {/* ── Phone verification ── */}
-      <div className="card p-6 space-y-4">
+      {/* ── Phone verification — coming soon ── */}
+      <div className="card p-6 space-y-4 opacity-60">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="font-semibold text-base" style={{ color: 'var(--color-ink)' }}>Phone verification</h2>
             <p className="text-sm mt-0.5" style={{ color: 'var(--color-muted)' }}>
-              Verify your mobile number to receive a <strong>Phone Verified</strong> badge on your complaints. One number per account.
+              Verify your mobile number to receive a <strong>Phone Verified</strong> badge on your complaints.
             </p>
           </div>
-          {profile?.phone_verified_at && (
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
-              style={{ background: 'var(--color-eucalyptus-3)', color: 'var(--color-eucalyptus)' }}>
-              ✅ Verified
-            </span>
-          )}
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
+            style={{ background: 'var(--color-paper-2)', color: 'var(--color-muted)', border: '1px solid var(--color-line)' }}>
+            Coming soon
+          </span>
         </div>
-
-        {profile?.phone_verified_at ? (
-          <div className="rounded-xl px-4 py-3 text-sm flex items-start gap-2.5"
-            style={{ background: 'var(--color-eucalyptus-3)', border: '1px solid var(--color-eucalyptus)', color: 'var(--color-eucalyptus)' }}>
-            <span className="text-base shrink-0">✅</span>
-            <div>
-              <strong>Phone number verified</strong>
-              <p className="text-xs mt-0.5 opacity-80">
-                Verified on {new Date(profile.phone_verified_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}.
-                Your complaints now show the Phone Verified badge.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-xl px-4 py-3 text-sm flex items-start gap-2.5"
-            style={{ background: 'var(--color-paper-2)', border: '1px solid var(--color-line)', color: 'var(--color-ink-2)' }}>
-            <span className="text-base shrink-0">📱</span>
-            <div>
-              <strong>Not yet verified</strong>
-              <p className="text-xs mt-0.5 opacity-80">
-                Enter your mobile number above and tap <em>Send code</em> to receive a one-time SMS code.
-              </p>
-            </div>
-          </div>
-        )}
+        <div className="rounded-xl px-4 py-3 text-sm flex items-start gap-2.5"
+          style={{ background: 'var(--color-paper-2)', border: '1px solid var(--color-line)', color: 'var(--color-ink-2)' }}>
+          <span className="text-base shrink-0">📱</span>
+          <p>SMS verification will be available soon. Your complaints will automatically receive the Phone Verified badge once enabled.</p>
+        </div>
       </div>
 
       {/* ── Password ── */}
