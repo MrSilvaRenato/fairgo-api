@@ -320,7 +320,7 @@ class CompanyController extends Controller
 
     public function show(string $slug)
     {
-        $company = Company::with(['score', 'subscription'])
+        $company = Company::with(['score', 'subscription', 'afcaInsight'])
             ->where('slug', $slug)
             ->firstOrFail();
 

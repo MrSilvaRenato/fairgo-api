@@ -62,4 +62,9 @@ class Company extends Model
     {
         return $this->hasOne(Subscription::class);
     }
+
+    public function afcaInsight()
+    {
+        return $this->hasOne(AfcaInsight::class);
+    }
 }

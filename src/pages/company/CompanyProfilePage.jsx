@@ -120,6 +120,7 @@ export default function CompanyProfilePage() {
       <StatsStrip score={score} />
       {score && <PerformancePanel slug={company.slug} companyName={company.abn_entity_name || company.name} />}
       {score && <CategoryBreakdown complaints={complaints} />}
+      {company.afca_insight && <AfcaPanel insight={company.afca_insight} />}
       <ComplaintsBlock
         company={company}
         complaints={complaints}
@@ -811,5 +812,94 @@ function NotFound() {
       <p className="text-sm text-[color:var(--color-muted)] mb-6">It may have been removed, or the link is misspelled.</p>
       <Link to="/" className="btn btn-primary">Back to home <Icon name="arrow-r" size={14} /></Link>
     </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────
+   AfcaPanel — Public complaint data sourced from AFCA DataCube
+───────────────────────────────────────────────────────── */
+function AfcaPanel({ insight }) {
+  const rate        = parseFloat(insight.resolution_rate)
+  const unresolved  = 100 - rate
+  const rateColor   = rate >= 65 ? 'var(--color-eucalyptus)' : rate >= 45 ? 'var(--color-ochre)' : 'var(--color-clay)'
+
+  return (
+    <section className="mb-10">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div>
+          <div className="caps mb-1" style={{ color: 'var(--color-muted)' }}>Public Complaint Insights</div>
+          <h2 className="font-display text-[20px] sm:text-[22px] font-semibold tracking-tight">
+            AFCA Complaint Data — {insight.period_year} Financial Year
+          </h2>
+        </div>
+        <a
+          href="https://data.afca.org.au"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[11px] font-medium px-3 py-1.5 rounded-xl border transition shrink-0"
+          style={{ color: 'var(--color-muted)', borderColor: 'var(--color-line)' }}>
+          Source: AFCA DataCube ↗
+        </a>
+      </div>
+
+      <div className="card p-5 sm:p-6 space-y-5">
+        {/* Disclaimer */}
+        <div className="rounded-xl px-4 py-3 text-xs flex items-start gap-2.5"
+          style={{ background: 'var(--color-paper-2)', border: '1px solid var(--color-line)', color: 'var(--color-muted)' }}>
+          <span className="shrink-0 mt-0.5">ℹ️</span>
+          <p>
+            This is aggregated, public data from the Australian Financial Complaints Authority (AFCA).
+            It covers financial services complaints only and is separate from Aus Fair Go user-submitted complaints.
+          </p>
+        </div>
+
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-2xl p-4 text-center" style={{ background: 'var(--color-paper-2)' }}>
+            <p className="font-display text-[28px] sm:text-[32px] font-semibold leading-none" style={{ color: 'var(--color-ink)' }}>
+              {insight.complaints_received.toLocaleString('en-AU')}
+            </p>
+            <p className="text-[11px] sm:text-xs mt-1.5" style={{ color: 'var(--color-muted)' }}>Complaints received</p>
+          </div>
+          <div className="rounded-2xl p-4 text-center" style={{ background: 'var(--color-paper-2)' }}>
+            <p className="font-display text-[28px] sm:text-[32px] font-semibold leading-none" style={{ color: 'var(--color-ink)' }}>
+              {insight.complaints_resolved.toLocaleString('en-AU')}
+            </p>
+            <p className="text-[11px] sm:text-xs mt-1.5" style={{ color: 'var(--color-muted)' }}>Resolved</p>
+          </div>
+          <div className="rounded-2xl p-4 text-center" style={{ background: 'var(--color-paper-2)' }}>
+            <p className="font-display text-[28px] sm:text-[32px] font-semibold leading-none" style={{ color: rateColor }}>
+              {rate}%
+            </p>
+            <p className="text-[11px] sm:text-xs mt-1.5" style={{ color: 'var(--color-muted)' }}>Resolution rate</p>
+          </div>
+        </div>
+
+        {/* Resolution rate bar */}
+        <div>
+          <div className="flex justify-between text-xs mb-2" style={{ color: 'var(--color-muted)' }}>
+            <span>Resolution rate</span>
+            <span className="font-semibold" style={{ color: rateColor }}>{rate}% resolved</span>
+          </div>
+          <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--color-paper-2)' }}>
+            <div className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${rate}%`, background: rateColor }} />
+          </div>
+          <div className="flex justify-between text-[10px] mt-1" style={{ color: 'var(--color-muted)' }}>
+            <span>0%</span>
+            <span className="text-right">{unresolved.toFixed(1)}% not yet resolved</span>
+          </div>
+        </div>
+
+        {/* Business type */}
+        <div className="flex items-center justify-between pt-1 border-t hairline">
+          <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
+            AFCA registered as: <span className="font-medium" style={{ color: 'var(--color-ink)' }}>{insight.primary_business}</span>
+          </p>
+          <p className="text-xs" style={{ color: 'var(--color-muted)' }}>FY{insight.period_year}</p>
+        </div>
+      </div>
+    </section>
   )
 }
