@@ -50,6 +50,10 @@ return [
         'key' => env('ANTHROPIC_API_KEY'),
     ],
 
+    'google' => [
+        'places_key' => env('GOOGLE_PLACES_API_KEY'),
+    ],
+
     'moderation' => [
         'driver' => env('MODERATION_DRIVER', 'log'),
     ],

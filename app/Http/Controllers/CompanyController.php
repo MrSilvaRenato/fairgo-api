@@ -320,9 +320,15 @@ class CompanyController extends Controller
 
     public function show(string $slug)
     {
-        $company = Company::with(['score', 'subscription', 'afcaInsight'])
+        $company = Company::with(['score', 'subscription', 'afcaInsight', 'googlePlaceSnapshot'])
             ->where('slug', $slug)
             ->firstOrFail();
+
+        // Queue a background fetch if no snapshot exists or it's stale
+        $snapshot = $company->googlePlaceSnapshot;
+        if (!$snapshot || $snapshot->isStale()) {
+            \App\Jobs\FetchGooglePlaceJob::dispatch($company->id);
+        }
 
         return response()->json($company);
     }

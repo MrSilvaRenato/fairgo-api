@@ -121,6 +121,7 @@ export default function CompanyProfilePage() {
       {score && <PerformancePanel slug={company.slug} companyName={company.abn_entity_name || company.name} />}
       {score && <CategoryBreakdown complaints={complaints} />}
       {company.afca_insight && <AfcaPanel insight={company.afca_insight} />}
+      {company.google_place_snapshot?.place_id && <GooglePanel snapshot={company.google_place_snapshot} />}
       <ComplaintsBlock
         company={company}
         complaints={complaints}
@@ -898,6 +899,118 @@ function AfcaPanel({ insight }) {
             AFCA registered as: <span className="font-medium" style={{ color: 'var(--color-ink)' }}>{insight.primary_business}</span>
           </p>
           <p className="text-xs" style={{ color: 'var(--color-muted)' }}>FY{insight.period_year}</p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────
+   GooglePanel — Google Places snapshot (rating, reviews, info)
+   Attribution required per Google ToS: show author name + link
+───────────────────────────────────────────────────────── */
+function GooglePanel({ snapshot }) {
+  const stars = (n) => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n))
+
+  return (
+    <section className="mb-10">
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div>
+          <div className="caps mb-1" style={{ color: 'var(--color-muted)' }}>Google Review Snapshot</div>
+          <h2 className="font-display text-[20px] sm:text-[22px] font-semibold tracking-tight">
+            Google Reviews
+          </h2>
+        </div>
+        {snapshot.maps_url && (
+          <a href={snapshot.maps_url} target="_blank" rel="noopener noreferrer"
+            className="text-[11px] font-medium px-3 py-1.5 rounded-xl border transition shrink-0"
+            style={{ color: 'var(--color-muted)', borderColor: 'var(--color-line)' }}>
+            View on Google Maps ↗
+          </a>
+        )}
+      </div>
+
+      <div className="card p-5 sm:p-6 space-y-5">
+
+        {/* Rating summary */}
+        <div className="flex items-center gap-5 flex-wrap">
+          <div className="text-center shrink-0">
+            <p className="font-display text-[48px] font-semibold leading-none" style={{ color: 'var(--color-ink)' }}>
+              {snapshot.rating ?? '—'}
+            </p>
+            {snapshot.rating && (
+              <p className="text-[18px] mt-1 tracking-tight" style={{ color: '#FBBC04' }}>
+                {stars(snapshot.rating)}
+              </p>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            {snapshot.user_ratings_total && (
+              <p className="text-sm font-medium" style={{ color: 'var(--color-ink)' }}>
+                {snapshot.user_ratings_total.toLocaleString('en-AU')} Google reviews
+              </p>
+            )}
+            {snapshot.google_name && (
+              <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>{snapshot.google_name}</p>
+            )}
+            {snapshot.address && (
+              <p className="text-xs mt-1.5 flex items-start gap-1.5" style={{ color: 'var(--color-muted)' }}>
+                <span className="shrink-0 mt-0.5">📍</span>{snapshot.address}
+              </p>
+            )}
+            {snapshot.phone && (
+              <p className="text-xs mt-1 flex items-center gap-1.5" style={{ color: 'var(--color-muted)' }}>
+                <span>📞</span>
+                <a href={`tel:${snapshot.phone}`} className="hover:underline" style={{ color: 'var(--color-ink-2)' }}>
+                  {snapshot.phone}
+                </a>
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Review snippets */}
+        {snapshot.reviews?.length > 0 && (
+          <div className="space-y-3 pt-2 border-t hairline">
+            <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>
+              Recent reviews
+            </p>
+            {snapshot.reviews.map((r, i) => (
+              <div key={i} className="rounded-xl p-3.5 space-y-2" style={{ background: 'var(--color-paper-2)' }}>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  {/* Author attribution — required by Google ToS */}
+                  <a href={r.author_url ?? '#'} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 min-w-0">
+                    {r.profile_photo_url && (
+                      <img src={r.profile_photo_url} alt={r.author_name}
+                        className="w-6 h-6 rounded-full shrink-0 object-cover" referrerPolicy="no-referrer" />
+                    )}
+                    <span className="text-xs font-medium truncate hover:underline" style={{ color: 'var(--color-ink)' }}>
+                      {r.author_name}
+                    </span>
+                  </a>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs tracking-tight" style={{ color: '#FBBC04' }}>{stars(r.rating)}</span>
+                    <span className="text-[10px]" style={{ color: 'var(--color-muted)' }}>{r.relative_time_description}</span>
+                  </div>
+                </div>
+                {r.text && (
+                  <p className="text-xs leading-relaxed line-clamp-3" style={{ color: 'var(--color-ink-2)' }}>
+                    {r.text}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Attribution footer — required by Google ToS */}
+        <div className="flex items-center justify-between pt-1 border-t hairline flex-wrap gap-2">
+          <p className="text-[10px]" style={{ color: 'var(--color-muted)' }}>
+            Reviews and ratings sourced from Google via the Places API. Data refreshes every 7 days.
+          </p>
+          <img src="https://www.gstatic.com/images/branding/googlelogo/svg/googlelogo_clr_74x24px.svg"
+            alt="Google" className="h-4 opacity-60" />
         </div>
       </div>
     </section>

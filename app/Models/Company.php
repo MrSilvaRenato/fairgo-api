@@ -67,4 +67,9 @@ class Company extends Model
     {
         return $this->hasOne(AfcaInsight::class);
     }
+
+    public function googlePlaceSnapshot()
+    {
+        return $this->hasOne(GooglePlaceSnapshot::class);
+    }
 }
