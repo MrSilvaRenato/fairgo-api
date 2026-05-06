@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Subscription;
+use App\Services\MonetisationGateService;
 use Illuminate\Http\Request;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\StripeClient;
@@ -16,9 +17,10 @@ class BillingController extends Controller
     }
 
     // GET /billing/plans
-    public function plans()
+    public function plans(MonetisationGateService $monetisationGate)
     {
         return response()->json([
+            'monetisation' => $monetisationGate->status(),
             'plans' => [
                 [
                     'id'          => 'standard',
@@ -26,6 +28,7 @@ class BillingController extends Controller
                     'price'       => 149,
                     'price_id'    => config('services.stripe.prices.standard'),
                     'features'    => ['Analytics dashboard', 'Complaint trends', 'Response time analytics', 'Satisfaction scores'],
+                    'rules'       => ['No pay-to-remove', 'No pay-to-suppress', 'No paid ranking manipulation'],
                 ],
                 [
                     'id'          => 'pro',
@@ -33,14 +36,24 @@ class BillingController extends Controller
                     'price'       => 399,
                     'price_id'    => config('services.stripe.prices.pro'),
                     'features'    => ['Everything in Standard', 'Priority support', 'Trust badge widget', 'API access', 'Custom branding'],
+                    'rules'       => ['No pay-to-remove', 'No pay-to-suppress', 'No paid ranking manipulation'],
                 ],
             ],
         ]);
     }
 
     // POST /billing/checkout  { plan: 'standard'|'pro' }
-    public function checkout(Request $request)
+    public function checkout(Request $request, MonetisationGateService $monetisationGate)
     {
+        $gateStatus = $monetisationGate->status();
+
+        if (!$gateStatus['launched']) {
+            return response()->json([
+                'message' => 'Paid business tools are not available until monetisation gates are met.',
+                'monetisation' => $gateStatus,
+            ], 403);
+        }
+
         $request->validate(['plan' => 'required|in:standard,pro']);
 
         $company = $request->user()->company;

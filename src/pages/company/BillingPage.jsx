@@ -5,6 +5,8 @@ import api from '../../lib/axios'
 export default function BillingPage() {
   const [plans, setPlans] = useState([])
   const [current, setCurrent] = useState(null)
+  const [monetisation, setMonetisation] = useState(null)
+  const [checkoutError, setCheckoutError] = useState('')
   const [loading, setLoading] = useState(true)
   const [redirecting, setRedirecting] = useState(null)
   const [searchParams] = useSearchParams()
@@ -13,16 +15,24 @@ export default function BillingPage() {
 
   useEffect(() => {
     Promise.all([api.get('/billing/plans'), api.get('/dashboard/company')])
-      .then(([p, d]) => { setPlans(p.data.plans); setCurrent(d.data.company.subscription) })
+      .then(([p, d]) => {
+        setPlans(p.data.plans)
+        setMonetisation(p.data.monetisation)
+        setCurrent(d.data.company.subscription)
+      })
       .finally(() => setLoading(false))
   }, [])
 
   const handleCheckout = async (planId) => {
+    setCheckoutError('')
     setRedirecting(planId)
     try {
       const { data } = await api.post('/billing/checkout', { plan: planId })
-      window.location.href = data.url
-    } catch { setRedirecting(null) }
+      window.location.assign(data.url)
+    } catch (error) {
+      setCheckoutError(error.response?.data?.message || 'Checkout is unavailable.')
+      setRedirecting(null)
+    }
   }
 
   const handleCancel = async () => {
@@ -30,6 +40,8 @@ export default function BillingPage() {
     await api.post('/billing/cancel')
     window.location.reload()
   }
+
+  const paidToolsLaunched = monetisation?.launched ?? false
 
   if (loading) return (
     <div className="max-w-3xl mx-auto space-y-6 animate-pulse">
@@ -67,6 +79,31 @@ export default function BillingPage() {
         <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex items-center gap-3">
           <span className="text-2xl">↩️</span>
           <p className="text-sm text-gray-600">Checkout was cancelled. No changes were made.</p>
+        </div>
+      )}
+
+      {monetisation && !paidToolsLaunched && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
+          <div>
+            <p className="font-semibold text-amber-900 text-sm">Paid business tools are locked until launch gates are met.</p>
+            <p className="text-xs text-amber-800 mt-0.5">No pay-to-remove, no pay-to-suppress, and no paid ranking manipulation.</p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {monetisation.gates.map((gate) => (
+              <div key={gate.key} className="text-xs bg-white/70 rounded-xl px-3 py-2 flex justify-between gap-3">
+                <span className="capitalize text-gray-600">{gate.key.replaceAll('_', ' ')}</span>
+                <span className={gate.passed ? 'text-green-700 font-semibold' : 'text-amber-800 font-semibold'}>
+                  {gate.actual}/{gate.minimum}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {checkoutError && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-700">
+          {checkoutError}
         </div>
       )}
 
@@ -110,7 +147,7 @@ export default function BillingPage() {
               </div>
 
               <ul className="space-y-2 mb-6 flex-1">
-                {plan.features.map((f) => (
+                {[...plan.features, ...(plan.rules || [])].map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
                     <svg className="w-4 h-4 text-green-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
@@ -128,7 +165,7 @@ export default function BillingPage() {
               ) : (
                 <button
                   onClick={() => handleCheckout(plan.id)}
-                  disabled={!!redirecting}
+                  disabled={!!redirecting || !paidToolsLaunched}
                   className={`w-full justify-center flex font-medium text-sm py-2.5 rounded-xl transition disabled:opacity-50 ${
                     isPro
                       ? 'bg-blue-600 text-white hover:bg-blue-700'
@@ -142,7 +179,7 @@ export default function BillingPage() {
                       </svg>
                       Redirecting…
                     </span>
-                  ) : `Upgrade to ${plan.name}`}
+                  ) : paidToolsLaunched ? `Upgrade to ${plan.name}` : 'Locked until launch'}
                 </button>
               )}
             </div>
