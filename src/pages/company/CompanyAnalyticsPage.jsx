@@ -29,11 +29,17 @@ export default function CompanyAnalyticsPage() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [locked, setLocked] = useState(false)
+  const [lockedMessage, setLockedMessage] = useState('')
 
   useEffect(() => {
     api.get('/dashboard/analytics')
       .then((res) => setData(res.data))
-      .catch((err) => { if (err.response?.status === 403) setLocked(true) })
+      .catch((err) => {
+        if (err.response?.status === 403) {
+          setLocked(true)
+          setLockedMessage(err.response?.data?.message || '')
+        }
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -53,8 +59,12 @@ export default function CompanyAnalyticsPage() {
         <div className="text-5xl mb-4">📊</div>
         <h2 className="text-xl font-bold text-gray-800 mb-2">Analytics — Standard & Pro</h2>
         <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-          Upgrade to <strong>Standard ($149/mo)</strong> or <strong>Pro ($399/mo)</strong> to access
-          complaint trends, response time analytics, and satisfaction scores over time.
+          {lockedMessage || (
+            <>
+              Upgrade to <strong>Standard ($149/mo)</strong> or <strong>Pro ($399/mo)</strong> to access
+              complaint trends, response time analytics, and satisfaction scores over time.
+            </>
+          )}
         </p>
         <Link to="/company/billing" className="btn-primary w-full justify-center flex">
           View plans & upgrade

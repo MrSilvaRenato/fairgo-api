@@ -1,111 +1,194 @@
-import { Link } from 'react-router-dom'
-import Icon from '../../components/Icon'
-
-const PLANS = [
-  {
-    name: 'Free',
-    price: '$0',
-    period: 'forever',
-    features: ['Unlimited complaints', 'Basic dashboard', 'Public profile', 'Company response tools'],
-    current: true,
-  },
-  {
-    name: 'Pro',
-    price: '$29',
-    period: '/month',
-    features: ['Everything in Free', 'Advanced analytics', 'Priority badge', 'AI-assisted responses', 'CSV export'],
-  },
-  {
-    name: 'Business',
-    price: '$79',
-    period: '/month',
-    features: ['Everything in Pro', 'Multi-location support', 'Dedicated account manager', 'API access', 'White-label reports'],
-  },
-]
+import { useEffect, useState } from 'react'
+import { useSearchParams, Link } from 'react-router-dom'
+import api from '../../lib/axios'
 
 export default function BillingPage() {
+  const [plans, setPlans] = useState([])
+  const [current, setCurrent] = useState(null)
+  const [monetisation, setMonetisation] = useState(null)
+  const [checkoutError, setCheckoutError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [redirecting, setRedirecting] = useState(null)
+  const [searchParams] = useSearchParams()
+  const success  = searchParams.get('success')
+  const cancelled = searchParams.get('cancelled')
+
+  useEffect(() => {
+    Promise.all([api.get('/billing/plans'), api.get('/dashboard/company')])
+      .then(([p, d]) => {
+        setPlans(p.data.plans)
+        setMonetisation(p.data.monetisation)
+        setCurrent(d.data.company.subscription)
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  const handleCheckout = async (planId) => {
+    setCheckoutError('')
+    setRedirecting(planId)
+    try {
+      const { data } = await api.post('/billing/checkout', { plan: planId })
+      window.location.assign(data.url)
+    } catch (error) {
+      setCheckoutError(error.response?.data?.message || 'Checkout is unavailable.')
+      setRedirecting(null)
+    }
+  }
+
+  const handleCancel = async () => {
+    if (!confirm('Cancel your subscription? You will be downgraded to the free plan.')) return
+    await api.post('/billing/cancel')
+    window.location.reload()
+  }
+
+  const paidToolsLaunched = monetisation?.launched ?? false
+
+  if (loading) return (
+    <div className="max-w-3xl mx-auto space-y-6 animate-pulse">
+      <div className="h-8 bg-gray-100 rounded w-1/4" />
+      <div className="grid sm:grid-cols-2 gap-6">
+        {[...Array(2)].map((_, i) => <div key={i} className="h-64 bg-gray-100 rounded-2xl" />)}
+      </div>
+    </div>
+  )
+
   return (
     <div className="max-w-3xl mx-auto space-y-8">
-
-      {/* Header */}
-      <div>
-        <h1 className="font-display text-[28px] font-semibold tracking-tight" style={{ color: 'var(--color-ink)' }}>
-          Billing &amp; Plans
-        </h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--color-muted)' }}>
-          Manage your subscription and unlock advanced features.
-        </p>
-      </div>
-
-      {/* Coming soon banner */}
-      <div className="rounded-2xl p-5 flex items-start gap-4"
-        style={{ background: 'var(--color-paper-2)', border: '1px solid var(--color-line)' }}>
-        <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-          style={{ background: 'var(--color-eucalyptus-3)' }}>
-          <Icon name="sparkle" size={18} style={{ color: 'var(--color-eucalyptus)' }} />
-        </div>
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <p className="font-semibold text-sm" style={{ color: 'var(--color-ink)' }}>
-            Paid plans are coming soon
-          </p>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--color-muted)' }}>
-            All features are completely free during our launch period. Paid plans with advanced analytics and priority features will be introduced later — we'll notify you before anything changes.
+          <h1 className="page-header">Billing & Plans</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Current plan:{' '}
+            <span className="font-semibold text-gray-700 capitalize">{current?.plan ?? 'free'}</span>
           </p>
         </div>
+        <Link to="/company/dashboard" className="btn-secondary text-sm">← Dashboard</Link>
       </div>
 
-      {/* Plan cards */}
-      <div className="grid sm:grid-cols-3 gap-4">
-        {PLANS.map((plan) => (
-          <div key={plan.name}
-            className={`card p-5 flex flex-col gap-4 relative ${!plan.current ? 'opacity-50' : ''}`}>
-
-            {plan.current && (
-              <span className="absolute top-4 right-4 text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                style={{ background: 'var(--color-eucalyptus-3)', color: 'var(--color-eucalyptus)' }}>
-                Current
-              </span>
-            )}
-            {!plan.current && (
-              <span className="absolute top-4 right-4 text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                style={{ background: 'var(--color-paper-2)', color: 'var(--color-muted)', border: '1px solid var(--color-line)' }}>
-                Coming soon
-              </span>
-            )}
-
-            <div>
-              <p className="font-semibold text-sm" style={{ color: 'var(--color-ink)' }}>{plan.name}</p>
-              <div className="flex items-baseline gap-1 mt-1">
-                <span className="font-display text-[28px] font-semibold leading-none" style={{ color: 'var(--color-ink)' }}>
-                  {plan.price}
-                </span>
-                <span className="text-xs" style={{ color: 'var(--color-muted)' }}>{plan.period}</span>
-              </div>
-            </div>
-
-            <ul className="space-y-2 flex-1">
-              {plan.features.map((f) => (
-                <li key={f} className="flex items-start gap-2 text-xs" style={{ color: 'var(--color-ink-2)' }}>
-                  <svg className="w-3.5 h-3.5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    style={{ color: 'var(--color-eucalyptus)' }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
-                  </svg>
-                  {f}
-                </li>
-              ))}
-            </ul>
-
-            <button disabled
-              className="w-full text-center text-xs font-medium py-2 rounded-xl cursor-not-allowed"
-              style={{ background: 'var(--color-paper-2)', color: 'var(--color-muted)', border: '1px solid var(--color-line)' }}>
-              {plan.current ? 'Active' : 'Coming soon'}
-            </button>
+      {success && (
+        <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-center gap-3">
+          <span className="text-2xl">🎉</span>
+          <div>
+            <p className="font-semibold text-green-800 text-sm">Payment successful!</p>
+            <p className="text-xs text-green-700 mt-0.5">Your plan has been upgraded. Analytics are now unlocked.</p>
           </div>
-        ))}
+        </div>
+      )}
+
+      {cancelled && (
+        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex items-center gap-3">
+          <span className="text-2xl">↩️</span>
+          <p className="text-sm text-gray-600">Checkout was cancelled. No changes were made.</p>
+        </div>
+      )}
+
+      {monetisation && !paidToolsLaunched && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
+          <div>
+            <p className="font-semibold text-amber-900 text-sm">Paid business tools are locked until launch gates are met.</p>
+            <p className="text-xs text-amber-800 mt-0.5">No pay-to-remove, no pay-to-suppress, and no paid ranking manipulation.</p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {monetisation.gates.map((gate) => (
+              <div key={gate.key} className="text-xs bg-white/70 rounded-xl px-3 py-2 flex justify-between gap-3">
+                <span className="capitalize text-gray-600">{gate.key.replaceAll('_', ' ')}</span>
+                <span className={gate.passed ? 'text-green-700 font-semibold' : 'text-amber-800 font-semibold'}>
+                  {gate.actual}/{gate.minimum}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {checkoutError && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-700">
+          {checkoutError}
+        </div>
+      )}
+
+      {/* Free plan */}
+      <div className="card p-5 flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <div className="flex items-center gap-2 mb-0.5">
+            <h3 className="font-semibold text-gray-800">Free plan</h3>
+            {(!current || current.plan === 'free') && (
+              <span className="badge badge-green">Current</span>
+            )}
+          </div>
+          <p className="text-sm text-gray-500">Unlimited complaints · Basic dashboard · Public profile</p>
+        </div>
+        <p className="text-2xl font-bold text-gray-400">$0<span className="text-sm font-normal">/mo</span></p>
       </div>
 
-      <p className="text-center text-xs" style={{ color: 'var(--color-muted)' }}>
-        All plans will be processed securely by Stripe. Cancel anytime — no lock-in.
+      {/* Paid plans */}
+      <div className="grid sm:grid-cols-2 gap-5">
+        {plans.map((plan) => {
+          const isCurrent = current?.plan === plan.id
+          const isPro = plan.id === 'pro'
+          return (
+            <div key={plan.id}
+              className={`card p-6 flex flex-col relative overflow-hidden ${
+                isPro ? 'border-blue-200' : 'border-green-200'
+              } ${isCurrent ? (isPro ? 'bg-blue-50' : 'bg-green-50') : ''}`}>
+
+              {isPro && (
+                <div className="absolute top-4 right-4">
+                  <span className="badge badge-blue">Most popular</span>
+                </div>
+              )}
+
+              <div className="mb-4">
+                <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-3xl font-bold text-gray-900">${plan.price}</span>
+                  <span className="text-sm text-gray-500">/month</span>
+                </div>
+              </div>
+
+              <ul className="space-y-2 mb-6 flex-1">
+                {[...plan.features, ...(plan.rules || [])].map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
+                    <svg className="w-4 h-4 text-green-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
+                    </svg>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              {isCurrent ? (
+                <button onClick={handleCancel}
+                  className="btn-danger w-full justify-center flex text-sm">
+                  Cancel plan
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleCheckout(plan.id)}
+                  disabled={!!redirecting || !paidToolsLaunched}
+                  className={`w-full justify-center flex font-medium text-sm py-2.5 rounded-xl transition disabled:opacity-50 ${
+                    isPro
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  }`}>
+                  {redirecting === plan.id ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                      Redirecting…
+                    </span>
+                  ) : paidToolsLaunched ? `Upgrade to ${plan.name}` : 'Locked until launch'}
+                </button>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <p className="text-center text-xs text-gray-400">
+        Payments processed securely by Stripe. Cancel anytime.
       </p>
     </div>
   )
