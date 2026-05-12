@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\MonetisationGateService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,6 +20,15 @@ class RequiresPlan
 
         if (!$company) {
             return response()->json(['message' => 'No company found.'], 403);
+        }
+
+        $gateStatus = app(MonetisationGateService::class)->status();
+
+        if (!$gateStatus['launched']) {
+            return response()->json([
+                'message' => 'Paid business tools are not available until monetisation gates are met.',
+                'monetisation' => $gateStatus,
+            ], 403);
         }
 
         $subscription = $company->subscription;
