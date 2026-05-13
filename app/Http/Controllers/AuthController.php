@@ -90,6 +90,25 @@ class AuthController extends Controller
         ]);
     }
 
+    public function refresh(Request $request)
+    {
+        $user = $request->user();
+
+        // Revoke current token and issue a fresh one (token rotation)
+        $request->user()->currentAccessToken()->delete();
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        $user->load('company:id');
+        $data                  = $user->toArray();
+        $data['company_id']    = $user->company?->id;
+        $data['unread_replies'] = $this->unreadCount($user);
+
+        return response()->json([
+            'user'  => $data,
+            'token' => $token,
+        ]);
+    }
+
     public function logout(Request $request)
     {
         $token = $request->user()->currentAccessToken();

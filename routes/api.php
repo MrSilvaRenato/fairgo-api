@@ -40,6 +40,7 @@ Route::prefix('auth')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout',          [AuthController::class, 'logout']);
+        Route::post('refresh',         [AuthController::class, 'refresh']);
         Route::get('me',               [AuthController::class, 'me']);
         Route::delete('account',       \App\Http\Controllers\DeleteAccountController::class);
         Route::post('phone/send',    [PhoneVerificationController::class, 'send'])->middleware('throttle:3,60');

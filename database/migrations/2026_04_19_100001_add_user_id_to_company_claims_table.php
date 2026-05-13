@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasColumn('company_claims', 'user_id')) {
+        if (!Schema::hasTable('company_claims') || Schema::hasColumn('company_claims', 'user_id')) {
             return;
         }
 

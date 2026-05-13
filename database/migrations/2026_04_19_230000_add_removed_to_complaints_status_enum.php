@@ -7,7 +7,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Expand the enum to include 'removed'
+        if (DB::getDriverName() === 'sqlite') return;
+
         DB::statement("ALTER TABLE complaints MODIFY COLUMN status ENUM(
             'open','awaiting_response','responded','resolved','unresolved','expired','removed'
         ) NOT NULL DEFAULT 'open'");
@@ -15,6 +16,8 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') return;
+
         DB::statement("ALTER TABLE complaints MODIFY COLUMN status ENUM(
             'open','awaiting_response','responded','resolved','unresolved','expired'
         ) NOT NULL DEFAULT 'open'");
